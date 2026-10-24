@@ -227,7 +227,7 @@ details.blk > summary .s { color: var(--dim); font-size: .92rem; }
 details.blk > summary .lvl { margin-left: auto; font-family: var(--mono); font-size: .85rem; color: var(--c); }
 .body { padding: 0 16px 16px; }
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
 .demo { background: var(--panel2); border-radius: 10px; padding: 10px; }
 .demo canvas { width: 100%; display: block; border-radius: 6px; background: var(--panel); }
 .demo .ctrls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 8px; }
@@ -277,3 +277,27 @@ a.term:hover, a.term:focus-visible { color: var(--accent); }
   border-radius: 10px; padding: 9px 12px; font-size: .86rem; line-height: 1.4; box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
 #termTip .tt { color: var(--dim); margin-top: 3px; }
 #termTip .tl { margin-top: 6px; font-size: .8rem; }
+
+/* выбор антенны: карточки с иконкой */
+.patctl { display: grid; gap: 8px; margin: 0 0 10px; }
+.antpick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.antpick > button { flex: 1 1 104px; max-width: 170px; }
+.antpick button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 6px 7px; cursor: pointer;
+  background: var(--panel); color: var(--fg); border: 1px solid var(--grid); border-radius: 10px; font: inherit; min-width: 0; }
+.antpick button:hover { border-color: var(--tx); }
+.antpick button.on { border-color: var(--tx); background: color-mix(in srgb, var(--tx) 14%, var(--panel)); }
+.antpick svg { width: 40px; height: 28px; fill: none; stroke: var(--tx); stroke-width: 2; stroke-linecap: round; }
+.antpick svg .fill { fill: var(--tx); }
+.antpick .n { font-size: .8rem; font-weight: 600; line-height: 1.15; text-align: center; hyphens: none; overflow-wrap: normal; }
+.antpick .d { font-size: .74rem; color: var(--dim); line-height: 1.15; text-align: center; }
+.optrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.optrow .lbl { font-size: .86rem; color: var(--dim); min-width: 92px; }
+.seg2 { flex-wrap: wrap; border-radius: 12px; }
+.seg2 button { display: flex; flex-direction: column; align-items: center; line-height: 1.15; padding: 5px 12px; }
+.seg2 button small { font-size: .72rem; opacity: .8; white-space: nowrap; }
+@media (max-width: 560px) { .seg2 { display: grid; grid-template-columns: 1fr; width: 100%; } .seg2 button + button { border-left: 0; border-top: 1px solid var(--grid); } }
+
+[hidden] { display: none !important; }
+.demo { min-width: 0; }
+.demo select { max-width: 100%; }
+#adcCodes { overflow-wrap: anywhere; }
