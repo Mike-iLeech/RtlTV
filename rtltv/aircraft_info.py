@@ -15,7 +15,7 @@ import urllib.request
 from . import paths
 
 CACHE_DIR = paths.service_root()
-USER_AGENT = "RtlTV/1.1 (personal ADS-B receiver)"
+USER_AGENT = "SDR4NOOB/1.1 (personal ADS-B receiver)"
 AC_URLS = ("https://api.adsbdb.com/v0/aircraft/{hex}", "https://hexdb.io/api/v1/aircraft/{hex}")
 CS_URL = "https://api.adsbdb.com/v0/callsign/{cs}"
 CS_URL2 = "https://hexdb.io/callsign-route?callsign={cs}"

@@ -1,7 +1,7 @@
 """Орбиты спутников: TLE с celestrak.org (кэш, офлайн), SGP4, подспутниковая точка, трасса,
 пролёты над домом (AOS/LOS/максимум), азимут/возвышение, доплеровский сдвиг.
 
-Кэш TLE: %LOCALAPPDATA%\\RtlTV\\tle\\<группа>.txt, обновление не чаще раза в сутки;
+Кэш TLE: %LOCALAPPDATA%\\SDR4NOOB\\tle\\<группа>.txt, обновление не чаще раза в сутки;
 без сети — работаем по кэшу любой давности.
 """
 import math
@@ -19,7 +19,7 @@ TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?GROUP={group}&FORMAT=tle"
 TLE_URL_CATNR = "https://celestrak.org/NORAD/elements/gp.php?CATNR={norad}&FORMAT=tle"
 GROUPS = ("weather", "stations", "amateur")
 MAX_AGE = 24 * 3600
-USER_AGENT = "RtlTV/1.1 (personal SDR receiver; Windows)"
+USER_AGENT = "SDR4NOOB/1.1 (personal SDR receiver; Windows)"
 
 C_LIGHT = 299792.458          # км/с
 R_EARTH = 6378.137            # км (WGS-84)

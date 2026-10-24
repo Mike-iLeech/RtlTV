@@ -13,7 +13,7 @@
 Усиление везде — десятые дБ или None (АРУ); info["gains"] — доступные значения в десятых дБ.
 Если устройство не умеет запрошенную частоту дискретизации, поток пересчитывается (StreamResampler).
 
-Драйверы пользователя лежат в %LOCALAPPDATA%\\RtlTV\\drivers\\ (каталог добавляется в поиск DLL).
+Драйверы пользователя лежат в %LOCALAPPDATA%\\SDR4NOOB\\drivers\\ (каталог добавляется в поиск DLL).
 """
 import collections
 import ctypes as C
@@ -59,7 +59,7 @@ AIRSPY_FUNCS = ["airspy_list_devices", "airspy_open_sn", "airspy_close", "airspy
 RTL_FUNCS = ["rtlsdr_get_device_count", "rtlsdr_open", "rtlsdr_close", "rtlsdr_set_center_freq",
              "rtlsdr_set_sample_rate", "rtlsdr_read_sync", "rtlsdr_reset_buffer", "rtlsdr_get_tuner_gains"]
 
-# вид: (название, функция-признак, обязательные функции, поддерживается ли RtlTV)
+# вид: (название, функция-признак, обязательные функции, поддерживается ли SDR4NOOB)
 DRIVER_KINDS = {
     "rtl": ("RTL-SDR (librtlsdr)", "rtlsdr_open", RTL_FUNCS, True),
     "hackrf": ("HackRF (libhackrf)", "hackrf_init", HACKRF_FUNCS, True),
@@ -72,9 +72,9 @@ DEP_NAMES = ("libusb", "pthread", "libwinpthread", "libgcc", "libstdc++", "msvcp
 PREFERRED_NAMES = {"hackrf": ("hackrf.dll", "libhackrf.dll"), "airspy": ("airspy.dll", "libairspy.dll")}
 
 UNSUPPORTED_HINT = {
-    "sdrplay": "Прямая работа с SDRplay API v3 в RtlTV не реализована. Запустите сервер rsp_tcp "
+    "sdrplay": "Прямая работа с SDRplay API v3 в SDR4NOOB не реализована. Запустите сервер rsp_tcp "
                "(совместим с rtl_tcp) и добавьте его кнопкой «Добавить сетевой rtl_tcp…».",
-    "airspyhf": "Airspy HF+ в RtlTV не поддерживается: его частоты дискретизации (до 0,9 MS/s) меньше, "
+    "airspyhf": "Airspy HF+ в SDR4NOOB не поддерживается: его частоты дискретизации (до 0,9 MS/s) меньше, "
                 "чем нужно режимам (от 0,96 MS/s).",
 }
 
@@ -148,7 +148,7 @@ def check_dll(path):
     if not info["dll"]:
         raise DriverError(f"{name} — это программа (EXE), а не библиотека DLL")
     if not info["x64"]:
-        raise DriverError(f"{name} собрана для {info['machine']}, а RtlTV — 64-битное приложение. "
+        raise DriverError(f"{name} собрана для {info['machine']}, а SDR4NOOB — 64-битное приложение. "
                           "Нужна 64-битная (x64) сборка этой DLL.")
     kind = classify(info["exports"], name)
     if kind is None:
@@ -206,7 +206,7 @@ def import_dll(src, drivers_dir=None):
         try:
             shutil.copy2(src, dst)
         except PermissionError as e:
-            raise DriverError(f"{name} уже загружена приложением и занята — перезапустите RtlTV "
+            raise DriverError(f"{name} уже загружена приложением и занята — перезапустите SDR4NOOB "
                               "и загрузите файл снова.") from e
         except OSError as e:
             raise DriverError(f"Не удалось скопировать {name} в {ddir}: {e}") from e
@@ -1136,7 +1136,7 @@ def _driver_state(kind, svc):
     zadig = f"Привяжите WinUSB через Zadig ({ZADIG_URL}): Options → List All Devices → нужное устройство → WinUSB."
     if kind == "rtl":
         if s == "winusb":
-            return True, "WinUSB", "Готово: работает со встроенным драйвером RtlTV."
+            return True, "WinUSB", "Готово: работает со встроенным драйвером SDR4NOOB."
         if not s:
             return False, "драйвер не установлен", zadig + " Для RTL-SDR выберите «Bulk-In, Interface (Interface 0)»."
         return False, f"{svc} (драйвер DVB-T/другой программы)", \
@@ -1153,11 +1153,11 @@ def _driver_state(kind, svc):
     if kind == "airspyhf":
         return False, svc or "драйвер не установлен", UNSUPPORTED_HINT["airspyhf"]
     if kind == "lime":
-        return False, svc or "драйвер не установлен", "LimeSDR напрямую в RtlTV не поддерживается."
+        return False, svc or "драйвер не установлен", "LimeSDR напрямую в SDR4NOOB не поддерживается."
     if kind == "pluto":
-        return False, svc or "драйвер не установлен", "PlutoSDR (libiio) в RtlTV не поддерживается."
+        return False, svc or "драйвер не установлен", "PlutoSDR (libiio) в SDR4NOOB не поддерживается."
     if kind == "funcube":
-        return False, svc or "USB-аудио", "FUNcube Dongle работает как звуковая карта — в RtlTV не поддерживается."
+        return False, svc or "USB-аудио", "FUNcube Dongle работает как звуковая карта — в SDR4NOOB не поддерживается."
     return False, svc or "—", ""
 
 

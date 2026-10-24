@@ -20,7 +20,7 @@
   function words(q) { return norm(q).split(/\s+/).filter(function (w) { return w.length > 0; }); }
 
   function search(q) {
-    var ws = words(q), out = [], idx = window.RTLTV_SEARCH || [];
+    var ws = words(q), out = [], idx = window.SDR4NOOB_SEARCH || [];
     if (!ws.length) return out;
     idx.forEach(function (p) {
       var low = p.n || (p.n = norm(p.x)), tl = norm(p.t), score = 0;

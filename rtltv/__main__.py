@@ -8,7 +8,7 @@ from .launcher import MODES, Launcher
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="RtlTV", description="Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, ADS-B")
+    ap = argparse.ArgumentParser(prog="SDR4NOOB", description="SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на RTL-SDR")
     ap.add_argument("--mode", choices=[m[0] for m in MODES], help="сразу открыть режим, минуя выбор")
     ap.add_argument("--test", action="store_true", help="тестовый эфир вместо донгла")
     ap.add_argument("--digital", action="store_true", help="ТВ: запуск в цифровом режиме")
@@ -20,7 +20,9 @@ def main():
     from . import diag
     diag.setup()
     app = QApplication(sys.argv)
-    app.setApplicationName("RtlTV")
+    app.setApplicationName("SDR4NOOB")
+    from .branding import app_icon
+    app.setWindowIcon(app_icon())   # иконка всех окон и панели задач
     from PySide6.QtCore import QTimer
     beat = QTimer()
     beat.timeout.connect(diag.heartbeat)

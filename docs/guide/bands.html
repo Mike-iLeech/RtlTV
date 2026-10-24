@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Что можно принимать — RtlTV</title>
-<meta name="description" content="RTL-SDR Blog V4 перекрывает 0,5–1766 МГц: от средних волн до L-диапазона спутников. Ниже — что где находится, каким видом модуляции передаётся, какой режим RtlTV нужен и какая антенна. Колонка «Приём»">
+<title>Что можно принимать — SDR4NOOB</title>
+<meta name="description" content="RTL-SDR Blog V4 перекрывает 0,5–1766 МГц: от средних волн до L-диапазона спутников. Ниже — что где находится, каким видом модуляции передаётся, какой режим SDR4NOOB нужен и какая антенна. Колонка «При">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/bands.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/bands.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
@@ -16,37 +16,37 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html" aria-current="page" class="cur">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
 <p class="crumbs"><a href="index.html">Содержание</a> › Первые шаги</p>
 <h1>Что можно принимать</h1>
 <p>RTL-SDR Blog V4 перекрывает 0,5–1766 МГц: от средних волн до L-диапазона спутников. Ниже — что где
-находится, каким <a href="modulation.html">видом модуляции</a> передаётся, какой режим RtlTV нужен и какая
+находится, каким <a href="modulation.html">видом модуляции</a> передаётся, какой режим SDR4NOOB нужен и какая
 <a href="antennas.html">антенна</a>. Колонка «Приём»: <b>свободно</b> — вещание и любители, слушать и
 обсуждать можно; <b>служебн.</b> — слушать можно, разглашать и использовать содержание нельзя
 (<a href="legal.html">почему</a>); <b>шифр</b> — содержание закрыто, видно только наличие сигнала.</p>
 
 <h2 id="table">Таблица диапазонов<a class="anchor" href="#table" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
-<tr><th>Частоты</th><th>Что там</th><th>Модуляция / режим RtlTV</th><th>Антенна</th><th>Приём</th></tr>
+<tr><th>Частоты</th><th>Что там</th><th>Модуляция / режим SDR4NOOB</th><th>Антенна</th><th>Приём</th></tr>
 <tr><td>0,15–0,28 МГц (ДВ)<br>0,53–1,6 МГц (СВ)</td><td>Вещание; приводные радиомаяки аэродромов (NDB, позывной телеграфом)</td>
 <td>AM — «Радио»</td><td>Длинный провод 10–30 м или магнитная рамка; ниже 0,5 МГц V4 не принимает</td><td>свободно</td></tr>
 <tr><td>1,8–30 МГц (КВ)</td><td>Международное вещание, радиолюбители 160–10 м, сигналы времени RWM (4996, 9996, 14996 кГц), авиа- и морская КВ-связь</td>
@@ -82,7 +82,7 @@ Wi-Fi 2,4 ГГц) V4 не заходит.</p>
 <div class="tw"><table class="t">
 <tr><th style="width:28%">Сигнал</th><th>Состояние</th></tr>
 <tr><td>Аналоговое эфирное ТВ</td><td><b>Выключено</b> (федеральные каналы — с 14 октября 2019 г.). Режим «ТВ / аналоговое» полезен только с тестовым генератором или кабельной сетью.</td></tr>
-<tr><td>Цифровое ТВ DVB-T2</td><td>Есть: мультиплексы с Останкинской башни на ДМВ, например 546 МГц (ДМВ 30) и 578 МГц (ДМВ 34) — проверено RtlTV как 32K, GI 1/16. Картинку RTL-SDR не покажет (не хватает полосы), но <a href="mode-tv.html#digital">измеритель</a> поможет навести антенну.</td></tr>
+<tr><td>Цифровое ТВ DVB-T2</td><td>Есть: мультиплексы с Останкинской башни на ДМВ, например 546 МГц (ДМВ 30) и 578 МГц (ДМВ 34) — проверено SDR4NOOB как 32K, GI 1/16. Картинку RTL-SDR не покажет (не хватает полосы), но <a href="mode-tv.html#digital">измеритель</a> поможет навести антенну.</td></tr>
 <tr><td>FM 87,5–108 МГц</td><td>Плотно занят: станции почти через каждые 0,3–0,5 МГц, многие мощные — легко перегрузить донгл.</td></tr>
 <tr><td>Авиасвязь 118–137 МГц</td><td>Активна: подходы и вылеты Шереметьево, Внукова, Домодедова, Жуковского. Лучше слышны борта (высоко), чем наземные пункты.</td></tr>
 <tr><td>ADS-B 1090 МГц</td><td>Много бортов, дальность 200–400 км с хорошей антенной. Из-за <b>подавления и подмены GNSS</b> часть бортов передаёт ложные координаты или не передаёт их вовсе.</td></tr>
@@ -94,7 +94,7 @@ Wi-Fi 2,4 ГГц) V4 не заходит.</p>
 <tr><td>СВ/ДВ вещание</td><td>Отечественное в основном свёрнуто; вечером на длинный провод слышны зарубежные станции.</td></tr>
 </table></div>
 
-<h2>Чего RtlTV не декодирует</h2>
+<h2>Чего SDR4NOOB не декодирует</h2>
 <p>На спектре видно, но не расшифровывается: dPMR, NXDN, TETRA, P25, D-STAR, System Fusion, сотовая связь,
 ACARS/VDL2 (≈131,5 и 136,975 МГц), датчики 433/868 МГц, FT8 (слушать на USB можно, но декодер нужен
 внешний), DAB+. Это не неисправность — для них нужны другие программы.</p>
@@ -103,9 +103,9 @@ ACARS/VDL2 (≈131,5 и 136,975 МГц), датчики 433/868 МГц, FT8 (с�
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

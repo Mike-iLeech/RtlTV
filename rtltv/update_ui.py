@@ -74,7 +74,7 @@ class UpdateDialog(QDialog):
     def __init__(self, info, parent=None):
         super().__init__(parent)
         self.info = info
-        self.setWindowTitle("Доступно обновление RtlTV")
+        self.setWindowTitle("Доступно обновление SDR4NOOB")
         self.resize(620, 480)
         v = QVBoxLayout(self)
         a = info.get("asset") or {}
@@ -116,7 +116,7 @@ class UpdateDialog(QDialog):
 
     def _update(self):
         prog = QProgressDialog("Загрузка обновления…", "Отмена", 0, 100, self)
-        prog.setWindowTitle("RtlTV — обновление")
+        prog.setWindowTitle("SDR4NOOB — обновление")
         prog.setWindowModality(Qt.WindowModal)
         prog.setMinimumDuration(0)
         state = {"done": 0, "total": 0, "path": None, "err": None, "cancel": False, "finished": False}
@@ -155,7 +155,7 @@ class UpdateDialog(QDialog):
             QMessageBox.warning(self, "Обновление", str(e))
             return
         QMessageBox.information(self, "Обновление",
-                                "Обновление скачано. RtlTV сейчас закроется, заменит файлы и запустится снова.")
+                                "Обновление скачано. SDR4NOOB сейчас закроется, заменит файлы и запустится снова.")
         try:   # установщик стартует только после «OK», и программа сразу закрывается
             updater.install_and_restart(new_dir)
         except Exception as e:  # noqa: BLE001

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Руководство RtlTV — RtlTV</title>
-<meta name="description" content="Это руководство объясняет, что можно услышать и увидеть в эфире с донглом RTL-SDR, как работает приёмник и как пользоваться каждым режимом RtlTV. Читать по порядку не обязательно: начните с быстрого с">
+<title>Руководство SDR4NOOB — SDR4NOOB</title>
+<meta name="description" content="Это руководство объясняет, что можно услышать и увидеть в эфире с донглом RTL-SDR, как работает приёмник и как пользоваться каждым режимом SDR4NOOB. Читать по порядку не обязательно: начните с быстрог">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/index.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/index.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
@@ -16,29 +16,29 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html" aria-current="page" class="cur">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html" aria-current="page" class="cur">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
-<h1>Руководство RtlTV для начинающего радиолюбителя</h1>
+<h1>Руководство SDR4NOOB для начинающего радиолюбителя</h1>
 <p>Это руководство объясняет, <b>что можно услышать и увидеть в эфире</b> с донглом RTL-SDR, <b>как работает
-приёмник</b> и <b>как пользоваться каждым режимом RtlTV</b>. Читать по порядку не обязательно: начните с
+приёмник</b> и <b>как пользоваться каждым режимом SDR4NOOB</b>. Читать по порядку не обязательно: начните с
 <a href="quickstart.html">быстрого старта</a>, а непонятные слова ищите в <a href="glossary.html">словаре</a>
 или через поиск вверху страницы.</p>
 
@@ -66,7 +66,7 @@
 <tr><td><a href="satellites.html">Доплер и спутники</a></td><td>Орбиты, TLE и SGP4, пролёты и возвышение, доплер; пошагово «Метеор» и МКС.</td></tr>
 </table></div>
 
-<h2>Режимы RtlTV</h2>
+<h2>Режимы SDR4NOOB</h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Режим</th><th>Что делает</th></tr>
 <tr><td><a href="mode-tv.html">ТВ</a></td><td>Аналоговое ТВ (ч/б) и измеритель мультиплексов DVB-T2 для наведения антенны.</td></tr>
@@ -85,7 +85,7 @@
 
 <h2>Руководство в программе</h2>
 <ul>
-<li>Это же руководство встроено в RtlTV: кнопка «Руководство» на экране выбора режима, меню «Справка → Руководство», а <b>F1</b> в окне режима открывает страницу этого режима (в «Радио» F1 — краткая справка).</li>
+<li>Это же руководство встроено в SDR4NOOB: кнопка «Руководство» на экране выбора режима, меню «Справка → Руководство», а <b>F1</b> в окне режима открывает страницу этого режима (в «Радио» F1 — краткая справка).</li>
 <li>В окне руководства: <span class="k">Alt+←</span> / <span class="k">Alt+→</span> — назад и вперёд, <span class="k">Ctrl+F</span> — поиск по всем страницам, <span class="k">F3</span> — следующее совпадение.</li>
 <li>На сайте поиск — вверху страницы (клавиша <span class="k">/</span>).</li>
 </ul>
@@ -95,9 +95,9 @@
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

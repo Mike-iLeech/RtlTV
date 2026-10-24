@@ -17,7 +17,7 @@ from .themes import THEMES, qss
 class ModeWindow(QMainWindow):
     switchRequested = Signal()
 
-    def __init__(self, opts=None, title="RtlTV"):
+    def __init__(self, opts=None, title="SDR4NOOB"):
         super().__init__()
         self.opts = dict(opts or {})
         self.setWindowTitle(title)
@@ -63,8 +63,8 @@ class ModeWindow(QMainWindow):
         upd = QAction("Проверить обновления…", self)
         upd.triggered.connect(lambda: __import__("rtltv.update_ui", fromlist=["x"]).check_now(self))
         hm.addAction(upd)
-        site = QAction("Сайт и вики RtlTV", self)
-        site.triggered.connect(lambda: __import__("webbrowser").open("https://mike-ileech.github.io/RtlTV/"))
+        site = QAction("Сайт и вики SDR4NOOB", self)
+        site.triggered.connect(lambda: __import__("webbrowser").open("https://mike-ileech.github.io/SDR4NOOB/"))
         hm.addAction(site)
         about = QAction("О программе", self)
         about.triggered.connect(self.show_about)
@@ -78,11 +78,11 @@ class ModeWindow(QMainWindow):
         from PySide6.QtWidgets import QMessageBox
         from . import __version__
         QMessageBox.about(self, "О программе",
-                          f"<h3>RtlTV {__version__}</h3><p>Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, "
-                          "самолёты (ADS-B), APRS.</p><p>Руководство для начинающих — меню «Справка → "
-                          "Руководство» (F1).</p><p>Сайт и вики: <a href='https://mike-ileech.github.io/RtlTV/'>"
-                          "mike-ileech.github.io/RtlTV</a><br>Исходники и релизы: <a href='https://github.com/"
-                          "Mike-iLeech/RtlTV'>github.com/Mike-iLeech/RtlTV</a><br>Лицензия GPL-3.0-or-later.</p>")
+                          f"<h3>SDR4NOOB {__version__}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
+                          "Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p><p>Руководство для начинающих — меню «Справка → "
+                          "Руководство» (F1).</p><p>Сайт и вики: <a href='https://mike-ileech.github.io/SDR4NOOB/'>"
+                          "mike-ileech.github.io/SDR4NOOB</a><br>Исходники и релизы: <a href='https://github.com/"
+                          "Mike-iLeech/SDR4NOOB'>github.com/Mike-iLeech/SDR4NOOB</a><br>Лицензия GPL-3.0-or-later.</p>")
 
     # ---------- устройства: диалог «Устройства…» и обновление списка источников ----------
     def show_devices(self):

@@ -337,7 +337,7 @@ class RadioEngine(QObject):
 
 class RadioWindow(ModeWindow):
     def __init__(self, opts=None):
-        super().__init__(opts, "RtlTV — Радио")
+        super().__init__(opts, "SDR4NOOB — Радио")
         self.s = settings.load("radio", DEFAULTS)
         for k, v in DEFAULTS.items():
             self.s.setdefault(k, v)

@@ -1,11 +1,15 @@
-"""Автообновление с GitHub Releases (github.com/Mike-iLeech/RtlTV).
+"""Автообновление с GitHub Releases (github.com/Mike-iLeech/SDR4NOOB; до 3.0 — Mike-iLeech/RtlTV).
 
 Проверка: GET api.github.com/repos/<REPO>/releases/latest (без токена — репозиторий публичный),
 сравнение версии тега (vX.Y.Z) с __version__. Обновление (только для собранного EXE):
-скачать архив RtlTV-<версия>-win64.zip → сверить SHA-256 (поле digest у ассета GitHub или файл .sha256)
+скачать архив SDR4NOOB-<версия>-win64.zip → сверить SHA-256 (поле digest у ассета GitHub или файл .sha256)
 → распаковать во временную папку → после выхода программы PowerShell-скрипт заменяет файлы
-программы (RtlTV.exe и _internal; прежняя версия сохраняется как *.old и восстанавливается при ошибке)
-и запускает новую версию. Данные и настройки (папка данных, %APPDATA%\\RtlTV) не трогаются.
+программы (_internal и все *.exe из архива; прежняя версия сохраняется как *.old и восстанавливается при
+ошибке) и запускает новую версию. Данные и настройки (папка данных, %APPDATA%\\SDR4NOOB) не трогаются.
+
+Переименование RtlTV → SDR4NOOB (3.0): в архиве лежат SDR4NOOB.exe и его копия RtlTV.exe — старый обновлятор
+(2.x) ищет RtlTV.exe, ставит обе и запускает RtlTV.exe, то есть уже новую программу. Старый адрес API
+(repos/Mike-iLeech/RtlTV) GitHub перенаправляет на переименованный репозиторий.
 """
 import hashlib
 import json
@@ -21,10 +25,12 @@ import zipfile
 
 from . import __version__, paths, settings
 
-REPO = "Mike-iLeech/RtlTV"
+from . import REPO  # noqa: E402
+
+EXE_NAMES = ("SDR4NOOB.exe", "RtlTV.exe")   # основное имя и копия для совместимости с 2.x
 API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/latest"
-UA = f"RtlTV/{__version__} (+https://github.com/{REPO})"
+UA = f"SDR4NOOB/{__version__} (+https://github.com/{REPO})"
 INTERVALS = {"daily": 24 * 3600, "weekly": 7 * 24 * 3600, "never": None}
 
 
@@ -122,10 +128,10 @@ def skip(version):
 # ---------------------------------------------------------------- загрузка и установка
 
 def download(info, progress=None, cancel=None):
-    """Скачать архив релиза в %LOCALAPPDATA%\\RtlTV\\updates, проверить SHA-256. Возвращает путь к zip."""
+    """Скачать архив релиза в %LOCALAPPDATA%\\SDR4NOOB\\updates, проверить SHA-256. Возвращает путь к zip."""
     a = info.get("asset")
     if not a or not a.get("url"):
-        raise UpdateError("В релизе нет архива для Windows (RtlTV-*-win64.zip).")
+        raise UpdateError("В релизе нет архива для Windows (SDR4NOOB-*-win64.zip).")
     if not a.get("sha256"):
         raise UpdateError("Не удалось получить контрольную сумму архива — без неё обновление не ставится. "
                           "Скачайте архив вручную со страницы релиза.")
@@ -174,7 +180,7 @@ def _rm(p):
 
 
 def prepare(zip_path):
-    """Распаковать архив во временную папку и найти в нём папку с RtlTV.exe."""
+    """Распаковать архив во временную папку и найти в нём папку программы (SDR4NOOB.exe или RtlTV.exe + _internal)."""
     if not zipfile.is_zipfile(zip_path):
         raise UpdateError("Скачанный файл — не архив zip.")
     dest = tempfile.mkdtemp(prefix="rtltv-update-")
@@ -186,9 +192,9 @@ def prepare(zip_path):
                     raise UpdateError("В архиве недопустимые пути — обновление отменено.")
             z.extractall(dest)
         for root, _dirs, files in os.walk(dest):
-            if "RtlTV.exe" in files and os.path.isdir(os.path.join(root, "_internal")):
+            if any(n in files for n in EXE_NAMES) and os.path.isdir(os.path.join(root, "_internal")):
                 return root
-        raise UpdateError("В архиве нет RtlTV.exe с папкой _internal.")
+        raise UpdateError("В архиве нет SDR4NOOB.exe с папкой _internal.")
     except BaseException:
         shutil.rmtree(dest, ignore_errors=True)
         raise
@@ -204,59 +210,76 @@ def temp_root(new_dir):
 
 
 INSTALL_PS1 = r"""
-param([int]$ProcId, [string]$New, [string]$App, [string]$Log, [string]$Tmp = '', [switch]$NoStart)
+param([int]$ProcId, [string]$New, [string]$App, [string]$Log, [string]$Start = 'SDR4NOOB.exe',
+      [string]$Tmp = '', [switch]$NoStart)
 $ErrorActionPreference = 'Stop'
 function L($m) { try { Add-Content -LiteralPath $Log -Value ((Get-Date -Format s) + ' ' + $m) -Encoding UTF8 } catch {} }
 $int = Join-Path $App '_internal'; $intOld = Join-Path $App '_internal.old'
-$exe = Join-Path $App 'RtlTV.exe'; $exeOld = Join-Path $App 'RtlTV.exe.old'
-$movedInt = $false; $movedExe = $false
+$exes = @(Get-ChildItem -LiteralPath $New -File -Filter '*.exe' | ForEach-Object { $_.Name })
+$movedInt = $false; $moved = New-Object System.Collections.ArrayList
 function Rollback {
   L "откат к прежней версии"
   if ($script:movedInt) {
     if (Test-Path -LiteralPath $int) { Remove-Item -LiteralPath $int -Recurse -Force -ErrorAction Continue }
     Rename-Item -LiteralPath $intOld -NewName '_internal' -ErrorAction Continue
   }
-  if ($script:movedExe) {
-    if (Test-Path -LiteralPath $exe) { Remove-Item -LiteralPath $exe -Force -ErrorAction Continue }
-    Rename-Item -LiteralPath $exeOld -NewName 'RtlTV.exe' -ErrorAction Continue
+  foreach ($n in $script:moved) {
+    $e = Join-Path $App $n
+    if (Test-Path -LiteralPath $e) { Remove-Item -LiteralPath $e -Force -ErrorAction Continue }
+    Rename-Item -LiteralPath ($e + '.old') -NewName $n -ErrorAction Continue
   }
 }
 $ok = $false
 try {
-  L "ожидание выхода RtlTV (PID $ProcId)"
+  L "ожидание выхода программы (PID $ProcId)"
   $p = Get-Process -Id $ProcId -ErrorAction SilentlyContinue
   if ($p -and -not $p.WaitForExit(120000)) {
-    L "RtlTV не закрылась за 2 минуты — файлы не тронуты, обновление отложено"
+    L "программа не закрылась за 2 минуты — файлы не тронуты, обновление отложено"
     exit 2
   }
   Start-Sleep -Milliseconds 700
+  if ($exes.Count -eq 0) { throw "в обновлении нет exe" }
   if (Test-Path -LiteralPath $intOld) { Remove-Item -LiteralPath $intOld -Recurse -Force }
-  if (Test-Path -LiteralPath $exeOld) { Remove-Item -LiteralPath $exeOld -Force }
+  foreach ($n in $exes) {
+    $o = Join-Path $App ($n + '.old')
+    if (Test-Path -LiteralPath $o) { Remove-Item -LiteralPath $o -Force }
+  }
   Rename-Item -LiteralPath $int -NewName '_internal.old'; $movedInt = $true
-  Rename-Item -LiteralPath $exe -NewName 'RtlTV.exe.old'; $movedExe = $true
+  foreach ($n in $exes) {
+    $e = Join-Path $App $n
+    if (Test-Path -LiteralPath $e) { Rename-Item -LiteralPath $e -NewName ($n + '.old'); [void]$moved.Add($n) }
+  }
   Copy-Item -LiteralPath (Join-Path $New '_internal') -Destination $int -Recurse -Force
-  Copy-Item -LiteralPath (Join-Path $New 'RtlTV.exe') -Destination $exe -Force
-  Get-ChildItem -LiteralPath $New -File | Where-Object { $_.Name -ne 'RtlTV.exe' } |
-    ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $App -Force }
+  Get-ChildItem -LiteralPath $New -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $App -Force }
   Remove-Item -LiteralPath $intOld -Recurse -Force -ErrorAction SilentlyContinue
-  Remove-Item -LiteralPath $exeOld -Force -ErrorAction SilentlyContinue
-  L "обновление установлено, запуск"
+  foreach ($n in $moved) { Remove-Item -LiteralPath (Join-Path $App ($n + '.old')) -Force -ErrorAction SilentlyContinue }
+  L ("обновление установлено (" + ($exes -join ', ') + "), запуск $Start")
   $ok = $true
 } catch {
   L ("ошибка: " + $_)
   Rollback
 }
 if ($Tmp -and (Test-Path -LiteralPath $Tmp)) { Remove-Item -LiteralPath $Tmp -Recurse -Force -ErrorAction SilentlyContinue }
-if (-not $NoStart -and (Test-Path -LiteralPath $exe)) { Start-Process -FilePath $exe -WorkingDirectory $App }
+$run = Join-Path $App $Start
+if (-not (Test-Path -LiteralPath $run)) { $run = Join-Path $App 'RtlTV.exe' }
+if (-not $NoStart -and (Test-Path -LiteralPath $run)) { Start-Process -FilePath $run -WorkingDirectory $App }
 if (-not $ok) { exit 1 }
 """
+
+
+def start_name(new_dir):
+    """Какой exe запустить после обновления: SDR4NOOB.exe, если он есть в новой версии, иначе текущий."""
+    for n in EXE_NAMES:
+        if os.path.isfile(os.path.join(new_dir, n)):
+            return n
+    return os.path.basename(sys.executable)
 
 
 def install_and_restart(new_dir):
     """Запустить установщик и вернуть True. Вызывающий должен сразу закрыть программу:
     установщик ждёт её выхода до 2 минут, а если не дождётся — файлы не трогает."""
     if not frozen():
-        raise UpdateError("Обновление файлов работает только в собранной версии (RtlTV.exe).")
+        raise UpdateError("Обновление файлов работает только в собранной версии (SDR4NOOB.exe).")
     app = app_dir()
     test = os.path.join(app, ".rtltv_write_test")
     try:
@@ -274,6 +297,6 @@ def install_and_restart(new_dir):
     log = os.path.join(d, "install_update.log")
     flags = 0x08000000 | 0x00000008   # CREATE_NO_WINDOW | DETACHED_PROCESS
     subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1,
-                      "-ProcId", str(os.getpid()), "-New", new_dir, "-App", app, "-Log", log, "-Tmp", temp_root(new_dir)],
+                      "-ProcId", str(os.getpid()), "-New", new_dir, "-App", app, "-Log", log, "-Tmp", temp_root(new_dir), "-Start", start_name(new_dir)],
                      creationflags=flags, close_fds=True)
     return True

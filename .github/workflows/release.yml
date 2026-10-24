@@ -56,20 +56,24 @@ jobs:
       - name: Сборка EXE
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --name RtlTV `
+          python -m PyInstaller --noconfirm --clean --windowed --name SDR4NOOB `
             --collect-submodules rtltv `
             --add-data "rtltv\driver;rtltv\driver" `
             --add-data "rtltv\guide;rtltv\guide" `
+            --add-data "rtltv\assets;rtltv\assets" `
+            --icon "rtltv\assets\sdr4noob.ico" `
             --hidden-import PySide6.QtSvg `
             --exclude-module tkinter `
             run.py
-          Copy-Item LICENSE, THIRD_PARTY.md, README.md, CHANGELOG.md dist/RtlTV/
+          # копия под прежним именем: обновлятор версий 2.x ищет RtlTV.exe и запускает его после обновления
+          Copy-Item dist/SDR4NOOB/SDR4NOOB.exe dist/SDR4NOOB/RtlTV.exe
+          Copy-Item LICENSE, THIRD_PARTY.md, README.md, CHANGELOG.md dist/SDR4NOOB/
           $ver = python -c "import rtltv; print(rtltv.__version__)"
           New-Item -ItemType Directory -Force release | Out-Null
-          $zip = "release/RtlTV-$ver-win64.zip"
-          Compress-Archive -Path dist/RtlTV -DestinationPath $zip -CompressionLevel Optimal
+          $zip = "release/SDR4NOOB-$ver-win64.zip"
+          Compress-Archive -Path dist/SDR4NOOB -DestinationPath $zip -CompressionLevel Optimal
           $h = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          "$h  RtlTV-$ver-win64.zip" | Set-Content "$zip.sha256" -Encoding ascii
+          "$h  SDR4NOOB-$ver-win64.zip" | Set-Content "$zip.sha256" -Encoding ascii
           "ZIP=$zip" >> $env:GITHUB_ENV
 
       - name: Проверка сборки (запуск без окна)
@@ -77,14 +81,17 @@ jobs:
         shell: pwsh
         run: |
           $env:APPDATA = "$env:RUNNER_TEMP\appdata"
-          $p = Start-Process dist/RtlTV/RtlTV.exe -ArgumentList "--mode","radio","--test","--shot","$env:RUNNER_TEMP\shot.png","--shot-delay","5" -PassThru -Wait
-          if (-not (Test-Path "$env:RUNNER_TEMP\shot.png")) { throw "RtlTV.exe не открыл окно" }
+          $p = Start-Process dist/SDR4NOOB/SDR4NOOB.exe -ArgumentList "--mode","radio","--test","--shot","$env:RUNNER_TEMP\shot.png","--shot-delay","5" -PassThru -Wait
+          if (-not (Test-Path "$env:RUNNER_TEMP\shot.png")) { throw "SDR4NOOB.exe не открыл окно" }
+          Remove-Item "$env:RUNNER_TEMP\shot.png"
+          $p = Start-Process dist/SDR4NOOB/RtlTV.exe -ArgumentList "--mode","radio","--test","--shot","$env:RUNNER_TEMP\shot.png","--shot-delay","5" -PassThru -Wait
+          if (-not (Test-Path "$env:RUNNER_TEMP\shot.png")) { throw "копия RtlTV.exe (для обновления с 2.x) не запускается" }
 
       - name: Сборка как артефакт (PR)
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: RtlTV-pr${{ github.event.number }}
+          name: SDR4NOOB-pr${{ github.event.number }}
           path: release/
           retention-days: 14
 
@@ -99,7 +106,7 @@ jobs:
           $ver = $tag.TrimStart("v", "V")
           $log = Get-Content CHANGELOG.md -Raw -Encoding utf8
           $m = [regex]::Match($log, "(?ms)^## \[?$([regex]::Escape($ver))\]?(?=\s)[^\n]*\n(.*?)(?=^## |\z)")
-          $notes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "RtlTV $ver" }
+          $notes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "SDR4NOOB $ver" }
           Set-Content notes.md $notes -Encoding utf8
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
@@ -107,5 +114,5 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             gh release edit $tag --notes-file notes.md
           } else {
-            gh release create $tag $env:ZIP "$env:ZIP.sha256" --title "RtlTV $ver" --notes-file notes.md
+            gh release create $tag $env:ZIP "$env:ZIP.sha256" --title "SDR4NOOB $ver" --notes-file notes.md
           }

@@ -1,8 +1,26 @@
-"""Настройки режимов: %APPDATA%/RtlTV/<имя>.json (ТВ хранит свои в settings.json)."""
+"""Настройки режимов: %APPDATA%/SDR4NOOB/<имя>.json (ТВ хранит свои в settings.json).
+
+До версии 3.0 программа называлась RtlTV и хранила настройки в %APPDATA%/RtlTV — при первом запуске
+они копируются сюда (старая папка остаётся нетронутой: можно вернуться на прежнюю версию)."""
 import json
 import os
+import shutil
 
-DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "RtlTV")
+_APPDATA = os.environ.get("APPDATA", os.path.expanduser("~"))
+DIR = os.path.join(_APPDATA, "SDR4NOOB")
+OLD_DIR = os.path.join(_APPDATA, "RtlTV")
+
+
+def _migrate():
+    if os.environ.get("RTLTV_NO_MIGRATE") or os.path.exists(DIR) or not os.path.isdir(OLD_DIR):
+        return
+    try:
+        shutil.copytree(OLD_DIR, DIR)
+    except OSError:
+        pass
+
+
+_migrate()
 
 
 def load(name, defaults):

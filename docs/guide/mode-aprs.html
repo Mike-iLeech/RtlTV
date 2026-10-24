@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Режим «APRS» — RtlTV</title>
+<title>Режим «APRS» — SDR4NOOB</title>
 <meta name="description" content="APRS (Automatic Packet Reporting System) — сеть радиолюбителей, которые передают короткие цифровые пакеты: своё положение, погоду, сообщения, телеметрию. Пакеты передаются звуком ( AFSK 1200 бод, тоны">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/mode-aprs.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/mode-aprs.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
@@ -16,32 +16,32 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html" aria-current="page" class="cur">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html" aria-current="page" class="cur">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
-<p class="crumbs"><a href="index.html">Содержание</a> › Режимы RtlTV</p>
+<p class="crumbs"><a href="index.html">Содержание</a> › Режимы SDR4NOOB</p>
 <h1>Режим «APRS»</h1>
 <p><b>APRS</b> (Automatic Packet Reporting System) — сеть радиолюбителей, которые передают короткие цифровые
 пакеты: своё положение, погоду, сообщения, телеметрию. Пакеты передаются звуком
 (<a href="modulation.html#digital">AFSK 1200 бод</a>, тоны 1200/2200 Гц) поверх NFM и ретранслируются
-станциями-digipeater'ами. RtlTV декодирует пакеты и раскладывает их по станциям на карте.</p>
+станциями-digipeater'ами. SDR4NOOB декодирует пакеты и раскладывает их по станциям на карте.</p>
 
 <h2>Частоты</h2>
 <div class="tw"><table class="t">
@@ -63,7 +63,7 @@
 <tr><td>«Выбранная станция»</td><td>Подробности: координаты, высота, курс/скорость, комментарий, путь; «Показать на карте».</td></tr>
 <tr><td>«Фильтр»</td><td>«Поиск» по позывному, «Тип», «Не старше», «Только через МКС», «Очистить список станций».</td></tr>
 <tr><td>«Дом»</td><td>Широта/долгота, «Щелчок по карте задаёт дом».</td></tr>
-<tr><td>«Журнал»</td><td>«Писать пакеты в файл», «Открыть папку журналов» (Документы\RtlTV\aprs).</td></tr>
+<tr><td>«Журнал»</td><td>«Писать пакеты в файл», «Открыть папку журналов» (Документы\SDR4NOOB\aprs).</td></tr>
 <tr><td>«Обозначения»</td><td>Цвета значков: МКС/спутник, транспорт, пешеход, дом, метеостанция, digipeater, I-Gate, воздушное судно, судно, объект.</td></tr>
 </table></div>
 
@@ -84,7 +84,7 @@
 
 <h2>Ограничения</h2>
 <ul>
-<li>Только приём: отправлять свои пакеты RtlTV не может (и без позывного нельзя — <a href="legal.html">почему</a>).</li>
+<li>Только приём: отправлять свои пакеты SDR4NOOB не может (и без позывного нельзя — <a href="legal.html">почему</a>).</li>
 <li>Пакеты 9600 бод (G3RUH) не декодируются.</li>
 </ul>
 <p>См. также: <a href="satellites.html#iss">МКС пошагово</a>, <a href="antennas.html#whip">штырь λ/4</a>.</p>
@@ -92,9 +92,9 @@
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

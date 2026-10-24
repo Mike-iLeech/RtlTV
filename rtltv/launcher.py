@@ -127,15 +127,30 @@ class Launcher(QWidget):
         super().__init__()
         self.opts = dict(opts or {})
         self.app_s = settings.load("app", {"theme": "Тёмная", "last": "radio"})
-        self.setWindowTitle(f"RtlTV {__version__} — выбор режима")
+        self.setWindowTitle(f"SDR4NOOB {__version__} — выбор режима")
         self.resize(900, 560)
         self.current = None
         v = QVBoxLayout(self)
         v.setContentsMargins(24, 18, 24, 18)
-        head = QLabel("RtlTV")
+        from .branding import app_icon
+        top = QHBoxLayout()
+        top.setSpacing(14)
+        logo = QLabel()
+        logo.setPixmap(app_icon().pixmap(56, 56))
+        top.addWidget(logo)
+        names = QVBoxLayout()
+        names.setSpacing(0)
+        head = QLabel("SDR4NOOB")
         head.setStyleSheet("font-size: 26pt; font-weight: bold;")
-        v.addWidget(head)
-        sub = QLabel("Приёмник на RTL-SDR. Выберите режим — вернуться сюда можно из меню «Режим» (Ctrl+M).")
+        names.addWidget(head)
+        idea = QLabel("Всё в одном для начинающего радиолюбителя")
+        idea.setStyleSheet("font-size: 12pt;")
+        names.addWidget(idea)
+        top.addLayout(names)
+        top.addStretch(1)
+        v.addLayout(top)
+        sub = QLabel("Приёмник на RTL-SDR: ТВ, радио, цифровая связь, SSTV, спутники, самолёты, APRS. "
+                     "Выберите режим — вернуться сюда можно из меню «Режим» (Ctrl+M).")
         sub.setObjectName("dim")
         v.addWidget(sub)
         grid = QGridLayout()
@@ -196,7 +211,7 @@ class Launcher(QWidget):
             cls = getattr(importlib.import_module(entry[1]), entry[2])
         except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "RtlTV", f"Режим «{entry[3]}» не загрузился:\n{e}")
+            QMessageBox.warning(self, "SDR4NOOB", f"Режим «{entry[3]}» не загрузился:\n{e}")
             return
         self._save_app(last=key)
         opts = dict(self.opts)

@@ -1,4 +1,4 @@
-"""Диагностика: журнал %LOCALAPPDATA%/RtlTV/rtltv.log, необработанные исключения всех потоков
+"""Диагностика: журнал %LOCALAPPDATA%/SDR4NOOB/sdr4noob.log, необработанные исключения всех потоков
 и «сторож» зависаний — если поток интерфейса не отвечает дольше HANG_S, в журнал пишутся стеки всех потоков."""
 import faulthandler
 import logging
@@ -10,7 +10,7 @@ import traceback
 from . import paths
 
 LOG_DIR = paths.service_root()
-LOG_PATH = os.path.join(LOG_DIR, "rtltv.log")
+LOG_PATH = os.path.join(LOG_DIR, "sdr4noob.log")
 HANG_S = 5.0
 
 log = logging.getLogger("rtltv")
@@ -28,9 +28,9 @@ def setup():
         pass
     logging.basicConfig(filename=LOG_PATH, level=logging.INFO, encoding="utf-8",
                         format="%(asctime)s %(threadName)s %(levelname)s %(message)s")
-    log.info("==== запуск RtlTV, Python %s", sys.version.split()[0])
+    log.info("==== запуск SDR4NOOB, Python %s", sys.version.split()[0])
     # падения в DLL (librtlsdr, mbelib, lrpt_dsp) — стек Python в отдельный файл
-    _fault_file = open(os.path.join(LOG_DIR, "rtltv-crash.log"), "a", encoding="utf-8")
+    _fault_file = open(os.path.join(LOG_DIR, "sdr4noob-crash.log"), "a", encoding="utf-8")
     faulthandler.enable(_fault_file, all_threads=True)
 
     def hook(t, v, tb):

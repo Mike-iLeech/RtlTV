@@ -1,2 +1,8 @@
-"""RtlTV — приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, ADS-B, APRS."""
-__version__ = "2.1.0"
+"""SDR4NOOB — всё в одном для начинающего радиолюбителя: приёмник на RTL-SDR (ТВ, радио, SSTV, спутники,
+ADS-B, APRS). Внутреннее имя пакета — rtltv (историческое: проект начинался как RtlTV)."""
+__version__ = "3.0.0"
+
+NAME = "SDR4NOOB"
+TAGLINE = "Всё в одном для начинающего радиолюбителя"
+REPO = "Mike-iLeech/SDR4NOOB"
+SITE_URL = "https://mike-ileech.github.io/SDR4NOOB/"

@@ -1,13 +1,15 @@
-"""Где RtlTV хранит файлы. Одна корневая «папка данных» (выбирается в «Настройках»), внутри — порядок:
+"""Где SDR4NOOB хранит файлы. Одна корневая «папка данных» (выбирается в «Настройках»), внутри — порядок:
 
     Записи IQ\\            сырые записи пролётов (cu8)
     Снимки\\ТВ, Метеор, Электро-Л, SSTV
     Звук\\                 записи радио (WAV)
     Журналы\\ADS-B, APRS
     Служебное\\            кэш карт, орбиты (TLE), история самолётов, справочник бортов, драйверы, журнал
-                           программы — только если включено «служебное тоже здесь», иначе %LOCALAPPDATA%\\RtlTV
+                           программы — только если включено «служебное тоже здесь», иначе %LOCALAPPDATA%\\SDR4NOOB
 
-Настройки (*.json) всегда лежат в %APPDATA%\\RtlTV — по ним программа и узнаёт, где папка данных.
+Настройки (*.json) всегда лежат в %APPDATA%\\SDR4NOOB — по ним программа и узнаёт, где папка данных.
+До версии 3.0 программа называлась RtlTV: при первом запуске её служебные файлы переезжают из
+%LOCALAPPDATA%\\RtlTV, а прежняя папка данных «Документы\\RtlTV» продолжает использоваться (migrate()).
 Пути читаются при загрузке модулей, поэтому смена папки вступает в силу после перезапуска.
 """
 import ctypes
@@ -16,7 +18,8 @@ import shutil
 
 from . import settings
 
-APP = "RtlTV"
+APP = "SDR4NOOB"
+OLD_APP = "RtlTV"     # прежнее название программы (до 3.0)
 
 
 def _known_folder(guid_str, fallback):
@@ -46,8 +49,10 @@ DOCUMENTS = _known_folder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", os.path.join
 PICTURES = _known_folder("{33E28130-4E1E-4676-835A-98395C3BC3BB}", os.path.join(HOME, "Pictures"))
 MUSIC = _known_folder("{4BD8D571-6D19-48D3-BE97-422220080E43}", os.path.join(HOME, "Music"))
 LOCAL = os.path.join(os.environ.get("LOCALAPPDATA") or HOME, APP)
+OLD_LOCAL = os.path.join(os.environ.get("LOCALAPPDATA") or HOME, OLD_APP)
 
 DEFAULT_DATA = os.path.join(DOCUMENTS, APP)
+OLD_DEFAULT_DATA = os.path.join(DOCUMENTS, OLD_APP)
 
 # подпапки внутри папки данных
 IQ = "Записи IQ"
@@ -120,15 +125,15 @@ def legacy_items(root=None, with_service=None):
     root = root or data_root()
     with_service = service_in_data() if with_service is None else with_service
     pairs = [
-        (os.path.join(DOCUMENTS, APP, "sat-iq"), os.path.join(root, IQ)),
-        (os.path.join(DOCUMENTS, APP, "meteor-iq"), os.path.join(root, IQ)),
-        (os.path.join(DOCUMENTS, APP, "ADS-B"), os.path.join(root, LOGS, LOGS_ADSB)),
-        (os.path.join(DOCUMENTS, APP, "aprs"), os.path.join(root, LOGS, LOGS_APRS)),
-        (os.path.join(PICTURES, APP, "meteor"), os.path.join(root, PICS, PICS_METEOR)),
-        (os.path.join(PICTURES, APP, "elektro"), os.path.join(root, PICS, PICS_ELEKTRO)),
-        (os.path.join(PICTURES, APP, "sstv"), os.path.join(root, PICS, PICS_SSTV)),
-        (os.path.join(PICTURES, APP), os.path.join(root, PICS, PICS_TV)),   # снимки ТВ лежали в корне
-        (os.path.join(MUSIC, APP), os.path.join(root, AUDIO)),
+        (os.path.join(DOCUMENTS, OLD_APP, "sat-iq"), os.path.join(root, IQ)),
+        (os.path.join(DOCUMENTS, OLD_APP, "meteor-iq"), os.path.join(root, IQ)),
+        (os.path.join(DOCUMENTS, OLD_APP, "ADS-B"), os.path.join(root, LOGS, LOGS_ADSB)),
+        (os.path.join(DOCUMENTS, OLD_APP, "aprs"), os.path.join(root, LOGS, LOGS_APRS)),
+        (os.path.join(PICTURES, OLD_APP, "meteor"), os.path.join(root, PICS, PICS_METEOR)),
+        (os.path.join(PICTURES, OLD_APP, "elektro"), os.path.join(root, PICS, PICS_ELEKTRO)),
+        (os.path.join(PICTURES, OLD_APP, "sstv"), os.path.join(root, PICS, PICS_SSTV)),
+        (os.path.join(PICTURES, OLD_APP), os.path.join(root, PICS, PICS_TV)),   # снимки ТВ лежали в корне
+        (os.path.join(MUSIC, OLD_APP), os.path.join(root, AUDIO)),
     ]
     # прежняя папка данных (если пользователь уже раз менял её) — по тем же подпапкам
     old_root = _app().get("data_dir_prev")
@@ -145,7 +150,7 @@ def legacy_items(root=None, with_service=None):
         if os.path.abspath(src) == os.path.abspath(dst) or not os.path.exists(src):
             continue
         if os.path.isdir(src):
-            if src == os.path.join(PICTURES, APP):   # из корня «Изображения\RtlTV» — только файлы (снимки ТВ)
+            if src == os.path.join(PICTURES, OLD_APP):   # из корня «Изображения\RtlTV» — только файлы (снимки ТВ)
                 files = [f for f in os.listdir(src) if os.path.isfile(os.path.join(src, f))]
             else:
                 files = os.listdir(src)
@@ -206,3 +211,33 @@ def _free_name(path):
     while os.path.exists(f"{base} ({k}){ext}"):
         k += 1
     return f"{base} ({k}){ext}"
+
+
+# ---------------------------------------------------------------- переезд RtlTV → SDR4NOOB (версия 3.0)
+
+def migrate():
+    """Один раз после переименования: служебные файлы %LOCALAPPDATA%\\RtlTV → %LOCALAPPDATA%\\SDR4NOOB
+    (переносятся по одному, папку обновлений не трогаем), а если папка данных не была выбрана явно и
+    в «Документы\\RtlTV» уже что-то есть — продолжаем пользоваться ею, чтобы записи не «пропали»."""
+    if os.environ.get("RTLTV_NO_MIGRATE"):
+        return
+    if not os.path.exists(LOCAL) and os.path.isdir(OLD_LOCAL):
+        try:
+            os.makedirs(LOCAL, exist_ok=True)
+            for name in os.listdir(OLD_LOCAL):
+                if name.lower() == "updates":
+                    continue
+                try:
+                    shutil.move(os.path.join(OLD_LOCAL, name), os.path.join(LOCAL, name))
+                except OSError:
+                    pass
+        except OSError:
+            pass
+    s = _app()
+    if not s.get("data_dir") and not os.path.exists(DEFAULT_DATA) and os.path.isdir(OLD_DEFAULT_DATA) \
+            and os.listdir(OLD_DEFAULT_DATA):
+        s["data_dir"] = OLD_DEFAULT_DATA
+        settings.save("app", s)
+
+
+migrate()

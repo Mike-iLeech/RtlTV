@@ -1,4 +1,4 @@
-"""Генератор сайта RtlTV для GitHub Pages (папка docs/ ветки main → https://mike-ileech.github.io/RtlTV/).
+"""Генератор сайта SDR4NOOB для GitHub Pages (папка docs/ ветки main → https://mike-ileech.github.io/SDR4NOOB/).
 
 Источник — встроенное руководство rtltv/guide/*.html и схемы rtltv/guide/img/*.svg; порядок и группы
 разделов берутся из TOC в rtltv/guide_window.py. Сайт целиком статический и локальный: без CDN, шрифтов
@@ -28,11 +28,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GUIDE = os.path.join(ROOT, "rtltv", "guide")
 DOCS = os.path.join(ROOT, "docs")
 
-REPO = "Mike-iLeech/RtlTV"
+REPO = "Mike-iLeech/SDR4NOOB"
 REPO_URL = f"https://github.com/{REPO}"
 DOWNLOAD_URL = f"{REPO_URL}/releases/latest"
-SITE_URL = "https://mike-ileech.github.io/RtlTV/"
-SITE_PATH = "/RtlTV/"           # путь сайта на github.io — для 404.html, которую отдают с любого адреса
+SITE_URL = "https://mike-ileech.github.io/SDR4NOOB/"
+SITE_PATH = "/SDR4NOOB/"           # путь сайта на github.io — для 404.html, которую отдают с любого адреса
 
 OWNED = ["index.html", "install.html", "404.html", "sitemap.xml", ".nojekyll", "guide", "assets"]
 SCREEN_MAX_BYTES = 300 * 1024
@@ -141,7 +141,7 @@ SITE_FIXES = {
         ("или через поле поиска слева (Ctrl+F)", "или через поиск вверху страницы"),
         (re.compile(r"(?s)<h2>Как пользоваться этим окном</h2>.*?</ul>"),
          "<h2>Руководство в программе</h2>\n<ul>\n"
-         "<li>Это же руководство встроено в RtlTV: кнопка «Руководство» на экране выбора режима, меню "
+         "<li>Это же руководство встроено в SDR4NOOB: кнопка «Руководство» на экране выбора режима, меню "
          "«Справка → Руководство», а <b>F1</b> в окне режима открывает страницу этого режима (в «Радио» F1 — "
          "краткая справка).</li>\n"
          "<li>В окне руководства: <span class=\"k\">Alt+←</span> / <span class=\"k\">Alt+→</span> — назад и "
@@ -248,7 +248,7 @@ ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 
 def nav_tree(toc):
     """[(группа, [(путь от корня сайта, заголовок)])] — меню слева."""
-    groups = [("RtlTV", [("index.html", "Главная"), ("install.html", "Установка и обновление")])]
+    groups = [("SDR4NOOB", [("index.html", "Главная"), ("install.html", "Установка и обновление")])]
     for key, val in toc:
         if isinstance(val, list):
             groups.append((key, [(f"guide/{pid}.html", t) for pid, t in val]))
@@ -269,8 +269,8 @@ def render_nav(groups, current, root):
 
 
 def page(*, title, body, current, root, groups, version, description="", prevnext=None, home=False):
-    full_title = "RtlTV — приёмник на RTL-SDR" if home else f"{title} — RtlTV"
-    desc = html.escape(description or "RtlTV — бесплатный приёмник на RTL-SDR для Windows: ТВ, радио, "
+    full_title = "SDR4NOOB — всё в одном для начинающего радиолюбителя" if home else f"{title} — SDR4NOOB"
+    desc = html.escape(description or "SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатный приёмник на RTL-SDR для Windows: ТВ, радио, "
                                       "SSTV, спутники, самолёты ADS-B, APRS.")
     pn = ""
     if prevnext:
@@ -299,7 +299,7 @@ def page(*, title, body, current, root, groups, version, description="", prevnex
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="{root}index.html"><img src="{root}assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>{version}</small></a>
+  <a class="brand" href="{root}index.html"><img src="{root}assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>{version}</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -320,7 +320,7 @@ def page(*, title, body, current, root, groups, version, description="", prevnex
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV {version} · свободная программа под лицензией <a href="{REPO_URL}/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB {version} · свободная программа под лицензией <a href="{REPO_URL}/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="{REPO_URL}/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="{REPO_URL}">исходный код</a> · <a href="{REPO_URL}/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
@@ -349,7 +349,8 @@ def home_body():
     return f"""
 <section class="hero">
   <div>
-    <h1>RtlTV — приёмник на RTL-SDR</h1>
+    <h1>SDR4NOOB</h1>
+    <p class="tagline">Всё в одном для начинающего радиолюбителя</p>
     <p class="lead">Бесплатная программа для Windows, которая превращает недорогой USB-донгл RTL-SDR
     в радиоприёмник, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов.
     Всё в одном окне, по-русски, со встроенным драйвером и подробным руководством для начинающих.</p>
@@ -464,10 +465,10 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="install">Установка<a class="anchor" href="#install" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
-<li>Скачайте архив <code>RtlTV-&lt;версия&gt;-win64.zip</code> со страницы
+<li>Скачайте архив <code>SDR4NOOB-&lt;версия&gt;-win64.zip</code> со страницы
 <a href="{DOWNLOAD_URL}">последнего выпуска</a>.</li>
-<li>Распакуйте его в папку, куда у вас есть права записи (например, <code>C:\\RtlTV</code>).</li>
-<li>Запустите <code>RtlTV.exe</code>. Если донгл ещё не работал с SDR-программами — один раз поставьте WinUSB
+<li>Распакуйте его в папку, куда у вас есть права записи (например, <code>C:\\SDR4NOOB</code>).</li>
+<li>Запустите <code>SDR4NOOB.exe</code>. Если донгл ещё не работал с SDR-программами — один раз поставьте WinUSB
 через Zadig.</li>
 <li>Дальше программа обновляется сама.</li>
 </ol>
@@ -475,7 +476,7 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="quickstart">Быстрый старт<a class="anchor" href="#quickstart" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
-<li>Подключите донгл с антенной из комплекта, запустите RtlTV и выберите <b>«Радио»</b>.</li>
+<li>Подключите донгл с антенной из комплекта, запустите SDR4NOOB и выберите <b>«Радио»</b>.</li>
 <li>Нажмите <b>WFM</b>, в «Менеджере частот» дважды щёлкните «FM-вещание 87,5–108 МГц», затем щёлкните
 по «горбу» станции на спектре — зазвучит музыка, появится название (RDS).</li>
 <li>Меню «Режим → Выбрать другой режим…» (Ctrl+M) → <b>«Самолёты (ADS-B)»</b> → «▶ Старт»: через несколько
@@ -488,7 +489,7 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 <div class="cards">
 <a class="card" href="{g}quickstart.html"><b>Первые шаги</b><span>Быстрый старт, что можно принимать, закон и этика эфира.</span></a>
 <a class="card" href="{g}sdr.html"><b>Основы радиоприёма</b><span>SDR, децибелы, усиление, антенны, модуляция, спектр, доплер.</span></a>
-<a class="card" href="{g}mode-radio.html"><b>Режимы RtlTV</b><span>ТВ, Радио, SSTV, Спутники, ADS-B, APRS — каждое окно по карточкам.</span></a>
+<a class="card" href="{g}mode-radio.html"><b>Режимы SDR4NOOB</b><span>ТВ, Радио, SSTV, Спутники, ADS-B, APRS — каждое окно по карточкам.</span></a>
 <a class="card" href="{g}troubleshooting.html"><b>Помощь</b><span>Помехи и неполадки, словарь терминов.</span></a>
 </div>
 
@@ -503,12 +504,12 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 ~30° и тихого эфира без помех; комнатный штырь снимка не даст. <b>«Электро-Л»</b> — только с тарелкой и МШУ.</li>
 <li>Один канал (VFO) за раз; dPMR, NXDN, TETRA, P25, D-STAR и System Fusion не декодируются; APRS 9600 бод —
 тоже.</li>
-<li>RtlTV — только приёмник: передавать он не умеет. Слушать служебные переговоры можно, разглашать — нельзя
+<li>SDR4NOOB — только приёмник: передавать он не умеет. Слушать служебные переговоры можно, разглашать — нельзя
 (<a href="{g}legal.html">подробнее</a>).</li>
 </ul>
 
 <h2 id="license">Лицензия<a class="anchor" href="#license" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>RtlTV — свободная программа под лицензией <a href="{REPO_URL}/blob/main/LICENSE">GPL-3.0-or-later</a>.
+<p>SDR4NOOB — свободная программа под лицензией <a href="{REPO_URL}/blob/main/LICENSE">GPL-3.0-or-later</a>.
 Внутри — librtlsdr (сборка rtl-sdr-blog, GPL-2.0-or-later), mbelib (ISC), Qt/PySide6 (LGPL-3.0), numpy, scipy,
 sgp4 и другие компоненты; полный список с лицензиями и источниками — в
 <a href="{REPO_URL}/blob/main/THIRD_PARTY.md">THIRD_PARTY.md</a>. Декодирование голоса DMR (AMBE+2) может
@@ -520,7 +521,7 @@ def install_body():
     g = "guide/"
     return f"""
 <h1>Установка и обновление</h1>
-<p>RtlTV поставляется готовой сборкой для Windows: Python, Qt и драйвер librtlsdr уже внутри. Установщика нет —
+<p>SDR4NOOB поставляется готовой сборкой для Windows: Python, Qt и драйвер librtlsdr уже внутри. Установщика нет —
 архив распаковывается в любую папку.</p>
 
 <h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
@@ -538,16 +539,16 @@ def install_body():
 <h2 id="download">1. Скачать и распаковать<a class="anchor" href="#download" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
 <li>Откройте <a href="{DOWNLOAD_URL}">страницу последнего выпуска</a> и скачайте
-<code>RtlTV-&lt;версия&gt;-win64.zip</code> (например, <code>RtlTV-2.0.0-win64.zip</code>).</li>
+<code>SDR4NOOB-&lt;версия&gt;-win64.zip</code> (например, <code>SDR4NOOB-2.0.0-win64.zip</code>).</li>
 <li>Распакуйте архив целиком (правая кнопка → «Извлечь всё…») в папку, куда у вас есть права записи:
-<code>C:\\RtlTV</code>, <code>D:\\Программы\\RtlTV</code> и т. п. Не кладите программу в
+<code>C:\\SDR4NOOB</code>, <code>D:\\Программы\\SDR4NOOB</code> и т. п. Не кладите программу в
 <code>C:\\Program Files</code> — автообновлению нужно заменять файлы без прав администратора.</li>
-<li>Внутри будет папка с <code>RtlTV.exe</code> и служебной папкой <code>_internal</code>. Запускайте
-<code>RtlTV.exe</code>; при желании создайте ярлык на рабочем столе.</li>
+<li>Внутри будет папка с <code>SDR4NOOB.exe</code> и служебной папкой <code>_internal</code>. Запускайте
+<code>SDR4NOOB.exe</code>; при желании создайте ярлык на рабочем столе.</li>
 </ol>
 <div class="callout note">Программа не подписана сертификатом разработчика, поэтому при первом запуске Windows
 SmartScreen может показать «Система Windows защитила ваш компьютер». Нажмите «Подробнее» → «Выполнить в любом
-случае». Скачивайте RtlTV только со страницы выпусков на GitHub.</div>
+случае». Скачивайте SDR4NOOB только со страницы выпусков на GitHub.</div>
 
 <h2 id="zadig">2. Драйвер WinUSB (Zadig)<a class="anchor" href="#zadig" aria-label="Ссылка на этот раздел">#</a></h2>
 <p>Windows считает донгл ТВ-тюнером и ставит драйвер Realtek для DVB-T, с которым SDR-программы не работают.
@@ -560,8 +561,8 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 </ol>
 <div class="callout warn">Не выбирайте в Zadig другие устройства — клавиатура, мышь или звуковая карта перестанут
 работать. В другом USB-порту Windows может считать донгл новым устройством — тогда замену нужно повторить.</div>
-<p>Проверить результат можно в RtlTV: кнопка <b>«Устройства…»</b> на экране выбора режима показывает найденные
-приёмники, их VID:PID и драйвер Windows («Готово: работает со встроенным драйвером RtlTV»).
+<p>Проверить результат можно в SDR4NOOB: кнопка <b>«Устройства…»</b> на экране выбора режима показывает найденные
+приёмники, их VID:PID и драйвер Windows («Готово: работает со встроенным драйвером SDR4NOOB»).
 Подробнее — <a href="{g}sdr.html#driver">«Драйверы: WinUSB и Zadig»</a>.</p>
 
 <h2 id="first-run">3. Первый запуск<a class="anchor" href="#first-run" aria-label="Ссылка на этот раздел">#</a></h2>
@@ -579,7 +580,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 <li><b>RTL-SDR</b> работает со встроенным librtlsdr (сборка rtl-sdr-blog с поддержкой V4). Ставить SDR# или
 системный librtlsdr не нужно.</li>
 <li><b>HackRF One</b> и <b>Airspy R2/Mini</b>: «Устройства… → Загрузить драйвер (DLL)…» — hackrf.dll или airspy.dll,
-плюс libusb-1.0.dll и pthreadVC2.dll. Файлы копируются в папку драйверов RtlTV.</li>
+плюс libusb-1.0.dll и pthreadVC2.dll. Файлы копируются в папку драйверов SDR4NOOB.</li>
 <li><b>rtl_tcp</b>: приёмник на другом компьютере — «Добавить сетевой rtl_tcp…» (адрес и порт). Подходят и
 совместимые серверы, например rsp_tcp для SDRplay.</li>
 </ul>
@@ -587,20 +588,20 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 <h2 id="data">Где лежат файлы<a class="anchor" href="#data" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:38%">Папка</th><th>Что в ней</th></tr>
-<tr><td>Папка данных (по умолчанию <code>Документы\\RtlTV</code>)</td><td>Записи IQ, снимки (ТВ, «Метеор»,
+<tr><td>Папка данных (по умолчанию <code>Документы\\SDR4NOOB</code>)</td><td>Записи IQ, снимки (ТВ, «Метеор»,
 «Электро-Л», SSTV), звук (WAV), журналы ADS-B и APRS. Выбирается в «Настройках»; там же — перенос файлов из
 прежних мест.</td></tr>
-<tr><td><code>%APPDATA%\\RtlTV</code></td><td>Настройки (*.json).</td></tr>
-<tr><td><code>%LOCALAPPDATA%\\RtlTV</code></td><td>Кэш карт, орбиты (TLE), история самолётов, справочник бортов,
-драйверы, журнал <code>rtltv.log</code>. По желанию — внутри папки данных («служебное тоже здесь»).</td></tr>
+<tr><td><code>%APPDATA%\\SDR4NOOB</code></td><td>Настройки (*.json).</td></tr>
+<tr><td><code>%LOCALAPPDATA%\\SDR4NOOB</code></td><td>Кэш карт, орбиты (TLE), история самолётов, справочник бортов,
+драйверы, журнал <code>sdr4noob.log</code>. По желанию — внутри папки данных («служебное тоже здесь»).</td></tr>
 </table></div>
 
 <h2 id="update">Обновление<a class="anchor" href="#update" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li>RtlTV сам проверяет новую версию на GitHub Releases — по умолчанию раз в день (в «Настройках»: раз в день,
+<li>SDR4NOOB сам проверяет новую версию на GitHub Releases — по умолчанию раз в день (в «Настройках»: раз в день,
 раз в неделю или никогда). Проверить вручную — меню «Справка → Проверить обновления…» или «Настройки →
 Проверить сейчас».</li>
-<li>В окне «Доступно обновление RtlTV» видно описание изменений; кнопки «Обновить сейчас», «Страница релиза» и
+<li>В окне «Доступно обновление SDR4NOOB» видно описание изменений; кнопки «Обновить сейчас», «Страница релиза» и
 «Пропустить эту версию».</li>
 <li>«Обновить сейчас» скачивает архив, сверяет контрольную сумму SHA-256, после выхода программы заменяет файлы
 (прежняя версия сохраняется и возвращается при ошибке) и запускает новую версию. Настройки и папка данных не
@@ -609,8 +610,8 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 </ul>
 
 <h2 id="uninstall">Удаление<a class="anchor" href="#uninstall" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Закройте RtlTV и удалите папку программы. Чтобы не осталось следов, удалите также <code>%APPDATA%\\RtlTV</code>
-и <code>%LOCALAPPDATA%\\RtlTV</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно
+<p>Закройте SDR4NOOB и удалите папку программы. Чтобы не осталось следов, удалите также <code>%APPDATA%\\SDR4NOOB</code>
+и <code>%LOCALAPPDATA%\\SDR4NOOB</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно
 оставить: им пользуются и другие SDR-программы.</p>
 
 <h2 id="source">Из исходников<a class="anchor" href="#source" aria-label="Ссылка на этот раздел">#</a></h2>
@@ -624,7 +625,7 @@ NOT_FOUND = f"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Страница не найдена — RtlTV</title>
+<title>Страница не найдена — SDR4NOOB</title>
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="{SITE_PATH}assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="{SITE_PATH}assets/style.css">
@@ -632,7 +633,7 @@ NOT_FOUND = f"""<!DOCTYPE html>
 <body class="notfound">
 <main class="content">
 <h1>Страница не найдена</h1>
-<p>Такой страницы на сайте RtlTV нет. Возможно, она переехала.</p>
+<p>Такой страницы на сайте SDR4NOOB нет. Возможно, она переехала.</p>
 <p><a class="btn" href="{SITE_PATH}index.html">На главную</a>
 <a class="btn ghost" href="{SITE_PATH}guide/index.html">Руководство</a></p>
 </main>
@@ -736,6 +737,7 @@ figure { margin: 1rem 0; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; align-items: center; margin-bottom: 1rem; }
 .hero h1 { font-size: 2.2rem; }
 .lead { font-size: 1.12rem; }
+.tagline { font-size: 1.3rem; font-weight: 600; color: var(--accent); margin: -.4rem 0 .6rem; }
 .cta { margin: 1.2rem 0 .6rem; }
 .mode { border-top: 1px solid var(--grid); padding-top: .4rem; }
 .mode:first-of-type { border-top: 0; }
@@ -805,7 +807,7 @@ JS = r"""
   function words(q) { return norm(q).split(/\s+/).filter(function (w) { return w.length > 0; }); }
 
   function search(q) {
-    var ws = words(q), out = [], idx = window.RTLTV_SEARCH || [];
+    var ws = words(q), out = [], idx = window.SDR4NOOB_SEARCH || [];
     if (!ws.length) return out;
     idx.forEach(function (p) {
       var low = p.n || (p.n = norm(p.x)), tl = norm(p.t), score = 0;
@@ -945,7 +947,7 @@ def build(verbose=True):
 
     emit("index.html", "Главная", home_body(), home=True)
     emit("install.html", "Установка и обновление", install_body(),
-         description="Как установить RtlTV: скачать архив, распаковать, поставить WinUSB через Zadig; "
+         description="Как установить SDR4NOOB: скачать архив, распаковать, поставить WinUSB через Zadig; "
                      "автообновление и удаление.")
     for pid, toc_title in gpages:
         title, body = convert_guide(pid, read(os.path.join(GUIDE, pid + ".html")))
@@ -954,7 +956,7 @@ def build(verbose=True):
         emit(f"guide/{pid}.html", title, body, description=desc)
 
     write(os.path.join(DOCS, "assets", "search-index.js"),
-          "window.RTLTV_SEARCH = " + json.dumps(index, ensure_ascii=False, separators=(",", ":")) + ";\n")
+          "window.SDR4NOOB_SEARCH = " + json.dumps(index, ensure_ascii=False, separators=(",", ":")) + ";\n")
     write(os.path.join(DOCS, "404.html"), NOT_FOUND)
     urls = "".join(f"  <url><loc>{SITE_URL}{'' if p == 'index.html' else p}</loc></url>\n" for p in made)
     write(os.path.join(DOCS, "sitemap.xml"),
@@ -1042,7 +1044,7 @@ def convert_screens(src_dir, dst_dir=None, max_bytes=SCREEN_MAX_BYTES, width=160
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Собрать сайт RtlTV в docs/")
+    ap = argparse.ArgumentParser(description="Собрать сайт SDR4NOOB в docs/")
     ap.add_argument("--check", action="store_true", help="после сборки проверить ссылки, якоря и картинки")
     ap.add_argument("--screens", metavar="DIR", help="ужать снимки окон DIR/*.png в docs/img/screens/*.webp")
     a = ap.parse_args(argv)
