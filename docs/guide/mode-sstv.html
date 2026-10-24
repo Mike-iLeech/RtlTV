@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Режим «SSTV» — RtlTV</title>
+<meta name="description" content="SSTV (Slow Scan TV, медленное телевидение) — картинки, которые радиолюбители передают звуком: яркость точки кодируется частотой тона 1500–2300 Гц, начало строки — синхроимпульс 1200 Гц. Одна картинка ">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/mode-sstv.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html" aria-current="page" class="cur">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Режимы RtlTV</p>
+<h1>Режим «SSTV»</h1>
+<p><b>SSTV</b> (Slow Scan TV, медленное телевидение) — картинки, которые радиолюбители передают звуком:
+яркость точки кодируется частотой тона 1500–2300 Гц, начало строки — синхроимпульс 1200 Гц. Одна картинка
+идёт от 36 секунд до ~5 минут. RtlTV рисует её вживую, строка за строкой.</p>
+
+<h2>Элементы окна</h2>
+<div class="tw"><table class="t">
+<tr><th style="width:24%">Элемент</th><th>Что делает</th></tr>
+<tr><td>Картинка (слева сверху)</td><td>Принимаемое изображение; под ним — <b>галерея</b> принятых и спектр/водопад.</td></tr>
+<tr><td>«Приём» → табло</td><td>Частота (колесо над цифрой).</td></tr>
+<tr><td>«Частоты:»</td><td>Готовые частоты SSTV; режим демодуляции выставится сам.</td></tr>
+<tr><td>«Демодуляция:»</td><td>USB, LSB или NFM.</td></tr>
+<tr><td>«Источник:», «Усиление:»</td><td>Донгл / тестовый эфир, усиление тюнера.</td></tr>
+<tr><td>«Прослушка:»</td><td>Громкость — слышно ли «пиликанье» SSTV.</td></tr>
+<tr><td>«Сигнал:»</td><td>Уровень в канале.</td></tr>
+<tr><td>«Декодер SSTV» → «Режим:»</td><td><b>«Авто (VIS)»</b> — режим определяется по VIS-коду в начале передачи; или выбрать вручную.</td></tr>
+<tr><td>«Начать сейчас»</td><td>Начать картинку выбранным режимом без VIS (если начало пропущено).</td></tr>
+<tr><td>«Сброс»</td><td>Прервать текущую картинку.</td></tr>
+<tr><td>«Принимается / Строка / Тон / синхро»</td><td>Что сейчас декодируется, номер строки, частота тона.</td></tr>
+<tr><td>«Декодировать WAV-файл…»</td><td>Разобрать запись (например, из «Радио» → «Записывать в WAV»).</td></tr>
+<tr><td>«Открыть папку снимков»</td><td>Изображения\RtlTV\sstv.</td></tr>
+</table></div>
+
+<h2>Поддерживаемые режимы</h2>
+<div class="tw"><table class="t">
+<tr><th>Семейство</th><th>Режимы</th><th>Где встречается</th></tr>
+<tr><td>Robot</td><td>Robot 36, Robot 72</td><td>КВ, быстрые картинки (36 с)</td></tr>
+<tr><td>Martin</td><td>Martin M1, M2</td><td>Европа, КВ</td></tr>
+<tr><td>Scottie</td><td>Scottie S1, S2, DX</td><td>США, КВ</td></tr>
+<tr><td>PD</td><td>PD 50, 90, 120, 160, 180, 240, 290</td><td><b>МКС (обычно PD 120)</b>, высокое разрешение</td></tr>
+<tr><td>Wraase</td><td>SC2-180</td><td>редко</td></tr>
+</table></div>
+
+<h2>Частоты</h2>
+<div class="tw"><table class="t">
+<tr><th>Пресет</th><th>Когда слушать</th></tr>
+<tr><td>КВ 20 м — 14,230 МГц (USB), главная частота SSTV</td><td>днём, особенно в выходные</td></tr>
+<tr><td>КВ 20 м — 14,233 МГц (USB)</td><td>запасная</td></tr>
+<tr><td>КВ 40 м — 7,171 МГц (LSB)</td><td>вечером</td></tr>
+<tr><td>КВ 80 м — 3,730 МГц (LSB)</td><td>вечером и ночью</td></tr>
+<tr><td>КВ 15 м — 21,340 МГц (USB), КВ 10 м — 28,680 МГц (USB)</td><td>днём при хорошем прохождении</td></tr>
+<tr><td>МКС — 145,800 МГц (FM), сеансы ARISS</td><td>во время мероприятий ARISS при пролёте МКС</td></tr>
+<tr><td>2 м — 144,500 МГц (FM)</td><td>местные любители</td></tr>
+</table></div>
+
+<h2>Сценарий: SSTV с МКС</h2>
+<ol>
+<li>Узнайте даты сеанса на <a href="https://www.ariss.org/" target="_blank" rel="noopener">ariss.org</a> и время пролёта — в режиме
+<a href="mode-sat.html">«Спутники»</a> (фильтр «МКС»).</li>
+<li>За пару минут до пролёта откройте «SSTV», выберите «МКС — 145,800 МГц (FM), сеансы ARISS», режим
+«Авто (VIS)».</li>
+<li>Антенна — вертикальная 2 м или Яги. Картинка придёт сама; между картинками обычно пауза ~2 минуты.</li>
+<li>Доплер ±3,5 кГц режим SSTV не компенсирует, но в полосе NFM он почти не мешает; небольшой наклон картинки
+исправляет авто-наклон.</li>
+</ol>
+
+<h2>Сценарий: SSTV на КВ</h2>
+<ol>
+<li>Нужна длинная проволочная антенна (V4 принимает КВ без конвертера).</li>
+<li>Пресет «14,230 МГц (USB)», усиление 30–40 дБ, слушайте «пиликанье».</li>
+<li>Если картинка «поехала» наискосок — подстройте частоту на 50–100 Гц.</li>
+</ol>
+
+<h2>Ограничения</h2>
+<ul>
+<li>Начало без VIS декодер не узнает — используйте «Начать сейчас» с нужным режимом.</li>
+<li>Помехи и замирания на КВ дают полосы на картинке — это нормально.</li>
+</ul>
+<p>См. также: <a href="satellites.html#iss">МКС пошагово</a>, <a href="modulation.html#ssb">SSB</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/mode-radio.html"><span>← Назад</span>Радио</a><a class="next" href="../guide/mode-sat.html"><span>Дальше →</span>Спутники</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

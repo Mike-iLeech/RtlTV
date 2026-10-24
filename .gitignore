@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv*/
+build/
+dist/
+*.spec
+prof.out
+*.cu8
+*.wav
+.pytest_cache/
+release/

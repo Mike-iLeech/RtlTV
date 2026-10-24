@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Быстрый старт — RtlTV</title>
+<meta name="description" content="За первые 10 минут вы услышите FM-радио, увидите самолёты на карте и послушаете авиадиспетчеров. Больше ничего настраивать не нужно — RtlTV сам подставит разумные значения.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/quickstart.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html" aria-current="page" class="cur">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Первые шаги</p>
+<h1>Быстрый старт</h1>
+<p>За первые 10 минут вы услышите FM-радио, увидите самолёты на карте и послушаете авиадиспетчеров.
+Больше ничего настраивать не нужно — RtlTV сам подставит разумные значения.</p>
+
+<h2 id="connect">1. Подключение<a class="anchor" href="#connect" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li><b>Антенна.</b> Возьмите диполь из комплекта RTL-SDR Blog V4 (две телескопические «усы» на основании)
+и прикрутите к разъёму SMA донгла. Пока подойдёт любая длина — точные размеры в разделе
+<a href="antennas.html#ready">«Антенны»</a>.</li>
+<li><b>USB.</b> Вставьте донгл в порт компьютера, лучше через USB-удлинитель 0,5–2 м: подальше от
+компьютера меньше помех, а сам донгл не перегревает соседние разъёмы.</li>
+<li><b>Драйвер.</b> В RtlTV драйвер встроен. Нужно лишь, чтобы для донгла один раз был установлен WinUSB
+(программой Zadig) — один раз для каждого донгла; подробно — в разделе «Приёмники SDR». Если окно режима пишет «Устройство занято другой
+программой или не привязан WinUSB» — см. <a href="troubleshooting.html#busy">«Неполадки»</a>.</li>
+<li><b>Запуск.</b> Откройте RtlTV — появится экран выбора режима. Вернуться к нему можно из меню
+<b>«Режим → Выбрать другой режим…»</b> (Ctrl+M).</li>
+</ol>
+<div class="callout note"><b>Нет антенны под рукой?</b> Поставьте галочку <b>«Без антенны: тестовый эфир вместо донгла»</b> на экране
+выбора режима — RtlTV сгенерирует синтетические сигналы для всех режимов, и можно спокойно изучить окна.</div>
+
+<h2 id="fm">2. Минута 1–3: FM-радио<a class="anchor" href="#fm" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Выберите плитку <b>«Радио»</b>. Приём включится сам (кнопка <b>▶</b> слева от табло станет <b>■</b>;
+пробел — старт/стоп).</li>
+<li>Нажмите кнопку режима <b>WFM</b>. В левой колонке, в <b>«Менеджере частот»</b> (группа «Диапазоны»), дважды
+щёлкните «FM-вещание 87,5–108 МГц».</li>
+<li>На спектре появятся «горбы» шириной ~200 кГц — это станции. <b>Щёлкните по середине горба</b> —
+приёмник перестроится, вы услышите звук. Справа от S-метра появится надпись «СТЕРЕО», если станция
+передаёт пилот-тон 19 кГц, а над спектром — название станции и радиотекст (RDS).</li>
+<li>Громкость — ползунок <b>«Громкость»</b>, устройство вывода — меню <b>«Звук»</b>.</li>
+</ol>
+<p>Если вместо музыки шипение с хрипом и на спектре «лес» ложных пиков — уменьшите <b>«Усиление»</b> в
+карточке «Источник» до 20–30 дБ (FM-станции в Москве очень мощные, см. <a href="gain.html">«Усиление и АРУ»</a>).</p>
+
+<h2 id="adsb">3. Минута 4–7: самолёты на карте<a class="anchor" href="#adsb" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Меню <b>«Режим → Выбрать другой режим…»</b> → <b>«Самолёты (ADS-B)»</b>.</li>
+<li>Сложите оба уса диполя до <b>~6,5 см</b> каждый и поставьте антенну <b>вертикально</b>, лучше у окна.
+1090 МГц проходит только по прямой видимости — стены и стеклопакеты с напылением сильно ослабляют сигнал.</li>
+<li>Нажмите <b>«▶ Старт»</b> в карточке «Приёмник 1090 МГц». Через несколько секунд в таблице
+«Борта сейчас» появятся адреса ICAO, позывные и высоты, а на карте — значки самолётов.</li>
+<li>В карточке «Положение приёмника» укажите свои координаты (или Ctrl+щелчок по карте) — тогда
+дальность и кольца будут считаться от вас.</li>
+</ol>
+<p>В Москве часть бортов <b>не передаёт координаты</b> из-за подавления спутниковой навигации (GNSS) — они
+попадают в список «Без координат» поверх карты. Это нормально, подробнее — <a href="mode-adsb.html#nopos">здесь</a>.</p>
+
+<h2 id="atc">4. Минута 8–10: авиадиспетчеры<a class="anchor" href="#atc" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Снова «Радио». Раздвиньте усы диполя до <b>~55–60 см</b> и поставьте антенну вертикально.</li>
+<li>Нажмите <b>AM</b> и в «Менеджере частот» выберите «Авиа 118–137 МГц (AM)».</li>
+<li>Поставьте <b>«Шаг»</b> в карточке «Демодулятор» на 25 кГц (или 8,33 кГц) и
+поднимите <b>«Шумодав»</b> чуть выше уровня шума: тогда шипения в паузах не будет.</li>
+<li>Смотрите на водопад: короткие вспышки — это реплики пилотов и диспетчеров. Щёлкните по такой полоске.
+Ближние борта и диспетчерские пункты слышны громко, дальние — с шумом.</li>
+</ol>
+<div class="callout warn">Слушать авиасвязь можно, но <b>разглашать и использовать содержание чужих служебных переговоров нельзя</b>
+— см. <a href="legal.html">«Закон и этика эфира»</a>.</div>
+
+<h2>Что дальше</h2>
+<ul>
+<li>Посмотреть, что ещё есть в эфире: <a href="bands.html">«Что можно принимать»</a>.</li>
+<li>Принять снимок Земли со спутника «Метеор-М»: <a href="satellites.html#meteor">пошагово</a>.</li>
+<li>Послушать цифровые рации DMR: <a href="mode-radio.html#dmr">режим «Радио»</a>.</li>
+<li>Сделать антенну получше: <a href="antennas.html">«Антенны и кабели»</a>.</li>
+</ul>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/index.html"><span>← Назад</span>Содержание</a><a class="next" href="../guide/bands.html"><span>Дальше →</span>Что можно принимать</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

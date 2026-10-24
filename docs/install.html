@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Установка и обновление — RtlTV</title>
+<meta name="description" content="Как установить RtlTV: скачать архив, распаковать, поставить WinUSB через Zadig; автообновление и удаление.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/install.html">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/search-index.js" defer></script>
+<script src="assets/site.js" defer></script>
+</head>
+<body data-root="">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="index.html">Главная</a></li><li><a href="install.html" aria-current="page" class="cur">Установка и обновление</a></li><li><a href="guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="guide/quickstart.html">Быстрый старт</a></li><li><a href="guide/bands.html">Что можно принимать</a></li><li><a href="guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="guide/sdr.html">Приёмники SDR</a></li><li><a href="guide/decibels.html">Единицы и децибелы</a></li><li><a href="guide/gain.html">Усиление и АРУ</a></li><li><a href="guide/antennas.html">Антенны и кабели</a></li><li><a href="guide/modulation.html">Виды модуляции</a></li><li><a href="guide/spectrum.html">Спектр и водопад</a></li><li><a href="guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="guide/mode-tv.html">ТВ</a></li><li><a href="guide/mode-radio.html">Радио</a></li><li><a href="guide/mode-sstv.html">SSTV</a></li><li><a href="guide/mode-sat.html">Спутники</a></li><li><a href="guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+
+<h1>Установка и обновление</h1>
+<p>RtlTV поставляется готовой сборкой для Windows: Python, Qt и драйвер librtlsdr уже внутри. Установщика нет —
+архив распаковывается в любую папку.</p>
+
+<h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th style="width:30%">Что</th><th>Требование</th></tr>
+<tr><td>Система</td><td>Windows 10 или 11, 64 бит.</td></tr>
+<tr><td>Приёмник</td><td>RTL-SDR Blog V4 или V3, другие донглы на RTL2832U. Дополнительно: HackRF One, Airspy R2/Mini
+(с их DLL), любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
+<tr><td>Драйвер</td><td>WinUSB на интерфейсе донгла (Zadig, один раз).</td></tr>
+<tr><td>Антенна</td><td>Комплектный диполь для начала; для спутников и самолётов — см.
+<a href="guide/antennas.html">«Антенны и кабели»</a>.</td></tr>
+<tr><td>Интернет</td><td>Не обязателен. Нужен для подложки карт, орбит (TLE), справочника бортов и обновлений.</td></tr>
+</table></div>
+
+<h2 id="download">1. Скачать и распаковать<a class="anchor" href="#download" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Откройте <a href="https://github.com/Mike-iLeech/RtlTV/releases/latest">страницу последнего выпуска</a> и скачайте
+<code>RtlTV-&lt;версия&gt;-win64.zip</code> (например, <code>RtlTV-2.0.0-win64.zip</code>).</li>
+<li>Распакуйте архив целиком (правая кнопка → «Извлечь всё…») в папку, куда у вас есть права записи:
+<code>C:\RtlTV</code>, <code>D:\Программы\RtlTV</code> и т. п. Не кладите программу в
+<code>C:\Program Files</code> — автообновлению нужно заменять файлы без прав администратора.</li>
+<li>Внутри будет папка с <code>RtlTV.exe</code> и служебной папкой <code>_internal</code>. Запускайте
+<code>RtlTV.exe</code>; при желании создайте ярлык на рабочем столе.</li>
+</ol>
+<div class="callout note">Программа не подписана сертификатом разработчика, поэтому при первом запуске Windows
+SmartScreen может показать «Система Windows защитила ваш компьютер». Нажмите «Подробнее» → «Выполнить в любом
+случае». Скачивайте RtlTV только со страницы выпусков на GitHub.</div>
+
+<h2 id="zadig">2. Драйвер WinUSB (Zadig)<a class="anchor" href="#zadig" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Windows считает донгл ТВ-тюнером и ставит драйвер Realtek для DVB-T, с которым SDR-программы не работают.
+Один раз замените его на WinUSB. Если донгл уже работал в SDR#, SDR++ или SatDump — этот шаг не нужен.</p>
+<ol>
+<li>Скачайте Zadig с официального сайта <a href="https://zadig.akeo.ie/">zadig.akeo.ie</a> и запустите.</li>
+<li><b>Options → List All Devices.</b> Выберите «Bulk-In, Interface (Interface 0)» или «RTL2838UHIDIR».
+USB ID должен начинаться с <code>0BDA 2838</code>.</li>
+<li>Справа выберите <b>WinUSB</b> и нажмите <b>Replace Driver</b> (или Install Driver).</li>
+</ol>
+<div class="callout warn">Не выбирайте в Zadig другие устройства — клавиатура, мышь или звуковая карта перестанут
+работать. В другом USB-порту Windows может считать донгл новым устройством — тогда замену нужно повторить.</div>
+<p>Проверить результат можно в RtlTV: кнопка <b>«Устройства…»</b> на экране выбора режима показывает найденные
+приёмники, их VID:PID и драйвер Windows («Готово: работает со встроенным драйвером RtlTV»).
+Подробнее — <a href="guide/sdr.html#driver">«Драйверы: WinUSB и Zadig»</a>.</p>
+
+<h2 id="first-run">3. Первый запуск<a class="anchor" href="#first-run" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li>Появится экран выбора режима: ТВ, Радио, SSTV, Спутники, Самолёты (ADS-B), APRS. Вернуться к нему —
+меню «Режим → Выбрать другой режим…» (Ctrl+M).</li>
+<li>Галочка <b>«Без антенны: тестовый эфир вместо донгла»</b> включает синтетические сигналы для всех режимов.</li>
+<li>Кнопка <b>«Руководство»</b> открывает встроенную справку (то же, что на этом сайте), <b>F1</b> в окне режима —
+страницу этого режима.</li>
+<li>Дальше — <a href="guide/quickstart.html">«Быстрый старт»</a>.</li>
+</ul>
+
+<h2 id="devices">Другие приёмники<a class="anchor" href="#devices" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>RTL-SDR</b> работает со встроенным librtlsdr (сборка rtl-sdr-blog с поддержкой V4). Ставить SDR# или
+системный librtlsdr не нужно.</li>
+<li><b>HackRF One</b> и <b>Airspy R2/Mini</b>: «Устройства… → Загрузить драйвер (DLL)…» — hackrf.dll или airspy.dll,
+плюс libusb-1.0.dll и pthreadVC2.dll. Файлы копируются в папку драйверов RtlTV.</li>
+<li><b>rtl_tcp</b>: приёмник на другом компьютере — «Добавить сетевой rtl_tcp…» (адрес и порт). Подходят и
+совместимые серверы, например rsp_tcp для SDRplay.</li>
+</ul>
+
+<h2 id="data">Где лежат файлы<a class="anchor" href="#data" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th style="width:38%">Папка</th><th>Что в ней</th></tr>
+<tr><td>Папка данных (по умолчанию <code>Документы\RtlTV</code>)</td><td>Записи IQ, снимки (ТВ, «Метеор»,
+«Электро-Л», SSTV), звук (WAV), журналы ADS-B и APRS. Выбирается в «Настройках»; там же — перенос файлов из
+прежних мест.</td></tr>
+<tr><td><code>%APPDATA%\RtlTV</code></td><td>Настройки (*.json).</td></tr>
+<tr><td><code>%LOCALAPPDATA%\RtlTV</code></td><td>Кэш карт, орбиты (TLE), история самолётов, справочник бортов,
+драйверы, журнал <code>rtltv.log</code>. По желанию — внутри папки данных («служебное тоже здесь»).</td></tr>
+</table></div>
+
+<h2 id="update">Обновление<a class="anchor" href="#update" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li>RtlTV сам проверяет новую версию на GitHub Releases — по умолчанию раз в день (в «Настройках»: раз в день,
+раз в неделю или никогда). Проверить вручную — меню «Справка → Проверить обновления…» или «Настройки →
+Проверить сейчас».</li>
+<li>В окне «Доступно обновление RtlTV» видно описание изменений; кнопки «Обновить сейчас», «Страница релиза» и
+«Пропустить эту версию».</li>
+<li>«Обновить сейчас» скачивает архив, сверяет контрольную сумму SHA-256, после выхода программы заменяет файлы
+(прежняя версия сохраняется и возвращается при ошибке) и запускает новую версию. Настройки и папка данных не
+затрагиваются.</li>
+<li>Вручную: скачайте новый архив и распакуйте поверх старой папки (программа должна быть закрыта).</li>
+</ul>
+
+<h2 id="uninstall">Удаление<a class="anchor" href="#uninstall" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Закройте RtlTV и удалите папку программы. Чтобы не осталось следов, удалите также <code>%APPDATA%\RtlTV</code>
+и <code>%LOCALAPPDATA%\RtlTV</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно
+оставить: им пользуются и другие SDR-программы.</p>
+
+<h2 id="source">Из исходников<a class="anchor" href="#source" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Нужен Python 3.12 для Windows x64. Инструкция по запуску, сборке EXE и тестам — в
+<a href="https://github.com/Mike-iLeech/RtlTV#readme">README репозитория</a>.</p>
+
+
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

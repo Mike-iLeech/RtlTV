@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Помехи и неполадки — RtlTV</title>
+<meta name="description" content="Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы RtlTV — %LOCALAPPDATA%\RtlTV\rtltv.log (туда же пишутся отчёты о зависаниях).">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/troubleshooting.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html" aria-current="page" class="cur">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Помощь</p>
+<h1>Помехи и неполадки</h1>
+<p>Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы RtlTV —
+<span class="mono">%LOCALAPPDATA%\RtlTV\rtltv.log</span> (туда же пишутся отчёты о зависаниях).</p>
+
+<div class="tw"><table class="t">
+<tr><th style="width:30%">Симптом</th><th>Куда смотреть</th></tr>
+<tr><td>«Не удалось открыть RTL-SDR… Устройство занято другой программой или не привязан WinUSB»</td><td><a href="#busy">Донгл занят / нет драйвера</a></td></tr>
+<tr><td>В списке источников нет донгла</td><td><a href="#busy">Донгл занят / нет драйвера</a>, <a href="#usb">USB</a></td></tr>
+<tr><td>Спектр есть, но ровный — сигналов нет</td><td><a href="#nosignal">Нет сигнала</a></td></tr>
+<tr><td>Ложные станции, полосы на водопаде, хрип</td><td><a href="#overload">Перегрузка</a></td></tr>
+<tr><td>Сигнал есть, звука нет</td><td><a href="#sound">Нет звука</a></td></tr>
+<tr><td>Щелчки, рывки, «потеряно блоков»</td><td><a href="#usb">USB и нагрузка</a></td></tr>
+<tr><td>Гребёнка пиков, высокий шум</td><td><a href="#noise">Помехи от электроники</a></td></tr>
+<tr><td>Донгл горячий, пропадает</td><td><a href="#heat">Перегрев</a></td></tr>
+</table></div>
+
+<h2 id="busy">Донгл занят другой программой или нет драйвера<a class="anchor" href="#busy" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li><b>Закройте другие SDR-программы:</b> SDR#, SDR++, HDSDR, rtl_tcp, dump1090, SatDump — донгл может работать
+только с одной программой. Проверьте также, не запущено ли второе окно RtlTV.</li>
+<li><b>Переключение режима</b> RtlTV освобождает донгл сам; если окно закрылось с ошибкой, подождите 2–3 секунды и
+нажмите «Старт» ещё раз.</li>
+<li><b>Выньте и вставьте донгл</b> в тот же порт.</li>
+<li><b>Драйвер WinUSB.</b> Если донгл в «Диспетчере устройств» виден как «RTL2832U DVB-T» в разделе
+«Звуковые, игровые и видеоустройства» — стоит родной драйвер Realtek. Замените его на WinUSB программой Zadig
+(<a href="sdr.html#driver">инструкция</a>). В другом USB-порту замену иногда приходится повторить.</li>
+</ol>
+
+<h2 id="nosignal">Нет сигнала<a class="anchor" href="#nosignal" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Проверьте, что выбран донгл, а не «Тестовый эфир», и что приём запущен (▶ / «Старт»).</li>
+<li>Прикручена ли антенна до конца? SMA-разъём должен быть затянут пальцами.</li>
+<li>Настройтесь на заведомо сильный сигнал — FM 87,5–108 МГц. Есть FM — донгл исправен, дело в антенне,
+месте или частоте.</li>
+<li>Усиление не на нуле? Выключена ли «АРУ тюнера», если ползунок не помогает?</li>
+<li>Bias-T: включён без нужды на пассивной антенне? Выключите. Нужен активной антенне/МШУ? Включите.</li>
+<li>Для спутников: идёт ли сейчас пролёт? Свежие ли TLE? Верные ли координаты дома?</li>
+<li>Для ADS-B: антенна вертикально, у окна; бетонные стены и энергосберегающие стеклопакеты сильно глушат 1090 МГц.</li>
+<li>Ниже 0,5 МГц и выше 1766 МГц V4 не принимает.</li>
+</ol>
+
+<h2 id="overload">Перегрузка<a class="anchor" href="#overload" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Уменьшите <b>«Усиление»</b> на 10 дБ. Если ложные пики исчезли — это была перегрузка
+(<a href="gain.html#overload">почему</a>).</li>
+<li>Выключите «АРУ RTL2832».</li>
+<li>Уменьшите полосу обзора, чтобы мощная станция не попадала в неё.</li>
+<li>Поставьте <a href="antennas.html#filters">FM-режектор</a> или полосовой фильтр.</li>
+<li>С МШУ — уменьшите усиление донгла ещё сильнее или уберите МШУ.</li>
+</ol>
+
+<h2 id="sound">Нет звука<a class="anchor" href="#sound" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Меню <b>«Звук»</b> — выберите устройство вывода. Индексы устройств меняются при подключении наушников,
+RtlTV запоминает устройство по названию. Внизу меню — «Сейчас: …», что реально открыто.</li>
+<li>Если строка состояния пишет «Звук не открылся…» — выберите другое устройство в меню «Звук».</li>
+<li><b>Bluetooth-гарнитура</b> в режиме «гарнитуры» (Hands-Free, 1 канал, 8–16 кГц) работает плохо или не
+открывается. Выберите её «стерео»-вариант (без слова Hands-Free) или другие колонки.</li>
+<li>Громкость: ползунок «Громкость» в окне и громкость Windows.</li>
+<li><b>Шумодав</b> закрыт: сдвиньте влево до «выкл».</li>
+<li>Неверный режим демодуляции (например, NFM на AM-авиа) — слышно шипение без речи.</li>
+<li>DMR со значком 🔒 — зашифровано, звука не будет.</li>
+</ol>
+
+<h2 id="usb">USB и нагрузка на компьютер<a class="anchor" href="#usb" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li>Используйте <b>USB 2.0</b>-порт сзади системного блока или хороший удлинитель 0,5–2 м. Длинные пассивные
+удлинители (больше 3–5 м) и дешёвые хабы теряют данные.</li>
+<li>Порты и хабы USB 3.0 излучают шум — подключайте донгл через удлинитель подальше от них.</li>
+<li>Щелчки и «потеряно блоков» — уменьшите «Полосу»/«Дискретизацию» до 2,4 МГц или ниже, «Разрешение» БПФ и
+«Обновление» спектра, закройте тяжёлые программы.</li>
+<li>Ноутбук: включите план питания «Высокая производительность», работайте от сети.</li>
+</ul>
+
+<h2 id="noise">Помехи от электроники<a class="anchor" href="#noise" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Светодиодные лампы, импульсные блоки питания, мониторы, роутеры, USB 3.0. Выключайте приборы по одному,
+отнесите антенну и донгл подальше, наденьте <b>ферритовые кольца</b> на USB-кабель и провода шумящих приборов.
+Подробнее — <a href="antennas.html#noise">«Антенны: помехи от электроники»</a>; как отличить помеху от
+сигнала — <a href="spectrum.html#real">«Спектр и водопад»</a>.</p>
+
+<h2 id="heat">Перегрев<a class="anchor" href="#heat" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li>V4 в металлическом корпусе греется до ощутимо горячего — это нормально.</li>
+<li>Не втыкайте донгл прямо в ноутбук рядом с горячей решёткой — через удлинитель он охлаждается лучше.</li>
+<li>Если донгл периодически «отваливается» (ошибка «Чтение USB… донгл отключён?») — проверьте кабель, порт и
+питание USB; длительные приёмы на 3,2 МГц греют сильнее.</li>
+</ul>
+
+<h2>Всё ещё не работает?</h2>
+<p>Включите <b>«Без антенны: тестовый эфир»</b> на экране выбора режима: если с тестовым эфиром всё работает,
+программа в порядке, а дело в донгле, драйвере или антенне. Приложите к вопросу файл журнала
+<span class="mono">rtltv.log</span>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/mode-aprs.html"><span>← Назад</span>APRS</a><a class="next" href="../guide/glossary.html"><span>Дальше →</span>Словарь терминов</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Что можно принимать — RtlTV</title>
+<meta name="description" content="RTL-SDR Blog V4 перекрывает 0,5–1766 МГц: от средних волн до L-диапазона спутников. Ниже — что где находится, каким видом модуляции передаётся, какой режим RtlTV нужен и какая антенна. Колонка «Приём»">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/bands.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html" aria-current="page" class="cur">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Первые шаги</p>
+<h1>Что можно принимать</h1>
+<p>RTL-SDR Blog V4 перекрывает 0,5–1766 МГц: от средних волн до L-диапазона спутников. Ниже — что где
+находится, каким <a href="modulation.html">видом модуляции</a> передаётся, какой режим RtlTV нужен и какая
+<a href="antennas.html">антенна</a>. Колонка «Приём»: <b>свободно</b> — вещание и любители, слушать и
+обсуждать можно; <b>служебн.</b> — слушать можно, разглашать и использовать содержание нельзя
+(<a href="legal.html">почему</a>); <b>шифр</b> — содержание закрыто, видно только наличие сигнала.</p>
+
+<h2 id="table">Таблица диапазонов<a class="anchor" href="#table" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th>Частоты</th><th>Что там</th><th>Модуляция / режим RtlTV</th><th>Антенна</th><th>Приём</th></tr>
+<tr><td>0,15–0,28 МГц (ДВ)<br>0,53–1,6 МГц (СВ)</td><td>Вещание; приводные радиомаяки аэродромов (NDB, позывной телеграфом)</td>
+<td>AM — «Радио»</td><td>Длинный провод 10–30 м или магнитная рамка; ниже 0,5 МГц V4 не принимает</td><td>свободно</td></tr>
+<tr><td>1,8–30 МГц (КВ)</td><td>Международное вещание, радиолюбители 160–10 м, сигналы времени RWM (4996, 9996, 14996 кГц), авиа- и морская КВ-связь</td>
+<td>AM, USB/LSB, CW — «Радио»; SSTV 14,230 — «SSTV»</td><td>Провод 10–20 м как можно выше, вдали от проводки; вечером и ночью слышно дальше</td><td>свободно / служебн.</td></tr>
+<tr><td>26,965–27,405 МГц</td><td>Гражданский диапазон CB («Си-Би»): водители, рыбаки, охотники</td><td>AM, NFM — «Радио»</td><td>Штырь ~2,6 м (λ/4) или длинный провод</td><td>свободно</td></tr>
+<tr><td>65,9–74 МГц</td><td>Старый советский FM-диапазон (OIRT); в Москве почти пуст</td><td>WFM — «Радио»</td><td>Диполь 2×1 м</td><td>свободно</td></tr>
+<tr><td>87,5–108 МГц</td><td>FM-вещание, стерео, RDS</td><td>WFM — «Радио»</td><td>Любая; диполь 2×75 см</td><td>свободно</td></tr>
+<tr><td>108–118 МГц</td><td>Авиационные радиомаяки VOR/ILS (позывной телеграфом)</td><td>AM — «Радио»</td><td>Диполь 2×65 см, горизонтально</td><td>служебн.</td></tr>
+<tr><td>118–137 МГц</td><td>Авиасвязь: диспетчеры, пилоты, ATIS; 121,5 МГц — аварийная</td><td>AM — «Радио»</td><td>Вертикальный штырь/диполь ~2×57 см</td><td>служебн.</td></tr>
+<tr><td>137–138 МГц</td><td>Метеоспутники «Метеор-М» №2-3 и №2-4: LRPT 137,900 (резерв 137,100)</td><td>QPSK/OQPSK — «Спутники»</td><td><a href="antennas.html#v-dipole">V-диполь</a> или <a href="antennas.html#qfh">QFH</a></td><td>свободно</td></tr>
+<tr><td>144–146 МГц (2 м)</td><td>Радиолюбители: голос, ретрансляторы, APRS 144,800; МКС 145,800 (голос, SSTV) и 145,825 (APRS)</td><td>NFM — «Радио», «SSTV», «APRS», «Спутники»</td><td>Штырь 49 см, диполь 2×49 см</td><td>свободно</td></tr>
+<tr><td>146–174 МГц</td><td>Служебная связь: такси, охрана, ЖКХ, железная дорога (≈151–156 МГц), морской диапазон 156–162 (16 канал — 156,800)</td><td>NFM, DMR — «Радио»</td><td>Штырь ~45–50 см</td><td>служебн. / шифр</td></tr>
+<tr><td>174–230 МГц</td><td>МВ-телевидение (в Москве аналог выключен); местами DAB+</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>225–400 МГц</td><td>Военная авиация (AM), спутниковая служебная связь</td><td>AM — «Радио»</td><td>Дискон</td><td>служебн.</td></tr>
+<tr><td>~400–406 МГц</td><td>Радиозонды в некоторых странах; в России метеозонды работают около 1680 МГц</td><td>—</td><td>—</td><td>свободно</td></tr>
+<tr><td>430–440 МГц (70 см)</td><td>Радиолюбители, ретрансляторы, DMR 438–440; спутники (МКС кросс-бэнд 437,800)</td><td>NFM, DMR — «Радио»; «Спутники»</td><td>Штырь 16–17 см</td><td>свободно</td></tr>
+<tr><td>433,075–434,775 МГц</td><td>LPD (69 каналов по 25 кГц): маломощные рации, а также метеостанции, брелоки, датчики</td><td>NFM — «Радио»</td><td>Штырь 16,5 см</td><td>свободно</td></tr>
+<tr><td>446,0–446,2 МГц</td><td>PMR446: безлицензионные рации, 16 каналов через 12,5 кГц; бывают цифровые DMR/dPMR</td><td>NFM, DMR — «Радио»</td><td>Штырь 16 см</td><td>свободно</td></tr>
+<tr><td>400–470 МГц</td><td>Служебная связь предприятий, часто DMR</td><td>NFM, DMR — «Радио» (<a href="mode-radio.html#dmrscan">поиск DMR</a>)</td><td>Штырь ~16 см</td><td>служебн. / шифр</td></tr>
+<tr><td>470–790 МГц (ДМВ 21–60)</td><td>Цифровое ТВ DVB-T2 (в Москве — мультиплексы РТРС)</td><td>«ТВ» — измеритель</td><td>ТВ-антенна на телебашню</td><td>свободно</td></tr>
+<tr><td>790–960 МГц</td><td>Сотовая связь LTE/GSM; 864–869 МГц — датчики, LoRa</td><td>видно на спектре</td><td>—</td><td>шифр</td></tr>
+<tr><td>1090 МГц</td><td>Ответчики самолётов: ADS-B, Mode S</td><td>PPM — «Самолёты (ADS-B)»</td><td>Штырь 6,5–6,9 см вертикально, МШУ</td><td>свободно</td></tr>
+<tr><td>1240–1300 МГц (23 см)</td><td>Радиолюбители; навигационные сигналы GPS L2, ГЛОНАСС L2, Galileo E6</td><td>NFM — «Радио»</td><td>Яги/патч</td><td>свободно</td></tr>
+<tr><td>1420,4 МГц</td><td>Линия водорода — радиоастрономия, «шум Млечного Пути»</td><td>спектр с усреднением</td><td>Тарелка/рупор + МШУ</td><td>свободно</td></tr>
+<tr><td>1525–1660 МГц</td><td>GPS L1 1575,42, ГЛОНАСС ≈1602, Inmarsat, Iridium</td><td>видно на спектре</td><td>Активная патч-антенна через bias-T</td><td>служебн.</td></tr>
+<tr><td>1680 МГц</td><td>Российские метеозонды (запуск ≈00 и 12 UTC)</td><td>видно на спектре</td><td>Направленная + МШУ</td><td>свободно</td></tr>
+<tr><td>1691 МГц</td><td>Геостационарные «Электро-Л»: LRIT-снимки</td><td>BPSK — «Спутники», вкладка «Электро-Л»</td><td>Тарелка 60–100 см + облучатель + МШУ</td><td>свободно</td></tr>
+</table></div>
+<p class="dim">Границы округлены. Полоса 1766 МГц — верхний предел тюнера R828D; выше (DECT 1880 МГц,
+Wi-Fi 2,4 ГГц) V4 не заходит.</p>
+
+<h2 id="moscow">Что реально есть в Москве (2026)<a class="anchor" href="#moscow" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th style="width:28%">Сигнал</th><th>Состояние</th></tr>
+<tr><td>Аналоговое эфирное ТВ</td><td><b>Выключено</b> (федеральные каналы — с 14 октября 2019 г.). Режим «ТВ / аналоговое» полезен только с тестовым генератором или кабельной сетью.</td></tr>
+<tr><td>Цифровое ТВ DVB-T2</td><td>Есть: мультиплексы с Останкинской башни на ДМВ, например 546 МГц (ДМВ 30) и 578 МГц (ДМВ 34) — проверено RtlTV как 32K, GI 1/16. Картинку RTL-SDR не покажет (не хватает полосы), но <a href="mode-tv.html#digital">измеритель</a> поможет навести антенну.</td></tr>
+<tr><td>FM 87,5–108 МГц</td><td>Плотно занят: станции почти через каждые 0,3–0,5 МГц, многие мощные — легко перегрузить донгл.</td></tr>
+<tr><td>Авиасвязь 118–137 МГц</td><td>Активна: подходы и вылеты Шереметьево, Внукова, Домодедова, Жуковского. Лучше слышны борта (высоко), чем наземные пункты.</td></tr>
+<tr><td>ADS-B 1090 МГц</td><td>Много бортов, дальность 200–400 км с хорошей антенной. Из-за <b>подавления и подмены GNSS</b> часть бортов передаёт ложные координаты или не передаёт их вовсе.</td></tr>
+<tr><td>DMR</td><td>Любительские ретрансляторы 438–440 МГц (открытые разговоры) и много служебных каналов 146–174/400–470 МГц — часть зашифрована.</td></tr>
+<tr><td>«Метеор-М» №2-3, №2-4</td><td>Работают, LRPT 137,900 МГц: по 2–4 хороших пролёта в сутки каждый. Ловится на V-диполь с балкона.</td></tr>
+<tr><td>NOAA-15/18/19 (APT 137 МГц)</td><td><b>Выключены</b> в 2025 г. Старые инструкции «как принять NOAA» больше не работают.</td></tr>
+<tr><td>МКС</td><td>Голос и SSTV 145,800 МГц (SSTV — в дни мероприятий ARISS), APRS 145,825 МГц. Пролёты — только по южной части неба.</td></tr>
+<tr><td>«Электро-Л»</td><td>Нужна тарелка и МШУ — проект для опытных.</td></tr>
+<tr><td>СВ/ДВ вещание</td><td>Отечественное в основном свёрнуто; вечером на длинный провод слышны зарубежные станции.</td></tr>
+</table></div>
+
+<h2>Чего RtlTV не декодирует</h2>
+<p>На спектре видно, но не расшифровывается: dPMR, NXDN, TETRA, P25, D-STAR, System Fusion, сотовая связь,
+ACARS/VDL2 (≈131,5 и 136,975 МГц), датчики 433/868 МГц, FT8 (слушать на USB можно, но декодер нужен
+внешний), DAB+. Это не неисправность — для них нужны другие программы.</p>
+<p>См. также: <a href="legal.html">Закон и этика</a>, <a href="antennas.html#ready">готовые размеры антенн</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/quickstart.html"><span>← Назад</span>Быстрый старт</a><a class="next" href="../guide/legal.html"><span>Дальше →</span>Закон и этика эфира</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

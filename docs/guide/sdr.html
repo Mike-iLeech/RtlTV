@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Приёмники SDR — RtlTV</title>
+<meta name="description" content="SDR (Software Defined Radio, программно-определяемое радио) — приёмник, в котором железо только переносит кусок эфира на низкую частоту и оцифровывает его, а всё остальное — фильтры, демодуляция, деко">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/sdr.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html" aria-current="page" class="cur">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Основы радиоприёма</p>
+<h1>Приёмники SDR</h1>
+
+<h2 id="what">Что такое SDR<a class="anchor" href="#what" aria-label="Ссылка на этот раздел">#</a></h2>
+<p><b>SDR</b> (Software Defined Radio, программно-определяемое радио) — приёмник, в котором железо только
+переносит кусок эфира на низкую частоту и оцифровывает его, а всё остальное — фильтры, демодуляция,
+декодирование — делает программа. Поэтому один и тот же донгл за пару секунд превращается из FM-приёмника
+в декодер самолётов или метеоспутника.</p>
+<p><figure class="diagram"><picture><source srcset="img/sdr-chain-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/sdr-chain.svg" alt="Схема" width="720" height="180" loading="lazy"></picture></figure></p>
+<p>Донгл отдаёт в компьютер поток <b>I/Q-отсчётов</b> — пар чисел, которые описывают и амплитуду, и фазу
+сигнала. Благодаря паре (а не одному числу) программа отличает частоты выше центра от частот ниже центра,
+и на <a href="spectrum.html">спектре</a> видно полосу шириной, равной частоте дискретизации.</p>
+
+<h2 id="adc">АЦП и разрядность<a class="anchor" href="#adc" aria-label="Ссылка на этот раздел">#</a></h2>
+<p><b>АЦП</b> (аналого-цифровой преобразователь) много миллионов раз в секунду измеряет напряжение и
+записывает его числом. <b>Разрядность</b> — сколько бит в этом числе. От неё зависит
+<b>динамический диапазон</b>: насколько слабый сигнал можно услышать рядом с сильным, пока сильный ещё не
+«упирается» в максимум шкалы.</p>
+<p>Теоретический предел: <b>ДД ≈ 6,02·N + 1,76 дБ</b>, где N — число бит.</p>
+<div class="tw"><table class="t">
+<tr><th>Разрядность</th><th>Уровней</th><th>ДД (теория)</th><th>Примеры</th></tr>
+<tr><td>8 бит</td><td>256</td><td>≈ 50 дБ</td><td>RTL-SDR, HackRF</td></tr>
+<tr><td>12 бит</td><td>4 096</td><td>≈ 74 дБ</td><td>Airspy R2/Mini, LimeSDR, PlutoSDR</td></tr>
+<tr><td>14 бит</td><td>16 384</td><td>≈ 86 дБ</td><td>SDRplay RSP1A/RSPdx</td></tr>
+<tr><td>16 бит</td><td>65 536</td><td>≈ 98 дБ</td><td>профессиональные КВ-приёмники</td></tr>
+</table></div>
+<p>На практике всё лучше, чем в таблице: RTL2832U оцифровывает с частотой 28,8 МГц, а потом
+<b>децимирует</b> (прореживает с фильтрацией) до 2,4 МГц и ещё сильнее в канале демодулятора. Каждое сужение
+полосы в 10 раз даёт ~10 дБ <b>выигрыша обработки</b>. Поэтому в узком канале NFM 8-битный донгл ведёт себя
+как 12–13-битный. Но если в полосе есть очень мощная станция, 8 бит всё равно мало — отсюда
+<a href="gain.html#overload">перегрузка</a>.</p>
+
+<h2 id="rate">Частота дискретизации и полоса<a class="anchor" href="#rate" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>Частота дискретизации</b> fs — сколько пар I/Q в секунду отдаёт донгл. Она же — <b>ширина видимого
+спектра</b>: при 2,4 МГц и настройке на 101,0 МГц вы видите 99,8–102,2 МГц.</li>
+<li>Края полосы (по ~10 % с каждой стороны) заваливаются фильтром — сигналы там слабее.</li>
+<li>RTL2832U допускает 0,225–0,3 и 0,9–3,2 МГц. Устойчиво — <b>до 2,4 МГц</b>; 2,88–3,2 МГц на многих
+компьютерах теряют отсчёты (щелчки в звуке, обрывы декодеров).</li>
+<li>В RtlTV полоса выбирается полем <b>«Полоса»</b> (Радио, ТВ) или <b>«Дискретизация»</b> (Спутники, ADS-B).
+Шире — больше видно, но больше нагрузка на процессор и больше шансов, что в полосу попадёт мешающая станция.</li>
+</ul>
+
+<h2 id="nf">Коэффициент шума и чувствительность<a class="anchor" href="#nf" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Любой усилитель добавляет свой шум. <b>Коэффициент шума</b> (КШ, NF) показывает, во сколько раз
+(в дБ) ухудшается <a href="decibels.html#snr">отношение сигнал/шум</a> при прохождении через приёмник.
+Идеал — 0 дБ. У тюнеров R820T/R828D на УКВ — около 3,5–4 дБ, к краям диапазона хуже.</p>
+<p>Самый слабый сигнал, который ещё виден, оценивается так:</p>
+<p class="mono">Шум, дБм = −174 + КШ + 10·lg(полоса, Гц)</p>
+<p>Пример: КШ 4 дБ, канал NFM 12,5 кГц → −174 + 4 + 41 = <b>−129 дБм</b> (≈ 0,08 мкВ на 50 Ом).
+Для разборчивой речи сигнал должен быть на ~10 дБ выше, то есть около −119 дБм.</p>
+<p>Кабель <b>до</b> первого усилителя прибавляет свои потери прямо к КШ: 3 дБ потерь в кабеле = КШ хуже на
+3 дБ. Поэтому <a href="antennas.html#lna">МШУ ставят у антенны</a>, а не у компьютера.</p>
+
+<h2 id="tuners">Тюнеры<a class="anchor" href="#tuners" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th>Тюнер</th><th>Диапазон</th><th>Особенности</th></tr>
+<tr><td><b>R820T / R820T2</b></td><td>24–1766 МГц</td><td>Самый распространённый, низкая ПЧ (нет пика в центре от смесителя), 29 ступеней усиления. RTL-SDR v3, Nooelec.</td></tr>
+<tr><td><b>R828D</b></td><td>24–1766 МГц</td><td>Родственник R820T с несколькими входами. В <b>RTL-SDR Blog V4</b> — вместе с конвертером КВ и набором входных фильтров, поэтому V4 принимает от 0,5 МГц.</td></tr>
+<tr><td>E4000</td><td>≈52–2200 МГц с провалом ≈1100–1250 МГц</td><td>Старый, нулевая ПЧ (сильный пик в центре), больше не выпускается.</td></tr>
+<tr><td>FC0012 / FC0013 / FC2580</td><td>22–948 / 22–1100 / 146–308 и 438–924 МГц</td><td>Первые дешёвые ТВ-донглы, слабые.</td></tr>
+</table></div>
+<p>Тип тюнера RtlTV показывает после запуска приёма — в строке состояния окна (в «Самолётах» — под карточкой «Приёмник 1090 МГц»).</p>
+
+<h2 id="compare">Сравнение приёмников<a class="anchor" href="#compare" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th>Приёмник</th><th>Диапазон</th><th>Полоса</th><th>АЦП</th><th>Передача</th><th>Цена*</th></tr>
+<tr><td><b>RTL-SDR Blog V4</b></td><td>0,5–1766 МГц (КВ через встроенный конвертер)</td><td>2,4 (3,2) МГц</td><td>8 бит</td><td>нет</td><td>≈ $40</td></tr>
+<tr><td>RTL-SDR Blog V3</td><td>0,5–1766 МГц (КВ — прямая оцифровка, хуже V4)</td><td>2,4 (3,2) МГц</td><td>8 бит</td><td>нет</td><td>≈ $35</td></tr>
+<tr><td>Nooelec NESDR SMArt v5</td><td>≈25–1750 МГц</td><td>2,4 МГц</td><td>8 бит</td><td>нет</td><td>≈ $35</td></tr>
+<tr><td>HackRF One</td><td>1 МГц – 6 ГГц</td><td>до 20 МГц</td><td>8 бит</td><td>да (полудуплекс)</td><td>≈ $330</td></tr>
+<tr><td>Airspy R2</td><td>24–1800 МГц</td><td>10 МГц</td><td>12 бит</td><td>нет</td><td>≈ $170</td></tr>
+<tr><td>Airspy Mini</td><td>24–1700 МГц</td><td>6 МГц</td><td>12 бит</td><td>нет</td><td>≈ $100</td></tr>
+<tr><td>Airspy HF+ Discovery</td><td>0,5 кГц – 31 МГц и 60–260 МГц</td><td>≈ 0,66 МГц</td><td>ДД ≈110 дБ</td><td>нет</td><td>≈ $170</td></tr>
+<tr><td>SDRplay RSP1A / RSP1B</td><td>1 кГц – 2 ГГц</td><td>10 МГц</td><td>14 бит</td><td>нет</td><td>≈ $130</td></tr>
+<tr><td>SDRplay RSPdx-R2</td><td>1 кГц – 2 ГГц, 3 антенных входа</td><td>10 МГц</td><td>14 бит</td><td>нет</td><td>≈ $250</td></tr>
+<tr><td>LimeSDR (USB)</td><td>0,1–3800 МГц</td><td>до 61 МГц</td><td>12 бит</td><td>да (2×2)</td><td>от $300</td></tr>
+<tr><td>ADALM-Pluto (PlutoSDR)</td><td>325–3800 МГц (с доработкой 70–6000)</td><td>до 20 МГц</td><td>12 бит</td><td>да (1×1)</td><td>≈ $220</td></tr>
+</table></div>
+<p class="dim">* Ориентир на 2026 г. без доставки и пошлин; в России цены выше. Основной приёмник RtlTV — донглы на
+RTL2832U (первые три строки). Через меню <b>«Режим → Устройства…»</b> можно подключить и другие: HackRF One и
+Airspy R2/Mini (нужна их DLL), а также сетевой <b>rtl_tcp</b> (в том числе rsp_tcp для SDRplay).</p>
+<p><b>Совет новичку:</b> RTL-SDR Blog V4 — лучший выбор для начала. Переходить на 12–14-битный приёмник стоит,
+когда упрётесь в перегрузку от мощных станций рядом (центр города, рядом с телебашней) или захотите видеть
+10 МГц эфира сразу.</p>
+
+<h2 id="v4">Особенности RTL-SDR Blog V4<a class="anchor" href="#v4" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>TCXO</b> — термокомпенсированный кварцевый генератор с точностью ~1 ppm. Ошибка 1 ppm — это
+138 Гц на 137,9 МГц и ~1,1 кГц на 1090 МГц. У дешёвых донглов без TCXO бывает 50–100 ppm (до 40 кГц на
+433 МГц!) и частота «плывёт» при нагреве. Поэтому у V4 «Коррекция ppm» обычно 0.</li>
+<li><b>Bias-T</b> — 4,5 В постоянного тока на центральной жиле антенного разъёма для питания МШУ или
+активной антенны. Включается галочкой «Bias-T». <b>На пассивной антенне, замкнутой по постоянному току
+(петлевой диполь, некоторые QFH), включать нельзя</b> — будет короткое замыкание.</li>
+<li><b>КВ без конвертера</b>: ниже 28,8 МГц V4 сам переносит сигнал вверх встроенным преобразователем — просто
+наберите частоту.</li>
+<li><b>Металлический корпус</b> работает радиатором и экраном; горячий на ощупь — нормально.</li>
+</ul>
+
+<h2 id="driver">Драйверы: WinUSB и Zadig<a class="anchor" href="#driver" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Windows считает донгл ТВ-тюнером и ставит «родной» драйвер Realtek (для DVB-T), через который SDR-программы
+работать не могут. Нужно один раз заменить драйвер на <b>WinUSB</b> программой <b>Zadig</b>:</p>
+<ol>
+<li>Скачайте Zadig с официального сайта <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">zadig.akeo.ie</a>, запустите.</li>
+<li><b>Options → List All Devices</b>. Выберите <b>«Bulk-In, Interface (Interface 0)»</b> или
+«RTL2838UHIDIR» (это донгл). Убедитесь, что USB ID начинается с <span class="mono">0BDA 2838</span>.</li>
+<li>Справа выберите <b>WinUSB</b> и нажмите <b>Replace Driver</b>.</li>
+</ol>
+<div class="callout warn">Не выбирайте в Zadig другие устройства (клавиатуру, мышь, звуковую карту) — они перестанут работать.
+В другом USB-порту Windows может считать донгл новым устройством — тогда повторите замену.</div>
+<p>RtlTV содержит свою сборку librtlsdr (с поддержкой V4), ставить SDR# или системные драйверы не нужно.</p>
+<p>См. также: <a href="gain.html">Усиление и АРУ</a>, <a href="troubleshooting.html">Неполадки</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/legal.html"><span>← Назад</span>Закон и этика эфира</a><a class="next" href="../guide/decibels.html"><span>Дальше →</span>Единицы и децибелы</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="260" viewBox="0 0 760 260">
+  <rect x="0" y="0" width="760" height="260" fill="#ffffff"/>
+  <!-- штырь λ/4 с противовесами -->
+  <text x="130" y="24" font-family="Segoe UI" font-size="14" fill="#0a66c2" text-anchor="middle">Штырь λ/4 (Ground Plane)</text>
+  <line x1="130" y1="45" x2="130" y2="160" stroke="#0a66c2" stroke-width="4"/>
+  <line x1="130" y1="160" x2="60" y2="205" stroke="#0a66c2" stroke-width="3"/>
+  <line x1="130" y1="160" x2="200" y2="205" stroke="#0a66c2" stroke-width="3"/>
+  <line x1="130" y1="160" x2="100" y2="215" stroke="#0a66c2" stroke-width="3"/>
+  <line x1="130" y1="160" x2="160" y2="215" stroke="#0a66c2" stroke-width="3"/>
+  <line x1="150" y1="45" x2="150" y2="160" stroke="#5d6878" stroke-width="1"/>
+  <line x1="145" y1="45" x2="155" y2="45" stroke="#5d6878" stroke-width="1"/>
+  <line x1="145" y1="160" x2="155" y2="160" stroke="#5d6878" stroke-width="1"/>
+  <text x="160" y="105" font-family="Segoe UI" font-size="12" fill="#1d2430">λ/4</text>
+  <text x="130" y="238" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">4 противовеса λ/4 под 45° → ≈50 Ом</text>
+  <line x1="130" y1="160" x2="130" y2="225" stroke="#5d6878" stroke-width="2" stroke-dasharray="4,3"/>
+
+  <!-- диполь -->
+  <text x="390" y="24" font-family="Segoe UI" font-size="14" fill="#0a66c2" text-anchor="middle">Полуволновый диполь λ/2</text>
+  <line x1="270" y1="110" x2="382" y2="110" stroke="#0a66c2" stroke-width="4"/>
+  <line x1="398" y1="110" x2="510" y2="110" stroke="#0a66c2" stroke-width="4"/>
+  <line x1="382" y1="110" x2="386" y2="190" stroke="#5d6878" stroke-width="2"/>
+  <line x1="398" y1="110" x2="394" y2="190" stroke="#5d6878" stroke-width="2"/>
+  <text x="390" y="208" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">кабель (оплётка — к одному плечу, жила — к другому)</text>
+  <line x1="270" y1="85" x2="382" y2="85" stroke="#5d6878" stroke-width="1"/>
+  <line x1="398" y1="85" x2="510" y2="85" stroke="#5d6878" stroke-width="1"/>
+  <text x="326" y="78" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">λ/4</text>
+  <text x="454" y="78" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">λ/4</text>
+  <text x="390" y="140" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">≈73 Ом, 2,15 дБi</text>
+
+  <!-- V-диполь -->
+  <text x="650" y="24" font-family="Segoe UI" font-size="14" fill="#0a66c2" text-anchor="middle">V-диполь, 120°</text>
+  <line x1="650" y1="150" x2="572" y2="105" stroke="#0a66c2" stroke-width="4"/>
+  <line x1="650" y1="150" x2="728" y2="105" stroke="#0a66c2" stroke-width="4"/>
+  <path d="M 630 138 A 24 24 0 0 1 670 138" fill="none" stroke="#5d6878" stroke-width="1"/>
+  <text x="650" y="128" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">120°</text>
+  <text x="595" y="100" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">53 см</text>
+  <text x="705" y="100" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">53 см</text>
+  <line x1="650" y1="150" x2="650" y2="200" stroke="#5d6878" stroke-width="2"/>
+  <text x="650" y="222" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">горизонтально,</text>
+  <text x="650" y="238" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">«рогами» на север или юг</text>
+</svg>

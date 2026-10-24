@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Доплер и спутники — RtlTV</title>
+<meta name="description" content="Солнечно-синхронная орбита «Метеора» проходит над каждым местом примерно в одно и то же местное время: утренние/дневные пролёты дают цветные снимки, вечерние/ночные — только инфракрасные каналы.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/satellites.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html" aria-current="page" class="cur">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Основы радиоприёма</p>
+<h1>Доплер и спутники</h1>
+
+<h2 id="orbits">Орбиты<a class="anchor" href="#orbits" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th>Орбита</th><th>Высота</th><th>Период</th><th>Примеры</th><th>Как принимать</th></tr>
+<tr><td><b>Низкая (LEO)</b></td><td>400–1000 км</td><td>90–105 мин</td><td>МКС (~420 км, наклон 51,6°), «Метеор-М» (~830 км, солнечно-синхронная, наклон 98,7°), любительские</td><td>Пролёт 5–15 минут, сигнал сильный, но частота «ползёт»; нужны прогноз и доплер</td></tr>
+<tr><td><b>Геостационарная (GEO)</b></td><td>35 786 км</td><td>24 ч (стоит на месте)</td><td>«Электро-Л», Inmarsat</td><td>Антенна неподвижна, сигнал слабый — нужна тарелка и МШУ</td></tr>
+</table></div>
+<p><b>Солнечно-синхронная</b> орбита «Метеора» проходит над каждым местом примерно в одно и то же местное время:
+утренние/дневные пролёты дают цветные снимки, вечерние/ночные — только инфракрасные каналы.</p>
+
+<h2 id="tle">TLE и SGP4<a class="anchor" href="#tle" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>TLE</b> (Two-Line Elements) — две строки цифр, описывающие орбиту спутника на момент <b>эпохи</b>.
+Их публикуют для всех спутников; RtlTV скачивает их с celestrak.org и хранит в кэше (работает и офлайн).</li>
+<li><b>SGP4</b> — стандартная модель, которая по TLE считает, где спутник будет в любой момент: учитывает
+сплюснутость Земли и торможение в атмосфере.</li>
+<li>Точность падает со временем: ошибка растёт примерно на единицы километров в сутки (у МКС после
+манёвров — резко). <b>Обновляйте TLE раз в несколько дней</b> — кнопка <b>«Обновить TLE»</b> в карточке «Дом».</li>
+<li>Для расчёта нужны ваши <b>координаты</b>: карточка «Дом (Ctrl+щелчок по карте)», поля «Широта» и «Долгота».
+Для Москвы — примерно 55,75° с. ш., 37,62° в. д.</li>
+</ul>
+
+<h2 id="pass">Пролёт, возвышение, азимут<a class="anchor" href="#pass" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>AOS / LOS</b> — восход и заход спутника над горизонтом.</li>
+<li><b>Возвышение</b> (элевация) — угол над горизонтом: 0° — горизонт, 90° — зенит. Чем выше максимум,
+тем ближе спутник и тем лучше сигнал. Пролёты ниже 15–20° обычно бесполезны: мешают дома и деревья,
+расстояние больше 2000 км.</li>
+<li><b>Азимут</b> — направление по компасу: 0° север, 90° восток, 180° юг, 270° запад. В таблице пролётов
+колонка «Азимуты» — откуда спутник появится, где будет в максимуме и куда уйдёт.</li>
+<li>Поле <b>«Мин. возвышение»</b> отсеивает низкие пролёты из таблицы.</li>
+</ul>
+<div class="callout note"><b>МКС над Москвой:</b> наклон орбиты МКС 51,6°, а Москва на 55,75° с. ш. — станция никогда не проходит
+прямо над городом. Все пролёты идут по <b>южной части неба</b>, лучшие — с максимумом около 40°.</div>
+
+<h2 id="doppler">Доплер: почему сигнал «ползёт»<a class="anchor" href="#doppler" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Спутник летит со скоростью ~7,5 км/с. Пока он приближается, принимаемая частота выше номинала, а когда
+удаляется — ниже: <span class="mono">Δf = f · v<sub>r</sub> / c</span>, где v<sub>r</sub> — скорость
+сближения, c = 300 000 км/с.</p>
+<p><figure class="diagram"><picture><source srcset="img/pass-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/pass.svg" alt="Схема" width="720" height="219" loading="lazy"></picture></figure></p>
+<div class="tw"><table class="t">
+<tr><th>Частота</th><th>Наибольший сдвиг (у горизонта)</th><th>Что это значит</th></tr>
+<tr><td>137,9 МГц («Метеор»)</td><td>≈ ±3 кГц</td><td>LRPT шириной ~120 кГц — сдвиг мал, но демодулятору проще с коррекцией</td></tr>
+<tr><td>145,8 МГц (МКС)</td><td>≈ ±3,5 кГц</td><td>NFM 15 кГц — слышно и без коррекции, но звук хуже на краях</td></tr>
+<tr><td>437,8 МГц (70 см)</td><td>≈ ±10 кГц</td><td>без коррекции сигнал уходит из канала — подстройка обязательна</td></tr>
+</table></div>
+<p>Сильнее всего частота меняется в момент <b>максимума</b> пролёта (до сотен Гц в секунду). RtlTV
+пересчитывает доплер по TLE и подстраивает частоту сам (галочка <b>«Коррекция доплера по TLE»</b>).</p>
+
+<h2 id="meteor">Пошагово: снимок с «Метеора-М»<a class="anchor" href="#meteor" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li><b>Антенна:</b> <a href="antennas.html#v-dipole">V-диполь 2×53 см под 120°</a> горизонтально на балконе или
+крыше. Лучше — <a href="antennas.html#qfh">QFH</a>. В городе очень помогает
+<a href="antennas.html#filters">FM-режектор</a>.</li>
+<li>Откройте режим <b>«Спутники»</b>. Проверьте «Дом» (координаты) и что «TLE» свежие.</li>
+<li>В фильтре <b>«Показывать:»</b> оставьте «Метео». В таблице найдите ближайший пролёт «Метеор-М №2-4» или
+«№2-3» с <b>«Макс.»</b> не ниже 30–40°.</li>
+<li>В карточке <b>«Приёмник»</b> выберите донгл и <b>«Усиление»</b> 30–40 дБ; «Питание антенны (bias-T)» —
+только если у вас активная антенна или МШУ.</li>
+<li>В карточке <b>«Приём со спутника»</b>: спутник, частота <b>137,900 МГц (основная)</b>, «Коррекция доплера
+по TLE» — включена. Для первого раза полезно «Записывать IQ» — тогда неудачный приём можно декодировать
+повторно («Декодировать файл…»).</li>
+<li>За минуту до восхода нажмите <b>«▶ Принимать сейчас»</b> или включите <b>«Автоприём по расписанию»</b> —
+программа сама начнёт и закончит приём на каждом пролёте.</li>
+<li>На вкладке <b>«Приём со спутника»</b> смотрите: на спектре появится «столбик» ~120 кГц, <b>созвездие</b>
+соберётся в 4 точки, «Захват несущей» поднимется, «Синхр. кадров» станет стабильной, «Кадры без ошибок RS»
+— 50–100 %.</li>
+<li>Снимок строится полосой по ходу пролёта на вкладке <b>«Снимки со спутников»</b>. «Показать:» — выбор
+композита: <b>221 — естественные цвета</b> (днём), <b>125 — ИК в синем</b> и другие. «Сохранить PNG» и
+«Папка снимков» (Изображения\RtlTV\meteor).</li>
+</ol>
+<p><b>Если не вышло:</b> «столбика» на спектре нет — проверьте время пролёта и антенну; столбик есть, но
+созвездие — «облако» — сигнал слаб (антенна выше, кабель короче, МШУ); полосы и рывки на спектре — перегрузка
+(уменьшите усиление, фильтр FM). У «Метеора №2-3» антенна раскрылась не полностью — он слабее №2-4.</p>
+
+<h2 id="iss">Пошагово: голос и SSTV с МКС<a class="anchor" href="#iss" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Антенна: вертикальный штырь 49 см или диполь, лучше — <a href="antennas.html#yagi">Яги</a> вручную на
+спутник. Сигнал МКС мощный (~5–25 Вт), часто хватает и комплектного диполя.</li>
+<li>В «Спутниках» в фильтре включите «МКС», найдите пролёт с максимумом от 20°.</li>
+<li>Вкладка <b>«Слушать»</b>: «Спутник» — МКС, «Передатчик» — «Голос / SSTV» (145,800 МГц),
+нажмите <b>«▶ Слушать»</b>. Доплер подстраивается сам; колесо мыши над спектром — подстройка внутри полосы.</li>
+<li><b>SSTV</b> МКС передаёт только во время мероприятий ARISS (анонсы на
+<a href="https://www.ariss.org/" target="_blank" rel="noopener">ariss.org</a>), обычно режимом PD 120. Для картинок откройте режим
+<a href="mode-sstv.html">«SSTV»</a>, выберите в «Частоты:» «МКС — 145,800 МГц (FM), сеансы ARISS» — декодер сам узнает режим по VIS-коду.</li>
+<li><b>APRS</b> с МКС (145,825 МГц) — режим <a href="mode-aprs.html">«APRS»</a>, пресет «145,825 МГц — МКС».</li>
+</ol>
+<p>Любительские FM-спутники (SO-50, AO-91, PO-101 и др.) слушаются так же через «Слушать», SSB/CW-транспондеры
+(RS-44, FO-29) — режимом USB/CW с подстройкой колесом. Работа любительских аппаратов зависит от расписания
+и освещённости: «активен» в каталоге не гарантирует сигнал на каждом витке.</p>
+<p>См. также: <a href="mode-sat.html">Режим «Спутники»</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/spectrum.html"><span>← Назад</span>Спектр и водопад</a><a class="next" href="../guide/mode-tv.html"><span>Дальше →</span>ТВ</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

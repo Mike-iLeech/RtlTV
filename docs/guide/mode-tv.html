@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Режим «ТВ» — RtlTV</title>
+<meta name="description" content="Два прибора в одном окне: приёмник аналогового телевидения (чёрно-белая картинка или звук) и измеритель цифровых мультиплексов DVB-T/T2 — для наведения антенны.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/mode-tv.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html" aria-current="page" class="cur">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Режимы RtlTV</p>
+<h1>Режим «ТВ»</h1>
+<p>Два прибора в одном окне: <b>приёмник аналогового телевидения</b> (чёрно-белая картинка или звук) и
+<b>измеритель цифровых мультиплексов DVB-T/T2</b> — для наведения антенны.</p>
+
+<h2>Элементы окна</h2>
+<div class="tw"><table class="t">
+<tr><th style="width:22%">Карточка</th><th>Что в ней</th></tr>
+<tr><td>«Источник»</td><td>Донгл или «Тестовый генератор (без антенны)», кнопка <b>«▶ Старт»</b>.</td></tr>
+<tr><td>«Режим»</td><td>«Аналоговое ТВ» / «Цифровое ТВ (DVB-T2: измеритель)», галочка «Звук вместо картинки»,
+«Стандарт» (SECAM/PAL D/K, PAL B/G, PAL I, NTSC M) и «Сетка» каналов (Россия/СНГ, Европа, Великобритания, США).</td></tr>
+<tr><td>«Частота»</td><td>Табло (колесо мыши над цифрой меняет разряд), ◀ ▶ — канал (PgDown/PgUp), − + и «Шаг»
+(1 кГц…1 МГц, Ctrl+←/→), «Точно» — подстройка ±500 кГц от номинала канала.</td></tr>
+<tr><td>«Сигнал»</td><td>«Усиление» (29 ступеней), «АРУ тюнера», «АРУ RTL2832», «Коррекция» ppm,
+«Полоса (дискр.)» 2,048–3,2 МГц, «Bias-T», индикатор «Сигнал/шум».</td></tr>
+<tr><td>«Изображение»</td><td>Яркость, контраст, шумоподавление по кадрам, 9 палитр, «Поменять поля местами»,
+«Снимок (F12)», «Весь экран (F11)» (или двойной щелчок по картинке).</td></tr>
+<tr><td>«Звук»</td><td>Громкость и уровень (в режиме «Звук вместо картинки»).</td></tr>
+<tr><td>«Поиск каналов»</td><td>«Искать» перебирает все каналы сетки; двойной щелчок по найденному — настройка.</td></tr>
+</table></div>
+
+<h2 id="analog">Аналоговое ТВ<a class="anchor" href="#analog" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Аналоговый канал занимает 6–8 МГц, а RTL-SDR видит максимум ~3,2 МГц. Поэтому:</p>
+<ul>
+<li>картинка <b>чёрно-белая</b>: цветовая поднесущая (4,43 МГц от несущей изображения) в полосу не попадает;
+по горизонтали около 130 различимых точек;</li>
+<li>звук (+6,5 МГц от несущей изображения для D/K) и картинка одновременно не помещаются — галочка
+<b>«Звук вместо картинки»</b> перестраивает приёмник на звук.</li>
+</ul>
+<p>В России эфирное аналоговое ТВ в основном выключено с 2019 г. Чтобы посмотреть, как это работает, включите
+<b>тестовый генератор</b>: на ДМВ 35 он выдаёт аналоговую станцию с испытательной таблицей и FM-звуком.</p>
+<p>Частоты: несущая изображения ДМВ-канала N в российской сетке — <span class="mono">471,25 + 8·(N − 21)</span> МГц.
+Например, ДМВ 30 — 543,25 МГц (центр канала 546 МГц).</p>
+
+<h2 id="digital">Цифровое ТВ: измеритель DVB-T2<a class="anchor" href="#digital" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Показать картинку DVB-T2 донгл не может: мультиплекс занимает ~7,8 МГц, в АЦП попадает только треть
+поднесущих OFDM. Аппаратный демодулятор RTL2832U умеет только старый DVB-T и только с родным драйвером.
+Поэтому режим работает как <b>прибор для наведения антенны</b>:</p>
+<ul>
+<li>канал собирается из пяти перестроек и рисуется на спектре целиком (плоский «стол» ~7,8 МГц);</li>
+<li><b>«C/N (сигнал/шум)»</b> — главный показатель: для уверенного приёма T2 (256-QAM) нужно ~18–22 дБ;</li>
+<li><b>«Уровень в канале»</b> и <b>«Неравномерность»</b> — провалы в «столе» означают отражения (многолучёвость);
+поворачивайте антенну, пока стол не станет ровным;</li>
+<li><b>«OFDM (по префиксу)»</b> — по циклическому префиксу определяются режим FFT (1K…32K) и защитный интервал:
+это доказывает, что в канале именно DVB-T/T2, а не помеха;</li>
+<li><b>«Уход частоты»</b> — ошибка частоты донгла относительно передатчика.</li>
+</ul>
+<p>Проверено на V4 в Москве: мультиплексы ДМВ 30 (546 МГц) и ДМВ 34 (578 МГц) определяются как DVB-T2 32K,
+GI 1/16; пустые каналы — «нет».</p>
+
+<h2>Типичные сценарии</h2>
+<ol>
+<li><b>Навести ТВ-антенну:</b> «Цифровое ТВ», сетка «Россия», канал мультиплекса → крутите антенну по
+максимуму C/N и ровности «стола».</li>
+<li><b>Найти все мультиплексы:</b> «Цифровое ТВ» → «Поиск каналов» → «Искать».</li>
+<li><b>Посмотреть, как выглядит аналоговое ТВ:</b> «Без антенны: тестовый эфир», ДМВ 35, «Аналоговое ТВ».</li>
+</ol>
+
+<h2>Ограничения</h2>
+<ul>
+<li>Нет цвета и картинки DVB-T2 — это физика донгла, а не недоработка.</li>
+<li>Полоса 3,2 МГц «может терять отсчёты» — при рывках выберите 2,4–2,88 МГц.</li>
+</ul>
+<p>См. также: <a href="modulation.html#digital">OFDM</a>, <a href="decibels.html#snr">C/N</a>,
+<a href="antennas.html#yagi">направленные антенны</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/satellites.html"><span>← Назад</span>Доплер и спутники</a><a class="next" href="../guide/mode-radio.html"><span>Дальше →</span>Радио</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>
