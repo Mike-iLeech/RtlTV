@@ -55,7 +55,7 @@
     <text x="528" y="198" font-size="11" fill="{{dim}}">кабель, разъёмы</text>
     <rect x="612" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
     <text x="676" y="180" font-size="13" fill="{{fg}}">Приёмник</text>
-    <text x="676" y="198" font-size="11" fill="{{dim}}">RTL-SDR</text>
+    <text x="676" y="198" font-size="11" fill="{{dim}}">SDR, напр. RTL-SDR</text>
     <text x="84" y="226" font-size="11" fill="{{accent}}">−91 дБ за 2 км</text>
     <text x="232" y="226" font-size="11" fill="{{accent}}">−64 дБм · 134 мкВ</text>
     <text x="380" y="226" font-size="11" fill="{{accent}}">не нужен</text>
@@ -77,14 +77,14 @@
     <text x="84" y="278" font-size="13" fill="{{fg}}">Фильтр</text>
     <text x="84" y="296" font-size="11" fill="{{dim}}">полосовой</text>
     <rect x="168" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
-    <text x="232" y="278" font-size="13" fill="{{fg}}">Тюнер R828D</text>
-    <text x="232" y="296" font-size="11" fill="{{dim}}">усиление, ПЧ</text>
+    <text x="232" y="278" font-size="13" fill="{{fg}}">Тюнер, смеситель</text>
+    <text x="232" y="296" font-size="11" fill="{{dim}}">усиление, ПЧ или ноль</text>
     <rect x="316" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
-    <text x="380" y="278" font-size="13" fill="{{fg}}">АЦП 8 бит</text>
-    <text x="380" y="296" font-size="11" fill="{{dim}}">28,8 МГц</text>
+    <text x="380" y="278" font-size="13" fill="{{fg}}">АЦП N бит</text>
+    <text x="380" y="296" font-size="11" fill="{{dim}}">8–16 бит</text>
     <rect x="464" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
     <text x="528" y="278" font-size="13" fill="{{fg}}">IQ, децимация</text>
-    <text x="528" y="296" font-size="11" fill="{{dim}}">2,4 МГц по USB</text>
+    <text x="528" y="296" font-size="11" fill="{{dim}}">полоса обзора</text>
     <rect x="612" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
     <text x="676" y="278" font-size="13" fill="{{fg}}">БПФ</text>
     <text x="676" y="296" font-size="11" fill="{{dim}}">спектр и водопад</text>

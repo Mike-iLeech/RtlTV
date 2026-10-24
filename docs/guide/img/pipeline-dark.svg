@@ -55,7 +55,7 @@
     <text x="528" y="198" font-size="11" fill="#8a93a3">кабель, разъёмы</text>
     <rect x="612" y="158" width="128" height="52" rx="6" fill="#252a33" stroke="#4fb3ff"/>
     <text x="676" y="180" font-size="13" fill="#d8dee9">Приёмник</text>
-    <text x="676" y="198" font-size="11" fill="#8a93a3">RTL-SDR</text>
+    <text x="676" y="198" font-size="11" fill="#8a93a3">SDR, напр. RTL-SDR</text>
     <text x="84" y="226" font-size="11" fill="#4fb3ff">−91 дБ за 2 км</text>
     <text x="232" y="226" font-size="11" fill="#4fb3ff">−64 дБм · 134 мкВ</text>
     <text x="380" y="226" font-size="11" fill="#4fb3ff">не нужен</text>
@@ -77,14 +77,14 @@
     <text x="84" y="278" font-size="13" fill="#d8dee9">Фильтр</text>
     <text x="84" y="296" font-size="11" fill="#8a93a3">полосовой</text>
     <rect x="168" y="256" width="128" height="52" rx="6" fill="#252a33" stroke="#2f3542"/>
-    <text x="232" y="278" font-size="13" fill="#d8dee9">Тюнер R828D</text>
-    <text x="232" y="296" font-size="11" fill="#8a93a3">усиление, ПЧ</text>
+    <text x="232" y="278" font-size="13" fill="#d8dee9">Тюнер, смеситель</text>
+    <text x="232" y="296" font-size="11" fill="#8a93a3">усиление, ПЧ или ноль</text>
     <rect x="316" y="256" width="128" height="52" rx="6" fill="#252a33" stroke="#2f3542"/>
-    <text x="380" y="278" font-size="13" fill="#d8dee9">АЦП 8 бит</text>
-    <text x="380" y="296" font-size="11" fill="#8a93a3">28,8 МГц</text>
+    <text x="380" y="278" font-size="13" fill="#d8dee9">АЦП N бит</text>
+    <text x="380" y="296" font-size="11" fill="#8a93a3">8–16 бит</text>
     <rect x="464" y="256" width="128" height="52" rx="6" fill="#252a33" stroke="#2f3542"/>
     <text x="528" y="278" font-size="13" fill="#d8dee9">IQ, децимация</text>
-    <text x="528" y="296" font-size="11" fill="#8a93a3">2,4 МГц по USB</text>
+    <text x="528" y="296" font-size="11" fill="#8a93a3">полоса обзора</text>
     <rect x="612" y="256" width="128" height="52" rx="6" fill="#252a33" stroke="#4fb3ff"/>
     <text x="676" y="278" font-size="13" fill="#d8dee9">БПФ</text>
     <text x="676" y="296" font-size="11" fill="#8a93a3">спектр и водопад</text>

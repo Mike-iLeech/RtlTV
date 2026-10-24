@@ -86,21 +86,21 @@
   var S = {};
   var PRESETS = {
     pmr: { pTx: 27, txType: "RG-58", txLen: 0, gTx: 0, dist: 2, freq: 446.1, extra: 0, gRx: 0, lnaOn: false,
-      gLna: 20, rxType: "RG-58", rxLen: 2, bw: 12500, nfRx: 4.5, nfLna: 0.8, conn: 1,
+      gLna: 20, rxType: "RG-58", rxLen: 2, bw: 12500, sigBw: 11000, rq: "nfm", tGain: 30, nfRx: 4.5, nfLna: 0.8, conn: 1,
       note: "Рация PMR446: 0,5 Вт, штатная антенна ≈ 0 дБi, 2 км прямой видимости, приём на штырь и 2 м RG-58. " +
         "В городе за домами добавьте 20–30 дБ потерь ползунком «Доп. потери»." },
     fm: { pTx: 70, txType: "LMR-400", txLen: 50, gTx: 6, dist: 50, freq: 100, extra: 0, gRx: 0, lnaOn: false,
-      gLna: 20, rxType: "RG-6", rxLen: 10, bw: 200000, nfRx: 4.5, nfLna: 0.8, conn: 2,
+      gLna: 20, rxType: "RG-6", rxLen: 10, bw: 200000, sigBw: 180000, rq: "wfm", tGain: 0, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "Вещательный передатчик 10 кВт, 50 м кабеля на мачту, антенная решётка 6 дБi (ЭИИМ около 23 кВт). " +
         "Приём за 50 км на диполь и 10 м RG-6: сигнал сильный, МШУ не нужен." },
     meteor: { pTx: 37, txType: "LMR-400", txLen: 1, gTx: 0, dist: 800, freq: 137.9, extra: 3, gRx: 2, lnaOn: true,
-      gLna: 20, rxType: "RG-58", rxLen: 10, bw: 120000, nfRx: 4.5, nfLna: 0.8, conn: 2,
+      gLna: 20, rxType: "RG-58", rxLen: 10, bw: 120000, sigBw: 120000, rq: "lrpt", tGain: 30, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "«Метеор-М»: около 5 Вт на 137,9 МГц, 800 км — пролёт прямо над головой; 3 дБ — потери линейной антенны " +
-        "на круговой поляризации. Получается около −100 дБм у антенны; у горизонта (≈ 2400 км) ещё на 10 дБ " +
-        "меньше. На спектре RTL-SDR (бин около 1 кГц) сигнал шириной 120 кГц выглядит ещё на ~20 дБ ниже — " +
+        "на круговой поляризации. Получается около −100 дБм у антенны; на угле места 10° (≈ 2400 км) — ещё на " +
+        "9,5 дБ меньше, у самого горизонта (≈ 3300 км) — на 12 дБ. На спектре SDR при RBW около 1–2 кГц сигнал шириной 120 кГц выглядит ещё на ~20 дБ ниже — " +
         "около −120 дБм в бине." },
     adsb: { pTx: 54, txType: "RG-58", txLen: 3, gTx: 0, dist: 100, freq: 1090, extra: 0, gRx: 3, lnaOn: false,
-      gLna: 20, rxType: "RG-58", rxLen: 3, bw: 2000000, nfRx: 4.5, nfLna: 0.8, conn: 2,
+      gLna: 20, rxType: "RG-58", rxLen: 3, bw: 2000000, sigBw: 2000000, rq: "adsb", tGain: 40, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "Ответчик самолёта: импульсы 250 Вт на 1090 МГц. За 100 км на коллинеарную антенну 3 дБi; на 1 ГГц " +
         "тонкий RG-58 уже заметно теряет — попробуйте 20 м кабеля без МШУ и с ним." }
   };
@@ -117,6 +117,80 @@
       else { el.value = v; }
     });
     S.note = p.note || "";
+    S.sigBw = p.sigBw || 12500;
+    var rq = document.getElementById("rqMode"), tg = document.getElementById("tGain");
+    if (rq && p.rq) { rq.value = p.rq; }
+    if (tg && p.tGain !== undefined) { tg.value = p.tGain; }
+  }
+
+  /* RSSI, S-метр, dBFS и запас по связи */
+  var REQ = {  // требуемое С/Ш (дБ) для вида модуляции
+    nfm: [12, "NFM речь: ≈ 12 дБ SINAD"], wfm: [20, "WFM моно без шипения: ≈ 20 дБ"],
+    dmr: [6, "DMR: ≈ 5–7 дБ"], lrpt: [6.5, "LRPT QPSK: ≈ 5–8 дБ"], adsb: [10, "ADS-B: ≈ 10 дБ"]
+  };
+  var FS_DBM = -10;  // условно: полная шкала АЦП на входе при усилении тюнера 0 дБ
+  function sUnits(dbm) {
+    var s9 = S.freq < 30 ? -73 : -93;
+    if (dbm >= s9) { return "S9" + (dbm - s9 >= 0.5 ? "+" + num(dbm - s9, 0) + " дБ" : ""); }
+    var s = 9 + (dbm - s9) / 6;
+    return s < 1 ? "ниже S1" : "S" + Math.floor(s + 1e-9);
+  }
+  function renderRssi(r) {
+    var box = document.getElementById("rssiBox");
+    if (!box) { return; }
+    var rqEl = document.getElementById("rqMode"), tgEl = document.getElementById("tGain");
+    var req = REQ[rqEl.value] || REQ.nfm, tg = Number(tgEl.value);
+    var cut = Math.max(0, 10 * LOG10(S.sigBw / S.bw));             // канал уже сигнала — часть мощности за фильтром
+    var rssi = r.rxIn - cut;
+    var nrssi = r.noiseAnt + r.lnaG - r.rxLoss;                     // шум в полосе канала на входе приёмника
+    var snr = rssi - nrssi, margin = snr - req[0];
+    var s9 = S.freq < 30 ? -73 : -93;
+    setLive("rssi", fmtDbm(rssi));
+    setLive("rssi_sub", fmtV(dbmV(rssi)) + (cut > 0.05 ? " · канал уже сигнала: −" + num(cut, 1) + " дБ" : " · весь сигнал в канале"));
+    setLive("rssi_noise", fmtDbm(nrssi));
+    setLive("rssi_noise_sub", "шум в " + fmtBw(S.bw) + "; разница = С/Ш " + num(snr, 1) + " дБ");
+    setLive("smeter", sUnits(rssi));
+    setLive("smeter_sub", "шум: " + sUnits(nrssi) + "; S9 = " + num(s9, 0) + " дБм (" + (S.freq < 30 ? "50" : "5") + " мкВ), " +
+      (S.freq < 30 ? "ниже" : "выше") + " 30 МГц");
+    setLive("margin", fmtDb(margin).replace("+", "+"));
+    setLive("margin_sub", req[1] + "; нужно ≥ " + num(req[0], 1) + " дБ, есть " + num(snr, 1));
+    var mk = document.getElementById("k-margin");
+    if (mk) { mk.className = "kpi " + (margin >= 10 ? "good" : margin >= 3 ? "warn" : "bad"); }
+    document.getElementById("o-tGain").textContent = num(tg, 0) + " дБ";
+    var fsIn = FS_DBM - tg, dfs = rssi - fsIn, nfs = nrssi - fsIn;
+    setLive("dbfs", num(dfs, 1) + " дБFS");
+    setLive("dbfs_noise", num(nfs, 1) + " дБFS");
+    setLive("dbfs_full", "≈ " + fmtDbm(fsIn, 0) + " на входе");
+    var st = dfs > -1 ? ["bad", "клиппинг: сигнал упёрся в полную шкалу АЦП — уменьшите усиление"] :
+      dfs > -10 ? ["warn", "на грани: запас до полной шкалы меньше 10 дБ"] :
+        nfs < -80 && dfs < -50 ? ["warn", "усиление мало: шум ниже младших разрядов АЦП, слабые сигналы теряются"] :
+          ["good", "нормально: есть запас до перегрузки, шум выше младших разрядов"];
+    var stEl = document.getElementById("dbfs_state");
+    if (stEl) { stEl.textContent = st[1]; stEl.style.color = C[st[0]]; }
+    // мини-шкала S-метра
+    var svg = document.getElementById("smeterSvg");
+    while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+    var W = 760, L = 20, Rr = 740, lo = s9 - 54, hi = s9 + 60, X = function (d) { return L + (Rr - L) * (Math.max(lo, Math.min(hi, d)) - lo) / (hi - lo); };
+    svg.appendChild(svgEl("rect", { x: L, y: 30, width: X(s9) - L, height: 10, rx: 3, fill: C.good, opacity: 0.55 }));
+    svg.appendChild(svgEl("rect", { x: X(s9), y: 30, width: Rr - X(s9), height: 10, rx: 3, fill: C.bad, opacity: 0.55 }));
+    for (var k = 1; k <= 9; k++) {
+      var xk = X(s9 - (9 - k) * 6);
+      svg.appendChild(svgEl("line", { x1: xk, x2: xk, y1: 26, y2: 44, stroke: C.fg, "stroke-width": 1 }));
+      svg.appendChild(svgEl("text", { x: xk, y: 20, "text-anchor": "middle", "font-size": 12, fill: C.fg }, String(k)));
+    }
+    [20, 40, 60].forEach(function (p) {
+      var xp = X(s9 + p);
+      svg.appendChild(svgEl("line", { x1: xp, x2: xp, y1: 26, y2: 44, stroke: C.bad, "stroke-width": 1 }));
+      svg.appendChild(svgEl("text", { x: xp, y: 20, "text-anchor": p === 60 ? "end" : "middle", "font-size": 12, fill: C.bad }, "+" + p));
+    });
+    var mark = function (d, col, lbl, up) {
+      var xm = X(d);
+      svg.appendChild(svgEl("polygon", { points: (xm - 6) + ",58 " + (xm + 6) + ",58 " + xm + ",46", fill: col }));
+      svg.appendChild(svgEl("text", { x: Math.max(50, Math.min(W - 50, xm)), y: up ? 88 : 72, "text-anchor": "middle",
+        "font-size": 12, "font-weight": 600, fill: col }, lbl));
+    };
+    mark(nrssi, C.noise, "шум " + sUnits(nrssi), false);
+    mark(rssi, C.accent, "сигнал " + sUnits(rssi) + " (" + num(rssi, 0) + " дБм)", true);
   }
   function readControls() {
     IDS.forEach(function (k) {
@@ -245,6 +319,7 @@
     setLive("delay", fmtTime(r.delay));
     setLive("leff", fmtLen(r.leff));
     setLive("uoc", fmtV(r.uoc));
+    setLive("uoc_half", fmtV(r.uoc / 2) + " на 73 Ом");
     setLive("aeff", r.aeff >= 0.01 ? num(r.aeff, sig(r.aeff)) + " м²" : num(r.aeff * 1e4, sig(r.aeff * 1e4)) + " см²");
     setLive("rxant_full", levelText(r.rxAnt));
     setLive("rxant_short", fmtDbm(r.rxAnt, 0));
@@ -259,7 +334,7 @@
     setLive("rxin_full", levelText(r.rxIn));
     setLive("rxin_dbm", fmtDbm(r.rxIn));
     setLive("rxin_units", fmtW(dbmW(r.rxIn)) + " · " + fmtV(dbmV(r.rxIn)) +
-      (r.rxIn > -30 ? " — риск перегрузки RTL-SDR" : ""));
+      (r.rxIn > -30 ? " — риск перегрузки (например, RTL-SDR)" : ""));
     setLive("snr", fmtDb(r.snr).replace("+", ""));
     var verdict = r.snr > 20 ? ["good", "уверенный чистый приём"] : r.snr > 10 ? ["good", "приём есть"] :
       r.snr > 3 ? ["warn", "на грани, с шумом"] : ["bad", "сигнал тонет в шуме"];
@@ -271,6 +346,7 @@
     renderTable(r, nv);
     renderBudget(r, nv);
     renderLnaBars(r);
+    renderRssi(r);
     renderCables();
     ["pattern", "airchart", "rxant"].forEach(function (k) { if (DEMOS[k]) { DEMOS[k].dirty = true; } });
   }
@@ -285,6 +361,10 @@
     html += '<tr><td>Шум в канале ' + fmtBw(S.bw) + ' (к выходу антенны)</td><td class="n">КШ ' +
       num(r.nfSys, 1) + ' дБ</td><td class="n">' + num(r.noiseAnt, 1) + '</td><td class="n">' + fmtW(dbmW(r.noiseAnt)) +
       '</td><td class="n">' + fmtV(dbmV(r.noiseAnt)) + "</td></tr>";
+    var rs = r.rxIn - Math.max(0, 10 * LOG10((S.sigBw || S.bw) / S.bw));
+    html += '<tr class="st rx"><td><a href="#rssi">RSSI в канале</a> (что измерит приёмник)</td><td class="n">' + sUnits(rs) +
+      '</td><td class="n">' + num(rs, 1) + '</td><td class="n">' + fmtW(dbmW(rs)) + '</td><td class="n">' + fmtV(dbmV(rs)) +
+      "</td></tr>";
     tb.innerHTML = html;
   }
 
@@ -325,7 +405,7 @@
       svg.appendChild(svgEl("line", { x1: x(5) - 30, x2: W - Rm, y1: y(-30), y2: y(-30), stroke: C.warn,
         "stroke-dasharray": "3 4", "stroke-width": 1.2 }));
       svg.appendChild(svgEl("text", { x: W - Rm - 2, y: y(-30) - 4, "text-anchor": "end", "font-size": 11, fill: C.warn },
-        "перегрузка RTL-SDR"));
+        "перегрузка (≈ RTL-SDR)"));
     }
     // шум
     var np = [5, 6, 7].map(function (i, j) { return x(i) + "," + y(noiseRx[j]); }).join(" ");
@@ -560,8 +640,19 @@
 
   /* ------------------------------------------------------------------ 2. АЦП */
   function adcSig(t) { return 0.6 * Math.sin(TAU * 1000 * t) + 0.35 * Math.sin(TAU * 3000 * t + 0.5); }
+  // ползунок разрядности — номер в этом списке
+  var ADC_BITS = [1, 2, 3, 4, 5, 6, 8, 12, 14, 16, 24, 32];
+  var ADC_EX = {
+    1: "1-битный АЦП (дельта-сигма до фильтра)", 2: "грубая учебная оцифровка", 3: "грубая учебная оцифровка",
+    4: "старые игровые приставки", 5: "грубая учебная оцифровка", 6: "грубая учебная оцифровка",
+    8: "RTL-SDR, HackRF", 12: "Airspy R2/Mini, LimeSDR, PlutoSDR", 14: "SDRplay RSP1A/RSPdx",
+    16: "профессиональные SDR, CD-звук", 24: "звуковые карты (реально ≈ 18–21 бит ENOB)",
+    32: "формат хранения в программе (int32/float32), не АЦП в радио"
+  };
   function adcState() {
-    var fs = Number(document.getElementById("adcFs").value) * 1000, bits = Number(document.getElementById("adcBits").value);
+    var fs = Number(document.getElementById("adcFs").value) * 1000;
+    var i = Math.max(0, Math.min(ADC_BITS.length - 1, Number(document.getElementById("adcBits").value)));
+    var bits = ADC_BITS[i];
     return { fs: fs, bits: bits, L: Math.pow(2, bits) };
   }
   function quant(x, L) {
@@ -571,20 +662,26 @@
   function adcUpdate() {
     var s = adcState();
     document.getElementById("o-adcFs").textContent = num(s.fs / 1000, 0) + " кГц";
-    document.getElementById("o-adcBits").textContent = s.bits + " бит";
+    document.getElementById("o-adcBits").textContent = s.bits + " бит · ДД ≈ " + num(6.02 * s.bits + 1.76, 0) + " дБ";
     var nyq = s.fs / 2;
     document.getElementById("adcNyq").textContent = num(nyq / 1000, 1) + " кГц" + (nyq <= 3000 ? " — тон 3 кГц искажён!" : "");
     document.getElementById("adcNyq").style.color = nyq <= 3000 ? C.bad : "";
-    document.getElementById("adcLev").textContent = String(s.L);
+    document.getElementById("adcLev").textContent = num(s.L, 0);
     document.getElementById("adcSnr").textContent = "≈ " + num(6.02 * s.bits + 1.76, 1) + " дБ";
     document.getElementById("adcRate").textContent = num(s.fs * s.bits / 1000, 0) + " кбит/с";
-    var codes = [];
-    for (var n = 0; n < 8; n++) {
-      var q = quant(adcSig(n / s.fs), s.L).k.toString(2);
-      while (q.length < s.bits) { q = "0" + q; }
-      codes.push(q);
+    var ex = document.getElementById("adcEx");
+    if (ex) { ex.textContent = ADC_EX[s.bits] || ""; }
+    var codes = [], hex = s.bits > 8, nd = hex ? Math.ceil(s.bits / 4) : s.bits;
+    for (var n = 0; n < (hex ? 4 : 8); n++) {
+      var q = quant(adcSig(n / s.fs), s.L).k.toString(hex ? 16 : 2).toUpperCase();
+      while (q.length < nd) { q = "0" + q; }
+      codes.push(hex ? "0x" + q : q);
     }
-    document.getElementById("adcCodes").textContent = "Коды: " + codes.join(" ") + " …";
+    document.getElementById("adcCodes").textContent = "Коды" + (hex ? " (шестнадцатерично)" : "") + ": " +
+      codes.join(" ") + " …";
+    $$("#adcTable tr[data-bits]").forEach(function (tr) {
+      tr.classList.toggle("cur", Number(tr.getAttribute("data-bits")) === s.bits);
+    });
     if (DEMOS.adc) { DEMOS.adc.dirty = true; }
   }
   demo("adc", false, function (d) {
@@ -866,7 +963,7 @@
     var pts = rxHist.map(function (v, j) { return [x1 - (rxHist.length - 1 - j), cy - v * arm]; });
     if (pts.length > 1) { line(ctx, pts, C.rx, 2); }
     text(ctx, "U на выходе", x0 + 4, cy - arm - 10, C.dim);
-    text(ctx, "ЭДС ≈ " + fmtV(R.uoc) + " при E = " + fmtField(R.efield), 12, h - 10, C.fg);
+    text(ctx, "ЭДС диполя ≈ " + fmtV(R.uoc) + " при E = " + fmtField(R.efield), 12, h - 10, C.fg);
   });
 
   /* ------------------------------------------------------------------ 7. входной фильтр */
@@ -955,8 +1052,15 @@
     { f: 0.36, bw: 0.012, name: "AM-станция" }
   ];
   function fftInfo() {
-    document.getElementById("fftInfo").textContent = "Бин = 2,4 МГц / " + FS.N + " = " + num(2400 / FS.N, 2) +
-      " кГц; блок длится " + num(FS.N / 2.4, 0) + " мкс";
+    var bin = 2.4e6 / FS.N, rbw = bin * 1.5, nf = 4.5;
+    var floor = -174 + 10 * LOG10(rbw) + nf, ref = -174 + 10 * LOG10(2.4e6 / 512 * 1.5) + nf;
+    document.getElementById("fftInfo").textContent = "Бин = 2,4 МГц / " + FS.N + " = " + num(bin / 1000, 2) +
+      " кГц; RBW ≈ 1,5 × бин = " + num(rbw / 1000, 2) + " кГц; блок " + num(FS.N / 2.4, 0) + " мкс";
+    var set = function (id, t) { var el = document.getElementById(id); if (el) { el.textContent = t; } };
+    set("rbwVal", num(rbw / 1000, 2) + " кГц");
+    set("rbwFloor", fmtDbm(floor, 0) + " (КШ 4,5 дБ)");
+    set("rbwShift", FS.N === 512 ? "0 дБ (база N = 512)" : fmtDb(floor - ref) + " к N = 512");
+    set("rbwLrpt", fmtDbm(-100 - 10 * LOG10(120e3 / Math.min(rbw, 120e3)), 0) + " в бине");
   }
   function genBlock(N, tsec) {
     var I = new Float64Array(N), Q = new Float64Array(N), p = FS.ph;
@@ -1053,6 +1157,11 @@
     text(ctx, "спектр (строка БПФ, дБ)", sx0 + 4, sy0 + 13, C.fg, "left", "11px 'Segoe UI', sans-serif");
     text(ctx, "IQ → окно Ханна → БПФ → |X|² в дБ", sx1 - 4, sy0 + 13, C.sdr, "right", "600 11px 'Segoe UI', sans-serif");
     text(ctx, sel.name, (selX0 + selX1) / 2, sy0 + 28, C.accent, "center", "600 11px 'Segoe UI', sans-serif");
+    // «пол» шума: медиана сглаженного спектра — смещается на 3 дБ при каждом удвоении N
+    var srt = Array.prototype.slice.call(FS.avg).sort(function (a, b) { return a - b; }), med = srt[srt.length >> 1];
+    hline(ctx, sx0, sx1, SY(med), C.warn, [5, 4]);
+    text(ctx, "пол шума " + num(med, 0) + " дБ (RBW " + num(2400 / N * 1.5, 1) + " кГц)", sx0 + 4, SY(med) - 4, C.warn,
+      "left", "600 11px 'Segoe UI', sans-serif");
     // водопад
     ctx.drawImage(FS.wf, wfR[0], wfR[1], wfR[2] - wfR[0], wfR[3] - wfR[1]);
     ctx.strokeStyle = C.accent; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
@@ -1185,7 +1294,7 @@
     }
     line(ctx, [[L0 + (R0 - L0) / 2, top], [L0 + (R0 - L0) / 2, top + wh + 20]], C.accent, 1, [3, 3]);
     // полоса кадра
-    var fy = h - 58, fw = R0 - L0, segs = [[108, C.rx, "голос 108"], [48, C.tx, "синхро 48"], [108, C.rx, "голос 108"], [24, C.noise, "пауза"]];
+    var fy = h - 58, fw = R0 - L0, segs = [[108, C.rx, "голос 108"], [48, C.tx, "синхро 48"], [108, C.rx, "голос 108"], [24, C.noise, "пауза / CACH"]];
     var xx = L0;
     segs.forEach(function (s) {
       var sw2 = fw * s[0] / 288;
@@ -1402,6 +1511,79 @@
     src.start();
   }
 
+  /* ------------------------------------------------------------------ 15. шифрование и законная расшифровка */
+  // Учебная потоковая схема: ключ + IV/счётчик → гамма → XOR. НЕ криптостойкая — только для наглядности.
+  // Если в браузере есть WebCrypto (нужен защищённый контекст), можно включить настоящий AES-256-CTR.
+  var CR = { mode: "edu", seq: 0 };
+  function fnv(str) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return h >>> 0;
+  }
+  function eduStream(key, iv, n) {
+    var out = new Uint8Array(n), st = (fnv(key + "|" + iv) || 1) >>> 0;
+    for (var i = 0; i < n; i++) {
+      st ^= st << 13; st >>>= 0; st ^= st >>> 17; st ^= st << 5; st >>>= 0;
+      out[i] = (st ^ (st >>> 11) ^ fnv(key) >>> ((i & 3) * 8)) & 255;
+    }
+    return out;
+  }
+  function subtleOk() { return !!(window.crypto && window.crypto.subtle && window.isSecureContext); }
+  function aesStream(key, iv, n) {
+    var enc = new TextEncoder(), subtle = window.crypto.subtle;
+    return subtle.digest("SHA-256", enc.encode(key)).then(function (raw) {
+      return subtle.importKey("raw", raw, { name: "AES-CTR" }, false, ["encrypt"]);
+    }).then(function (k) {
+      var ctr = new Uint8Array(16), ivn = fnv(String(iv));
+      for (var i = 0; i < 4; i++) { ctr[i] = (ivn >>> (24 - 8 * i)) & 255; }
+      return subtle.encrypt({ name: "AES-CTR", counter: ctr, length: 64 }, k, new Uint8Array(n));  // гамма = AES(ключ, счётчик)
+    }).then(function (buf) { return new Uint8Array(buf); });
+  }
+  function streamOf(key, iv, n) {
+    return CR.mode === "aes" && subtleOk() ? aesStream(key, iv, n) : Promise.resolve(eduStream(key, iv, n));
+  }
+  function xorb(a, b) { var o = new Uint8Array(a.length); for (var i = 0; i < a.length; i++) { o[i] = a[i] ^ b[i]; } return o; }
+  function hexOf(u) { return Array.prototype.map.call(u, function (x) { return (x < 16 ? "0" : "") + x.toString(16).toUpperCase(); }).join(" "); }
+  function bitsHtml(u) {
+    var s = "", n = Math.min(u.length, 8);
+    for (var i = 0; i < n; i++) { for (var b = 7; b >= 0; b--) { s += "<i class=\"b" + ((u[i] >> b) & 1) + "\"></i>"; } }
+    return "<div class=\"bits\" aria-hidden=\"true\">" + s + "</div>";
+  }
+  function asText(u) {
+    var t;
+    try { t = new TextDecoder("utf-8", { fatal: false }).decode(u); } catch (e) { t = ""; }
+    return t.replace(/[\u0000-\u001f\u007f-\u009f�]/g, "·");
+  }
+  function cryptUpdate() {
+    var box = document.getElementById("cryptRows");
+    if (!box || !window.TextEncoder) { return; }
+    var msg = document.getElementById("cMsg").value || " ", k1 = document.getElementById("cKey").value,
+      k2 = document.getElementById("cKeyRx").value, iv = document.getElementById("cIv").value;
+    var plain = new TextEncoder().encode(msg).slice(0, 64), seq = ++CR.seq;
+    Promise.all([streamOf(k1, iv, plain.length), streamOf(k2, iv, plain.length), streamOf(k1 + "?", iv, plain.length)])
+      .then(function (ks) {
+        if (seq !== CR.seq) { return; }
+        var air = xorb(plain, ks[0]), rx = xorb(air, ks[1]), eve = xorb(air, ks[2]), same = k1 === k2;
+        var row = function (cls, lbl, sub, u, txt) {
+          return "<div class=\"crow " + cls + "\"><div class=\"lbl\">" + lbl + "<small>" + sub + "</small></div><div>" +
+            bitsHtml(u) + "<div class=\"hex\">" + hexOf(u) + "</div>" +
+            (txt !== undefined ? "<div class=\"txt\">" + txt.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</div>" : "") + "</div></div>";
+        };
+        box.innerHTML =
+          row("plain", "1. Открытые данные", "голосовой кадр или текст", plain, msg) +
+          row("ks", "2. Гамма передатчика", "ключ + IV/счётчик → генератор", ks[0]) +
+          row("air", "3. В эфире: данные XOR гамма", "выглядит как случайные биты", air, asText(air)) +
+          row(same ? "ok" : "bad", "4. Свой приёмник", same ? "тот же ключ → та же гамма → XOR" : "ключ не совпал!", rx, asText(rx)) +
+          row("bad", "5. Чужой приёмник", "неверный ключ → другая гамма → мусор", eve, asText(eve));
+      }).catch(function () { CR.mode = "edu"; cryptUpdate(); });
+    var note = document.getElementById("cryptMode");
+    if (note) {
+      note.textContent = CR.mode === "aes" && subtleOk() ? "AES-256-CTR через WebCrypto браузера: ключ = SHA-256(пароль), гамма = AES(ключ, счётчик)." :
+        "Учебная потоковая схема (xorshift от ключа и IV) — НЕ криптостойкая, только для наглядности." +
+        (subtleOk() ? "" : " AES в этом окне недоступен: WebCrypto работает только в защищённом контексте (https или localhost).");
+    }
+  }
+
   /* ------------------------------------------------------------------ навигация по блокам */
   function openBlock(id, scroll) {
     var el = document.getElementById(id);
@@ -1434,6 +1616,10 @@
     setControls(PRESETS.pmr);
     $("#ctl").addEventListener("input", update);
     $("#ctl").addEventListener("change", update);
+    ["rqMode", "tGain"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) { el.addEventListener("input", update); el.addEventListener("change", update); }
+    });
     $("#presets").addEventListener("click", function (e) {
       var b = e.target.closest("button");
       if (!b) { return; }
@@ -1473,6 +1659,16 @@
     document.getElementById("playAnalog").addEventListener("click", function () { play("a"); });
     document.getElementById("playDigital").addEventListener("click", function () { play("d"); });
     document.getElementById("cv-fft").addEventListener("click", fftClick);
+    ["cMsg", "cKey", "cKeyRx", "cIv"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) { el.addEventListener("input", cryptUpdate); }
+    });
+    if (document.getElementById("cryptModeSeg")) {
+      var aesBtn = $('#cryptModeSeg [data-v="aes"]');
+      if (!subtleOk()) { aesBtn.disabled = true; aesBtn.title = "WebCrypto недоступен: откройте страницу по https или с localhost"; }
+      CR.mode = segBind("cryptModeSeg", function (v) { CR.mode = v; cryptUpdate(); });
+    }
+    cryptUpdate();
     document.getElementById("o-demodNoise").textContent = document.getElementById("demodNoise").value + " %";
     update();
     adcUpdate();

@@ -167,6 +167,24 @@ table.t th, table.t td { border-bottom: 1px solid var(--grid); padding: 6px 8px;
 table.t th { color: var(--dim); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
 table.t td.n { font-family: var(--mono); white-space: nowrap; text-align: right; }
 table.t tr.st td:first-child { border-left: 3px solid var(--c); }
+.crypt { display: grid; gap: 8px; margin-top: 10px; }
+.crow { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 4px 12px; align-items: start;
+  background: var(--panel2); border-radius: 8px; padding: 8px 10px; border-left: 4px solid var(--c, var(--grid)); }
+.crow .lbl { font-size: .88rem; font-weight: 600; }
+.crow .lbl small { display: block; font-weight: 400; color: var(--dim); }
+.crow .hex { font-family: var(--mono); font-size: .8rem; word-break: break-all; color: var(--dim); }
+.crow .txt { font-family: var(--mono); font-size: .92rem; word-break: break-all; }
+.bits { display: flex; flex-wrap: wrap; gap: 2px; margin: 3px 0; }
+.bits i { width: 9px; height: 12px; border-radius: 2px; background: var(--grid); }
+.bits i.b1 { background: var(--c, var(--accent)); }
+.crow.plain { --c: var(--tx); } .crow.ks { --c: var(--sdr); } .crow.air { --c: var(--air); }
+.crow.ok { --c: var(--good); } .crow.bad { --c: var(--bad); }
+.cin { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 14px; }
+.cin label { display: block; font-size: .85rem; color: var(--dim); }
+.cin input[type=text] { width: 100%; font: inherit; font-family: var(--mono); font-size: .9rem; padding: 5px 8px;
+  border-radius: 6px; border: 1px solid var(--grid); background: var(--panel); color: var(--fg); }
+@media (max-width: 560px) { .crow { grid-template-columns: 1fr; } }
+table.t tr.cur td { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
 table.t tr.tx { --c: var(--tx); } table.t tr.air { --c: var(--air); } table.t tr.rx { --c: var(--rx); }
 .note { background: var(--panel2); border-left: 4px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
 .note.warn { border-left-color: var(--warn); }
