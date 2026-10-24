@@ -162,6 +162,20 @@ details.more > summary { cursor: pointer; color: var(--accent); font-size: .9rem
 #budgetSvg { width: 100%; height: auto; display: block; }
 #budgetSvg text { font-family: "Segoe UI", system-ui, sans-serif; }
 .tw { overflow-x: auto; margin-top: 10px; }
+.tw.fit { overflow-x: visible; }
+#budgetTable { table-layout: fixed; font-size: .86rem; }
+#budgetTable col.c1 { width: 38%; } #budgetTable col.c2 { width: 26%; } #budgetTable col.c3 { width: 12%; }
+#budgetTable td, #budgetTable th { overflow-wrap: anywhere; padding: 6px 6px; }
+#budgetTable td.n { white-space: normal; font-size: .82rem; }
+#budgetTable th.n { text-align: right; }
+#budgetTable th { text-transform: none; letter-spacing: 0; overflow-wrap: normal; font-size: .76rem; }
+#budgetTable .chg-inline { display: none; }
+@media (max-width: 640px) {
+  #budgetTable col.c1 { width: 52%; } #budgetTable col.c2 { width: 0; } #budgetTable col.c3 { width: 16%; }
+  #budgetTable td:nth-child(2), #budgetTable th:nth-child(2) { padding: 0; font-size: 0; border: 0; }
+  #budgetTable .chg-inline { display: block; font-size: .78rem; color: var(--dim); margin-top: 2px; }
+  #budgetTable td, #budgetTable th { padding: 5px 4px; }
+}
 table.t { border-collapse: collapse; width: 100%; font-size: .9rem; }
 table.t th, table.t td { border-bottom: 1px solid var(--grid); padding: 6px 8px; text-align: left; vertical-align: top; }
 table.t th { color: var(--dim); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
@@ -184,6 +198,11 @@ table.t tr.st td:first-child { border-left: 3px solid var(--c); }
 .cin input[type=text] { width: 100%; font: inherit; font-family: var(--mono); font-size: .9rem; padding: 5px 8px;
   border-radius: 6px; border: 1px solid var(--grid); background: var(--panel); color: var(--fg); }
 @media (max-width: 560px) { .crow { grid-template-columns: 1fr; } }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 2px; color: var(--dim); }
+.legend .sw { display: inline-block; width: 14px; height: 10px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
+.legend .sw.up { background: linear-gradient(90deg, var(--good) 50%, var(--bad) 50%); }
+.legend .sw.eq { border: 2px dashed var(--tx); border-radius: 50%; width: 10px; height: 10px; }
+i.eirp-pair { color: var(--tx); font-size: .85em; }
 table.t tr.cur td { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
 table.t tr.tx { --c: var(--tx); } table.t tr.air { --c: var(--air); } table.t tr.rx { --c: var(--rx); }
 .note { background: var(--panel2); border-left: 4px solid var(--accent); border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
@@ -240,3 +259,12 @@ ul.tight li { margin: .2rem 0; }
 
 footer { margin: 3rem 0 2rem; color: var(--dim); font-size: .88rem; border-top: 1px solid var(--grid); padding-top: 14px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* сокращения: ссылка с подсказкой */
+a.term { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--accent) 70%, transparent);
+  text-underline-offset: 3px; cursor: help; }
+a.term:hover, a.term:focus-visible { color: var(--accent); }
+#termTip { position: absolute; z-index: 50; background: var(--panel); color: var(--fg); border: 1px solid var(--accent);
+  border-radius: 10px; padding: 9px 12px; font-size: .86rem; line-height: 1.4; box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
+#termTip .tt { color: var(--dim); margin-top: 3px; }
+#termTip .tl { margin-top: 6px; font-size: .8rem; }

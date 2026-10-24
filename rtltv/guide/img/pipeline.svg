@@ -18,15 +18,15 @@
     <text x="442" y="74" font-size="11" fill="{{dim}}">мощности</text>
     <rect x="514" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
     <text x="566" y="56" font-size="13" fill="{{fg}}">Фидер</text>
-    <text x="566" y="74" font-size="11" fill="{{dim}}">потери, дБ</text>
+    <text x="566" y="74" font-size="11" fill="{{dim}}">потери, dB</text>
     <rect x="638" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
     <text x="690" y="56" font-size="13" fill="{{fg}}">Антенна</text>
     <text x="690" y="74" font-size="11" fill="{{dim}}">лишь направляет</text>
     <!-- уровни: рация PMR 0,5 Вт -->
-    <text x="70" y="102" font-size="11" fill="{{accent}}">0 дБм · 1 мВт</text>
-    <text x="442" y="102" font-size="11" fill="{{accent}}">27 дБм · 0,5 Вт</text>
-    <text x="566" y="102" font-size="11" fill="{{accent}}">27 дБм</text>
-    <text x="690" y="102" font-size="11" fill="{{accent}}">излучено ≈ 0,33 Вт</text>
+    <text x="70" y="102" font-size="11" fill="{{accent}}">0 dBm · 1 мВт</text>
+    <text x="442" y="102" font-size="11" fill="{{accent}}">27 dBm · 0,5 Вт</text>
+    <text x="566" y="102" font-size="11" fill="{{accent}}">27 dBm</text>
+    <text x="690" y="102" font-size="11" fill="{{accent}}">0,33 Вт · ЭИИМ 0,5</text>
   </g>
   <g stroke="{{dim}}" stroke-width="1.5">
     <line x1="122" y1="60" x2="140" y2="60"/>
@@ -43,24 +43,24 @@
   <g font-family="Segoe UI" text-anchor="middle">
     <rect x="20" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{line}}"/>
     <text x="84" y="180" font-size="13" fill="{{fg}}">Эфир</text>
-    <text x="84" y="198" font-size="11" fill="{{dim}}">FSPL, −дБ</text>
+    <text x="84" y="198" font-size="11" fill="{{dim}}">FSPL, −dB</text>
     <rect x="168" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
     <text x="232" y="180" font-size="13" fill="{{fg}}">Антенна</text>
     <text x="232" y="198" font-size="11" fill="{{dim}}">поле → напряжение</text>
     <rect x="316" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}" stroke-dasharray="5,3"/>
     <text x="380" y="180" font-size="13" fill="{{fg}}">МШУ (LNA)</text>
-    <text x="380" y="198" font-size="11" fill="{{dim}}">у антенны, +20 дБ</text>
+    <text x="380" y="198" font-size="11" fill="{{dim}}">у антенны, +20 dB</text>
     <rect x="464" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
     <text x="528" y="180" font-size="13" fill="{{fg}}">Фидер</text>
     <text x="528" y="198" font-size="11" fill="{{dim}}">кабель, разъёмы</text>
     <rect x="612" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
     <text x="676" y="180" font-size="13" fill="{{fg}}">Приёмник</text>
     <text x="676" y="198" font-size="11" fill="{{dim}}">SDR, напр. RTL-SDR</text>
-    <text x="84" y="226" font-size="11" fill="{{accent}}">−91 дБ за 2 км</text>
-    <text x="232" y="226" font-size="11" fill="{{accent}}">−64 дБм · 134 мкВ</text>
+    <text x="84" y="226" font-size="11" fill="{{accent}}">−91 dB за 2 км</text>
+    <text x="232" y="226" font-size="11" fill="{{accent}}">−64 dBm · 134 мкВ</text>
     <text x="380" y="226" font-size="11" fill="{{accent}}">не нужен</text>
-    <text x="528" y="226" font-size="11" fill="{{accent}}">−0,9 дБ</text>
-    <text x="676" y="226" font-size="11" fill="{{accent}}">−65 дБм · 121 мкВ</text>
+    <text x="528" y="226" font-size="11" fill="{{accent}}">−0,9 dB</text>
+    <text x="676" y="226" font-size="11" fill="{{accent}}">−65 dBm · 121 мкВ</text>
   </g>
   <g stroke="{{dim}}" stroke-width="1.5">
     <line x1="148" y1="184" x2="166" y2="184"/>

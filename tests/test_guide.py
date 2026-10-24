@@ -234,3 +234,29 @@ def test_interactive_link_opens_external_browser(monkeypatch):
     assert gw.interactive_path(QUrl.fromLocalFile(os.path.join(gw.guide_dir(), "img", "pipeline.svg"))) is None
     assert gw.interactive_path(QUrl("https://example.org/pipeline/index.html")) is None
     w.close()
+
+
+def test_pipeline_terms_dictionary():
+    """Словарь сокращений интерактивной схемы: каждый термин ведёт в словарь руководства и, если указано,
+    на существующий блок страницы; написания не повторяются."""
+    import json
+    base = os.path.join(gw.guide_dir(), "pipeline")
+    with open(os.path.join(base, "terms.js"), encoding="utf-8") as f:
+        src = f.read()
+    terms = json.loads(src[src.index("["):src.rindex("]") + 1])
+    with open(os.path.join(base, "index.html"), encoding="utf-8") as f:
+        page = f.read()
+    assert '<script src="terms.js"></script>' in page
+    gloss = _anchors(gw.read_page("glossary"))
+    words = []
+    for t in terms:
+        assert t["full"] and t["tip"] and t["w"], t["id"]
+        assert t["gl"] in gloss, f"{t['id']}: нет якоря {t['gl']} в glossary.html"
+        if t["href"]:
+            assert re.search(r'\sid="%s"' % re.escape(t["href"][1:]), page), f"{t['id']}: нет {t['href']}"
+        words += t["w"]
+    assert len(words) == len(set(words))
+    for must in ("ЭИИМ", "МШУ", "АЦП", "ПЧ", "IQ", "БПФ", "RBW", "VBW", "RSSI", "С/Ш", "КШ", "SINAD", "ENOB", "ЭДС",
+                 "КПД", "FSPL", "ДН", "AM", "FM", "FSK", "QPSK", "DMR", "AMBE", "CACH", "ADS-B", "PPM", "IARU", "ЦАП",
+                 "VFO", "PMR", "LRPT", "MRC"):
+        assert must in words, must
