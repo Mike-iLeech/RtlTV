@@ -176,18 +176,28 @@ end;
 
 procedure InitializeWizard;
 var
-  Json, Data, Upd: String;
+  Json, Data, Upd, Old, Note: String;
 begin
   Json := ReadSettings();
-  Data := JsonStr(Json, 'data_dir');
+  Data := RemoveBackslashUnlessRoot(JsonStr(Json, 'data_dir'));
+  Old := '';
   if Data = '' then
   begin
-    { прежняя версия (RtlTV) по умолчанию писала в «Документы\RtlTV» — если там уже что-то есть, остаёмся там }
-    if DirHasFiles(ExpandConstant('{userdocs}\RtlTV')) and not DirExists(ExpandConstant('{userdocs}\SDR4NOOB')) then
-      Data := ExpandConstant('{userdocs}\RtlTV')
-    else
-      Data := ExpandConstant('{userdocs}\SDR4NOOB');
+    Data := ExpandConstant('{userdocs}\SDR4NOOB');
+    { прежняя версия (RtlTV) по умолчанию писала в «Документы\RtlTV» }
+    if DirHasFiles(ExpandConstant('{userdocs}\RtlTV')) then
+      Old := ExpandConstant('{userdocs}\RtlTV');
+  end
+  else if CompareText(ExtractFileName(Data), 'RtlTV') = 0 then
+  begin
+    { папка с прежним именем программы (…\RtlTV) — предлагаем рядом …\SDR4NOOB }
+    Old := Data;
+    Data := ExtractFilePath(Data) + 'SDR4NOOB';
   end;
+  Note := '';
+  if Old <> '' then
+    Note := #13#10#13#10 + 'Файлы из прежней папки «' + Old + '» останутся на месте — их можно перенести ' +
+      'в новую кнопкой «Настройки» → «Перенести их в папку данных…».';
   if ExpandConstant('{param:DATADIR|}') <> '' then
     Data := ExpandConstant('{param:DATADIR|}');
   Upd := JsonStr(Json, 'update_check');
@@ -198,7 +208,7 @@ begin
     'Куда SDR4NOOB будет сохранять всё, что вы примете?',
     'Здесь будут записи пролётов спутников (до 2 ГБ за пролёт), снимки, записи звука и журналы. ' +
     'Удобно выбрать большой второй диск. Папку можно сменить позже в «Настройках» программы.' + #13#10#13#10 +
-    'При удалении программы эта папка не стирается.',
+    'При удалении программы эта папка не стирается.' + Note,
     False, 'SDR4NOOB');
   DataPage.Add('Папка данных:');
   DataPage.Values[0] := Data;
