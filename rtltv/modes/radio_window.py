@@ -1197,13 +1197,13 @@ class RadioWindow(ModeWindow):
         c0 = self.engine.center
         if force:
             # сигнал не на постоянной составляющей: центр чуть ниже VFO
-            c = max(vfo - 0.15 * fs, 0.5e6 + fs / 2)
+            c = min(max(vfo - 0.15 * fs, 0.5e6 + fs / 2), 1766e6 - fs / 2)
         elif abs(vfo - c0) > margin:
             # плавно: подвинуть полосу ровно настолько, чтобы VFO остался у края, без прыжка на страницу
             over = (vfo - c0) - margin if vfo > c0 else (vfo - c0) + margin
             c = max(c0 + over, 0.5e6 + fs / 2)
             if abs(vfo - c) > fs / 2:          # большой скачок (закладка, ввод частоты) — как раньше
-                c = max(vfo - 0.15 * fs, 0.5e6 + fs / 2)
+                c = min(max(vfo - 0.15 * fs, 0.5e6 + fs / 2), 1766e6 - fs / 2)
         else:
             return
         self.engine.set_center(c)
@@ -1253,6 +1253,11 @@ class RadioWindow(ModeWindow):
         if f is None:
             return
         if self.engine.fixed_center:
+            c, fs = self.engine.center, self.engine.fs
+            if abs(f - c) > fs / 2:      # файл IQ: за пределы записанной полосы не уйти
+                self.sb.setText("Идёт файл IQ: перейти можно только внутри записанной полосы "
+                                f"{(c - fs / 2) / 1e6:.3f}–{(c + fs / 2) / 1e6:.3f} МГц")
+                return
             self._set_vfo(f)
             return
         self._set_vfo(self._snap(f))

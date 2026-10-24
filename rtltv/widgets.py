@@ -381,7 +381,8 @@ class SpectrumView(QWidget):
         if press is not None and kind and kind[0] == "split" and e.buttons() & Qt.LeftButton:
             # граница спектр | водопад: полоса подписей идёт за курсором
             new = (e.position().y() + 8) / max(self.height(), 1)   # r.bottom()+10 = 6 + h·split − 24 + 10
-            self.split = float(min(max(new, 0.15), 0.9))
+            lo_frac = max(0.15, (24 + 60) / max(self.height(), 1))   # спектру не меньше ~60 px
+            self.split = float(min(max(new, lo_frac), 0.9))
             self._dragged = True
             self.update()
             return
@@ -506,14 +507,15 @@ class SpectrumView(QWidget):
                 p.setPen(QPen(QColor(col), 1.5, Qt.DashLine))
                 p.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom()))
                 p.setPen(QColor(col))
-                p.drawText(QRectF(x + 3, r.top() + 2, 120, 14), Qt.AlignLeft, label)
+                ly = r.top() + 2 + (2 * 13 if self.show_alloc else 0)   # ниже плашек «кто занимает»
+                p.drawText(QRectF(x + 3, ly, 120, 14), Qt.AlignLeft, label)
         if self.hover is not None and r.contains(self.hover):
             fh = self._f(self.hover.x(), r)
             p.setPen(QPen(QColor(c["fg"]), 1, Qt.DotLine))
             p.drawLine(QPointF(self.hover.x(), r.top()), QPointF(self.hover.x(), r.bottom()))
             hz_px = (f1 - f0) / max(r.width(), 1)
             hd = int(min(6, max(3, np.ceil(-np.log10(max(hz_px, 1e-3) / 1e6)))))
-            txt = f"{fh / 1e6:.{hd}f} МГц · λ {bandplan.fmt_wavelength(fh)}"
+            txt = f"{fh / 1e6:.{hd}f} МГц".replace(".", ",") + (f" · λ {bandplan.fmt_wavelength(fh)}" if fh > 0 else "")
             tx = self.hover.x() + 4 if self.hover.x() + 200 < r.right() else self.hover.x() - 204
             p.drawText(QRectF(tx, r.bottom() - 18, 200, 16),
                        Qt.AlignLeft if tx > self.hover.x() else Qt.AlignRight, txt)
@@ -759,7 +761,7 @@ class SpectrumControls(QWidget):
         checks = [self.cb_peak, self.cb_wf, self.cb_auto]
         if extended:
             self.range = QSlider(Qt.Horizontal)
-            self.range.setRange(0, 150)
+            self.range.setRange(0, 150)   # 0 — авто; 1…9 трактуются как 10 дБ
             self.range.setValue(int(self.st["range"]))
             self.range.setToolTip("Высота шкалы спектра в дБ (как Range в SDR#): меньше — сигналы выше и заметнее, "
                                   "больше — помещаются и слабые, и сильные. Крайнее левое положение — автоматически.")
@@ -817,12 +819,14 @@ class SpectrumControls(QWidget):
         if self.extended:
             self.split.setValue(int(round(frac * 100)))   # вызовет _changed → сохранение
         else:
-            self.st["split"] = int(round(frac * 100))
+            self._changed()
 
     def _changed(self, *_):
         self.st.update(fps=self.fps.currentData(), nfft=self.nfft.currentData(), smooth=self.smooth.value(),
                        peak=self.cb_peak.isChecked(), waterfall=self.cb_wf.isChecked(),
                        auto=self.cb_auto.isChecked(), lo=self.lo.value(), hi=self.hi.value())
+        if not self.extended and self.views:
+            self.st["split"] = int(round(self.views[0].split * 100))
         if self.extended:
             self.st.update(wf_off=self.wf_off.value(), wf_con=self.wf_con.value(),
                            wf_speed=self.wf_speed.currentData(), split=self.split.value(),
@@ -837,7 +841,7 @@ class SpectrumControls(QWidget):
     def _apply(self):
         st = self.st
         self.lo.setEnabled(not st["auto"])
-        self.hi.setEnabled(not st["auto"])
+        self.hi.setEnabled(not st["auto"] and not (self.extended and st.get("range", 0)))
         for v in self.views:
             v.set_fps(st["fps"])
             v.smooth = st["smooth"] / 100.0
@@ -846,15 +850,16 @@ class SpectrumControls(QWidget):
                 v.waterfall_on = bool(st["waterfall"])
                 v.wf = None
             v.auto_range = bool(st["auto"])
+            if abs(v.split - st["split"] / 100.0) > 0.006:
+                v.split = st["split"] / 100.0   # история водопада сохраняется (_push_wf подгонит высоту)
             v.man_lo, v.man_hi = float(st["lo"]), float(st["hi"])
             if self.extended:
                 v.wf_offset = float(st["wf_off"])
                 v.wf_contrast = float(st["wf_con"]) / 100.0
                 v.wf_speed = float(st["wf_speed"])
-                v.range_db = float(st["range"])
+                v.range_db = float(max(10, st["range"])) if st["range"] else 0.0
                 v.show_alloc = bool(st["alloc"])
-                if abs(v.split - st["split"] / 100.0) > 0.006:
-                    v.split = st["split"] / 100.0   # история водопада сохраняется (_push_wf подгонит высоту)
+
             v.update()
         if self.nfft_setter is not None:
             self.nfft_setter(int(st["nfft"]))
