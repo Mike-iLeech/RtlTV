@@ -193,15 +193,17 @@ def test_interactive_page_offline():
         assert f'id="{anchor}"' in src, anchor
 
 
-def test_interactive_link_opens_external_browser(monkeypatch):
-    """Ссылка на pipeline/index.html не грузится в QTextBrowser, а уходит в системный браузер (file://)."""
+def test_interactive_link_without_webengine_opens_browser(monkeypatch):
+    """Без QtWebEngine ссылка на pipeline/index.html не грузится в QTextBrowser, а уходит в системный браузер."""
     monkeypatch.setattr(gw.settings, "save", lambda *_a: None)
+    monkeypatch.setattr(gw, "web_engine", lambda: None)
     opened = []
     monkeypatch.setattr(gw, "open_in_browser", lambda path: opened.append(path) or True)
     from PySide6.QtCore import QUrl
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
-    w = gw.show_guide("pipeline")
+    w = gw.GuideWindow("pipeline")
+    w.show()
     app.processEvents()
     assert w.current_page() == "pipeline"
     src = w.view.source()
@@ -234,6 +236,211 @@ def test_interactive_link_opens_external_browser(monkeypatch):
     assert gw.interactive_path(QUrl.fromLocalFile(os.path.join(gw.guide_dir(), "img", "pipeline.svg"))) is None
     assert gw.interactive_path(QUrl("https://example.org/pipeline/index.html")) is None
     w.close()
+
+
+def _wait(app, cond, secs=20):
+    import time
+    t = time.time() + secs
+    while not cond() and time.time() < t:
+        app.processEvents()
+        time.sleep(0.01)
+    return cond()
+
+
+def _js(app, page, code, secs=10):
+    box = []
+    page.runJavaScript(code, 0, box.append)
+    assert _wait(app, lambda: box, secs), code
+    return box[0]
+
+
+def test_interactive_page_embedded(monkeypatch):
+    """Схема открывается в самом окне справки (QtWebEngine): тема приложения, «Назад»/«Вперёд», ссылки со схемы
+    на обычные страницы — в окно справки, внешние — в браузер; скрытая схема заморожена и без звука."""
+    if gw.web_engine() is None:
+        import pytest
+        pytest.skip("нет QtWebEngine")
+    monkeypatch.setattr(gw.settings, "save", lambda *_a: None)
+    monkeypatch.setattr(gw.settings, "load", lambda name, default=None: {"theme": "Светлая"} if name == "app" else dict(default or {}))
+    opened = []
+    monkeypatch.setattr(gw, "open_in_browser", lambda path: opened.append(path) or True)
+    from PySide6.QtCore import QUrl
+    from PySide6.QtWebEngineCore import QWebEnginePage
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    w = gw.GuideWindow("pipeline")
+    w.resize(1100, 760)
+    w.show()
+    app.processEvents()
+    hist = w.view.backwardHistoryCount()
+    w.view.setSource(w.view.source().resolved(QUrl("pipeline/index.html")))
+    app.processEvents()
+    assert opened == [] and w.web_shown()
+    assert w.view.backwardHistoryCount() == hist and w.current_page() == "pipeline"
+    assert "интерактивная схема" in w.title.text() and w.b_back.isEnabled()
+    page = w.web.page()
+    assert _wait(app, lambda: _js(app, page, "!!window.SDR4NOOB_PIPELINE") is True)
+    assert _js(app, page, "document.documentElement.getAttribute('data-theme')") == "light"
+    assert "theme=light" in w.web.url().query()
+    # переход на блок схемы по якорю — без перезагрузки, блок раскрывается
+    _js(app, page, "window.__keep = 1")
+    w.show_interactive(gw.interactive_path(w.web.url()), "b-fft")
+    assert _wait(app, lambda: _js(app, page, "document.getElementById('b-fft').open") is True)
+    assert _js(app, page, "window.__keep") == 1
+    # «Назад» — на страницу со ссылкой, схема заморожена и без звука; «Вперёд» — обратно на схему
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "pipeline" and w.b_fwd.isEnabled()
+    assert page.isAudioMuted() and page.lifecycleState() == QWebEnginePage.LifecycleState.Frozen
+    w.go_forward()
+    app.processEvents()
+    assert w.web_shown() and not page.isAudioMuted()
+    assert page.lifecycleState() == QWebEnginePage.LifecycleState.Active
+    assert _js(app, page, "window.__keep") == 1  # та же страница, состояние на месте
+    # ссылка со схемы на обычную страницу руководства открывается в окне справки
+    _js(app, page, "location.href = '../antennas.html#lna'")
+    assert _wait(app, lambda: not w.web_shown())
+    assert w.current_page() == "antennas" and w.view.source().fragment() == "lna"
+    # смена темы приложения перезагружает схему в тёмной теме
+    w.view.setSource(QUrl.fromLocalFile(os.path.join(gw.guide_dir(), "pipeline", "index.html")))
+    app.processEvents()
+    assert w.web_shown()
+    w.apply_theme("Тёмная")
+    assert _wait(app, lambda: _js(app, page, "document.documentElement.getAttribute('data-theme')") == "dark")
+    # масштаб A+/A− действует и на схему
+    w.st["zoom"] = 13
+    w._apply_zoom()
+    assert abs(w.web.zoomFactor() - 13 / 11) < 1e-6
+    assert opened == []
+    w.close()
+    w.release_web()
+    assert w.web is None and not w.web_shown()
+
+
+def test_interactive_navigation_cases(monkeypatch):
+    """Навигация между схемой и страницами: «Назад» со страницы, открытой ссылкой со схемы, — на схему;
+    «Вперёд» на схему важнее истории; поиск по той же странице показывает текст; закрытое окно — схема заморожена."""
+    if gw.web_engine() is None:
+        import pytest
+        pytest.skip("нет QtWebEngine")
+    monkeypatch.setattr(gw.settings, "save", lambda *_a: None)
+    monkeypatch.setattr(gw, "open_in_browser", lambda path: True)
+    from PySide6.QtCore import QUrl
+    from PySide6.QtWebEngineCore import QWebEnginePage
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    ip = os.path.join(gw.guide_dir(), "pipeline", "index.html")
+    w = gw.GuideWindow("pipeline")
+    w.resize(1100, 760)
+    w.show()
+    app.processEvents()
+    w.show_interactive(ip)
+    page = w.web.page()
+    assert _wait(app, lambda: _js(app, page, "!!window.SDR4NOOB_PIPELINE") is True)
+    assert w.title.text() == "Путь радиосигнала — интерактивная схема"
+    # ссылка со схемы в словарь → «Назад» снова на схему → «Вперёд» снова в словарь
+    _js(app, page, "location.href = '../glossary.html#t-fspl'")
+    assert _wait(app, lambda: not w.web_shown() and w.current_page() == "glossary")
+    assert w.b_back.isEnabled()
+    w.go_back()
+    app.processEvents()
+    assert w.web_shown() and w.b_fwd.isEnabled()
+    w.go_forward()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "glossary" and w.view.source().fragment() == "t-fspl"
+    # ссылка → «Назад» (схема) → «Назад» — на страницу, с которой открыта схема, а не на словарь
+    w.go_back()
+    app.processEvents()
+    assert w.web_shown()
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "pipeline" and w.b_fwd.isEnabled()
+    w.go_forward()
+    app.processEvents()
+    assert w.web_shown()
+    # ссылка со схемы на её же страницу («Вернуться к руководству») — «Назад», «Назад» не уводят дальше по истории
+    w.open_page("index")
+    w.open_page("pipeline")
+    w.show_interactive(ip)
+    _js(app, page, "location.href = '../pipeline.html'")
+    assert _wait(app, lambda: not w.web_shown())
+    assert w.current_page() == "pipeline"
+    w.go_back()
+    app.processEvents()
+    assert w.web_shown()
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "pipeline" and w.b_fwd.isEnabled()
+    w.go_back()
+    app.processEvents()
+    assert w.current_page() == "index"
+    # A → B → «Назад» на A → схема с A → «Назад» → «Вперёд» ведёт на схему, а не на B
+    w.open_page("sdr")
+    w.open_page("decibels")
+    w.go_back()
+    app.processEvents()
+    assert w.current_page() == "sdr" and w.view.isForwardAvailable()
+    w.view.setSource(QUrl.fromLocalFile(ip))
+    app.processEvents()
+    assert w.web_shown()
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "sdr"
+    w.go_forward()
+    app.processEvents()
+    assert w.web_shown()
+    # поиск: результат на странице, с которой открыта схема, — показывается текст
+    w.q.setText("АЦП")
+    app.processEvents()
+    it = next(w.results.item(i) for i in range(w.results.count()) if w.results.item(i).data(gw.Qt.UserRole) == "sdr")
+    w._result_clicked(it)
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "sdr"
+    w.q.clear()
+    # закрытое окно: схема заморожена и без звука; открыли снова — ожила
+    w.show_interactive(ip)
+    app.processEvents()
+    w.close()
+    assert _wait(app, lambda: page.lifecycleState() == QWebEnginePage.LifecycleState.Frozen, 5)
+    assert page.isAudioMuted()
+    w.show()
+    app.processEvents()
+    assert page.lifecycleState() == QWebEnginePage.LifecycleState.Active and not page.isAudioMuted()
+    w.close()
+    w.release_web()
+
+
+def test_selftest_guide_exits_cleanly():
+    """SDR4NOOB --selftest-guide (шаг CI для собранного EXE): схема оживает, процесс выходит с кодом 0 — без
+    падения при выходе (профиль QtWebEngine должен пережить страницу)."""
+    if gw.web_engine() is None:
+        import pytest
+        pytest.skip("нет QtWebEngine")
+    import subprocess
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
+    r = subprocess.run([sys.executable, "-m", "rtltv", "--selftest-guide"], cwd=root, env=env, timeout=120,
+                       capture_output=True)
+    assert r.returncode == 0, (r.returncode, r.stderr[-2000:])
+
+
+def test_web_nav_rules():
+    """Куда ведут переходы со встроенной схемы."""
+    from PySide6.QtCore import QUrl
+    base = os.path.join(gw.guide_dir(), "pipeline", "index.html")
+    assert gw.web_nav(QUrl.fromLocalFile(base)) == ("web", None)
+    u = QUrl.fromLocalFile(base)
+    u.setFragment("b-air")
+    assert gw.web_nav(u) == ("web", None)
+    u = QUrl.fromLocalFile(gw.page_path("decibels"))
+    u.setFragment("dbm")
+    assert gw.web_nav(u) == ("guide", "decibels#dbm")
+    assert gw.web_nav(QUrl.fromLocalFile(gw.page_path("legal"))) == ("guide", "legal")
+    kind, url = gw.web_nav(QUrl("https://example.org/"))
+    assert kind == "external" and url.host() == "example.org"
+    assert gw.web_nav(QUrl("data:text/plain,1"))[0] == "web"
+    assert gw.web_nav(QUrl.fromLocalFile(r"C:\Windows\win.ini")) == ("block", None)
+    assert gw.web_nav(QUrl("ftp://example.org/x"))[0] == "block"
 
 
 def test_pipeline_terms_dictionary():

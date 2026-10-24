@@ -30,6 +30,7 @@ SDR4NOOB распространяется под лицензией **GPL-3.0-or
 |---|---|---|
 | CPython 3.12 | PSF License 2.0 | https://www.python.org/ |
 | Qt 6 / PySide6 (PySide6-Essentials, shiboken6) | LGPL-3.0 (Qt и PySide6 — также GPL; используются по LGPL) | https://www.qt.io/ , https://wiki.qt.io/Qt_for_Python |
+| Qt WebEngine (PySide6-WebEngine, PySide6-Addons) — встроенный браузер справки на основе Chromium | LGPL-3.0; Chromium и его компоненты — BSD-3-Clause и др. (полный список — `qtwebengine_resources` и https://doc.qt.io/qt-6/qtwebengine-licensing.html) | https://doc.qt.io/qt-6/qtwebengine-index.html |
 | NumPy | BSD-3-Clause | https://numpy.org/ |
 | SciPy | BSD-3-Clause | https://scipy.org/ |
 | sgp4 | MIT | https://github.com/brandon-rhodes/python-sgp4 |

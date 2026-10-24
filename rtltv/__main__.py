@@ -43,15 +43,21 @@ def main():
     ap.add_argument("--shot-delay", type=float, default=8.0)
     ap.add_argument("--freq", type=float, help="ТВ: частота, МГц")
     ap.add_argument("--auto", action="store_true", help="Спутники: сразу включить автоприём по расписанию")
+    ap.add_argument("--selftest-guide", action="store_true", help=argparse.SUPPRESS)  # проверка сборки в CI
     a = ap.parse_args()
     from . import diag
     diag.setup()
     from . import updater
     updater.cleanup_legacy_exe()   # RtlTV.exe от 3.0 и ярлыки на него — после обновления с 3.0
+    from PySide6.QtCore import QCoreApplication, Qt
+    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # до QApplication — нужно QtWebEngine (схема в справке)
     app = QApplication(sys.argv)
     app.setApplicationName("SDR4NOOB")
     from .branding import app_icon
     app.setWindowIcon(app_icon())   # иконка всех окон и панели задач
+    if a.selftest_guide:            # встроенный браузер справки собран и оживает (код выхода 0)
+        from .guide_window import selftest_interactive
+        sys.exit(selftest_interactive())
     from PySide6.QtCore import QTimer
     beat = QTimer()
     beat.timeout.connect(diag.heartbeat)
