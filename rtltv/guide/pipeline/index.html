@@ -105,7 +105,9 @@
   <form class="card ctl" id="ctl" onsubmit="return false">
     <fieldset>
       <legend>Передатчик</legend>
-      <div class="row"><label for="pTx">Мощность передатчика</label><output id="o-pTx"></output>
+      <div class="row"><label for="exc">Уровень возбудителя (выход модулятора → вход усилителя мощности)</label><output id="o-exc"></output>
+        <input type="range" id="exc" min="-20" max="20" step="0.5" value="0"></div>
+      <div class="row"><label for="pTx">Мощность передатчика (выход усилителя мощности)</label><output id="o-pTx"></output>
         <input type="range" id="pTx" min="-10" max="80" step="0.5"></div>
       <div class="row"><label for="txType">Фидер передатчика</label>
         <select id="txType"><option value="RG-174">RG-174 (тонкий)</option><option value="RG316">RG316 (тонкий, тефлон)</option><option value="RG-58">RG-58</option><option value="RG-6">RG-6 (75 Ом)</option><option value="RG-213">RG-213 (толстый)</option><option value="LMR-400">LMR-400</option></select>
@@ -113,9 +115,9 @@
       <div class="row"><label for="txLen">Длина кабеля</label><output id="o-txLen"></output>
         <input type="range" id="txLen" min="0" max="100" step="1"></div>
       <div class="row"><label for="txAnt">Тип антенны передатчика</label>
-        <select id="txAnt"><option value="iso">изотропная (0 dBi)</option><option value="dipole" selected>штырь / диполь (до 2,15 dBi)</option><option value="colinear">коллинеар (2,15–12 dBi)</option><option value="yagi">Яги (5–20 dBi)</option></select></div>
+        <select id="txAnt"><option value="iso">изотропная (0 dBi)</option><option value="dipole" selected>штырь / диполь (до 2,15 dBi)</option><option value="colinear">коллинеар (3–9 dBi)</option><option value="yagi">Яги / волновой канал (5–20 dBi)</option><option value="lpda">логопериодическая LPDA (5–8 dBi)</option></select></div>
       <div class="row"><label for="gTx">Усиление антенны передатчика (в главном лепестке)</label><output id="o-gTx"></output>
-        <input type="range" id="gTx" min="-5" max="20" step="0.5"></div>
+        <input type="range" id="gTx" min="-5" max="20" step="0.5"><span class="small dim" id="gTxLim" style="grid-column:1/-1"></span></div>
       <div class="row"><label for="thTx">Угол от главного лепестка до приёмника</label><output id="o-thTx"></output>
         <input type="range" id="thTx" min="0" max="180" step="1" value="0"></div>
       <p class="small dim" style="margin:2px 0 0">Усиление не добавляет мощности: излучается столько же
@@ -168,7 +170,7 @@
       <div class="kpi" id="k-snr"><div class="k">Сигнал/шум в канале</div><div class="v" data-live="snr">—</div><div class="small dim" data-live="snr_text"></div></div>
       <div class="kpi"><div class="k">Потери в эфире</div><div class="v" data-live="fspl">—</div><div class="small dim" data-live="air_units"></div></div>
     </div>
-    <div class="diagram-wrap"><svg id="budgetSvg" viewBox="0 0 860 340" role="img" aria-label="Диаграмма уровня сигнала вдоль тракта"></svg></div>
+    <div class="diagram-wrap"><svg id="budgetSvg" viewBox="0 0 860 370" role="img" aria-label="Диаграмма уровня сигнала вдоль тракта"></svg></div>
     <div class="legend small">
       <span><i class="sw up"></i><b>dB</b> — относительное изменение мощности (+ рост, − падение)</span>
       <span><b>dBm</b> — абсолютная мощность: 0 dBm = 1 мВт</span>
@@ -245,7 +247,7 @@
       координаты самолёта). Микрофон даёт всего <b>единицы милливольт</b>, микрофонный усилитель поднимает их до
       «линейного» уровня — около 0,775 В.</p>
       <p>Дальше сообщение попадает в <b>возбудитель</b> — маломощный генератор несущей с модулятором. На его выходе
-      обычно около <b>1 мВт</b>: это 0 dBm, или 0,22 В на нагрузке 50 Ом. С этой точки начинается расчёт внизу страницы.</p>
+      обычно около <b>1 мВт</b>: это 0 dBm, или 0,22 В на нагрузке 50 Ом. С этой точки начинается расчёт: уровень возбудителя задаётся ползунком (−20…+20 dBm), а усиление усилителя мощности (УМ) = мощность передатчика − уровень возбудителя. Цепочка: микрофон (милливольты) → микрофонный усилитель (≈ 0,775 В) → модулятор → возбудитель (≈ 1 мВт) → УМ (ватты).</p>
       <div class="facts">
         <div class="fact"><div class="k">Микрофон</div><div class="v">1–10 мВ</div></div>
         <div class="fact"><div class="k">Линейный уровень</div><div class="v">0,775 В (0 dBu)</div></div>
@@ -442,13 +444,44 @@
         <li><b>G = КПД · D.</b> D (направленность) — во сколько раз в главном направлении плотнее, чем в среднем по
         сфере; КПД — какая доля мощности вообще излучилась. Среднее по сфере G равно КПД при любой форме.</li>
         <li><b>У всенаправленных антенн</b> рост усиления — это сжатие излучения к горизонту: «бублик»
-        сплющивается, вертикальный лепесток сужается (по −3 dB: у диполя ≈ 79°, у коллинеара 6 dBi ≈ 28°, 9 dBi ≈ 14°).
+        сплющивается, вертикальный лепесток сужается (по −3 dB: у диполя ≈ 79°, у коллинеара 3 dBi ≈ 61°, 6 dBi ≈ 27°, 9 dBi ≈ 13°).
         По горизонту такая антенна по-прежнему одинакова во все стороны, а вверх (на самолёт над головой или
         спутник в зените) — слабее. Мощности не прибавилось.</li>
         <li><b>У Яги</b> рост усиления — сужение луча сразу в обеих плоскостях: 10 dBi ≈ 60°, 15 dBi ≈ 32°, 20 dBi ≈ 17°.
         Цена — точное наведение: мимо луча усиление падает на 15–20 dB.</li>
         <li>Поэтому усиление антенны — не «добавка мощности», а выбор, <b>куда</b> её направить.</li>
       </ul>
+      <h3>Волновой канал (Яги) и коллинеар — не одно и то же</h3>
+      <div class="antcmp">
+        <figure>
+          <svg viewBox="0 0 160 70" aria-hidden="true"><line x1="10" y1="35" x2="150" y2="35" class="boom"/>
+            <line x1="22" y1="8" x2="22" y2="62" class="el r"/><line x1="52" y1="12" x2="52" y2="58" class="el a"/>
+            <line x1="82" y1="16" x2="82" y2="54" class="el d"/><line x1="108" y1="18" x2="108" y2="52" class="el d"/>
+            <line x1="132" y1="20" x2="132" y2="50" class="el d"/><path d="M142 35 l12 0 m-5 -4 l5 4 l-5 4" class="arr"/></svg>
+          <figcaption><b>Волновой канал (Яги — Уда)</b>: горизонтальная штанга, на ней рефлектор, активный вибратор и
+          директоры. Направленная: луч вдоль штанги, сзади и сбоку слабо.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 160 70" aria-hidden="true"><line x1="80" y1="4" x2="80" y2="66" class="boom"/>
+            <line x1="80" y1="6" x2="80" y2="24" class="el a"/><line x1="80" y1="27" x2="80" y2="45" class="el a"/>
+            <line x1="80" y1="48" x2="80" y2="66" class="el a"/><ellipse cx="80" cy="35" rx="62" ry="9" class="lobe"/></svg>
+          <figcaption><b>Коллинеар</b>: несколько полуволновых вибраторов друг над другом на одной вертикали, питаются
+          синфазно. Всенаправленный по азимуту, «бублик» прижат к горизонту.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 160 70" aria-hidden="true"><line x1="10" y1="33" x2="150" y2="33" class="boom"/>
+            <line x1="10" y1="37" x2="150" y2="37" class="boom"/>
+            <line x1="22" y1="4" x2="22" y2="66" class="el a"/><line x1="46" y1="9" x2="46" y2="61" class="el a"/>
+            <line x1="68" y1="14" x2="68" y2="56" class="el a"/><line x1="88" y1="18" x2="88" y2="52" class="el a"/>
+            <line x1="106" y1="22" x2="106" y2="48" class="el a"/><line x1="122" y1="25" x2="122" y2="45" class="el a"/>
+            <path d="M22 33 L46 37 L68 33 L88 37 L106 33 L122 37" class="lobe"/>
+            <path d="M136 35 l12 0 m-5 -4 l5 4 l-5 4" class="arr"/></svg>
+          <figcaption><b>Логопериодическая (LPDA)</b>: вибраторы растущей длины на двух собирающих линиях, питание
+          перекрещивается от вибратора к вибратору. Направленная, но луч шире, чем у Яги той же длины (5–8 dBi,
+          задний лепесток −15…−20 dB). Главное — широкополосность: усиление почти одинаково, например, в 100–1300 МГц,
+          а Яги настроена на одну полосу.</figcaption>
+        </figure>
+      </div>
       <ul class="tight">
         <li>Полуволновый диполь — 2,15 dBi; штырь рации — от −5 до 0 dBi; Яги из 5–7 элементов — 9–11 dBi;
         вещательная антенная решётка — 6–10 dBi.</li>
@@ -457,14 +490,15 @@
     </div>
     <div class="demo">
       <div class="ctrls" style="margin:0 0 8px">
-        <span class="seg" id="patType"><button type="button" data-v="iso">Изотропная</button><button type="button" class="on" data-v="dipole">Штырь / диполь</button><button type="button" data-v="colinear">Коллинеар</button><button type="button" data-v="yagi">Яги</button></span>
-        <span class="seg" id="patView"><button type="button" class="on" data-v="3d">3D</button><button type="button" data-v="v">Вертикальное сечение</button><button type="button" data-v="h">Горизонтальное</button></span>
+        <span class="seg" id="patType"><button type="button" data-v="iso">Изотропная</button><button type="button" class="on" data-v="dipole">Штырь / диполь</button><button type="button" data-v="colinear">Коллинеар</button><button type="button" data-v="yagi">Яги (волновой канал)</button><button type="button" data-v="lpda">Логопериодическая (LPDA)</button></span>
+        <span class="seg" id="patView"><button type="button" class="on" data-v="3d">3D</button><button type="button" data-v="v">Вертикальное сечение (вид сбоку)</button><button type="button" data-v="h">Горизонтальное сечение (вид сверху)</button></span>
       </div>
       <canvas id="cv-pattern" height="320" data-demo="pattern" aria-label="Диаграмма направленности передающей антенны"></canvas>
       <p class="cap">Диаграмма направленности передающей антенны: тот же тип и то же усиление, что в расчёте
       (меняйте ползунок усиления — фигура плавно перестраивается). Масштаб в dBi, пунктирный круг — изотропная
       антенна (0 dBi). Синий луч — направление на приёмник (ползунок угла). Ширина главного лепестка по −3 dB:
       <b id="patBw">—</b>.</p>
+      <p class="cap" id="patNote"></p>
     </div>
   </div>
 </details>
@@ -901,19 +935,20 @@
 </div>
 
 <h2 id="formulas">Формулы на одной странице</h2>
+<p class="small dim">Каждая формула — ссылка на объяснение; наведите или коснитесь, чтобы увидеть подсказку.</p>
 <div class="card">
   <ul class="tight">
-    <li>Мощность из dBm: <span class="mono">P(мВт) = 10^(dBm/10)</span>; обратно: <span class="mono">dBm = 10·lg P(мВт)</span>.</li>
-    <li>Напряжение на нагрузке: <span class="mono">U = √(P·R)</span>, R = 50 Ом (у ТВ-техники — 75 Ом). −107 dBm ≈ 1 мкВ на 50 Ом, 0 dBµV = −107 dBm.</li>
-    <li>Децибелы складываются: <span class="mono">P<sub>вых</sub>(dBm) = P<sub>вх</sub>(dBm) + G(dB) − L(dB)</span>.
+    <li>Мощность из dBm: <a class="term mono" data-term="f-p" href="../decibels.html#dbm">P(мВт) = 10^(dBm/10)</a>; обратно: <a class="term mono" data-term="f-dbm" href="../decibels.html#dbm">dBm = 10·lg P(мВт)</a>.</li>
+    <li>Напряжение на нагрузке: <a class="term mono" data-term="f-u" href="../decibels.html#dbm">U = √(P·R)</a>, R = 50 Ом (у ТВ-техники — 75 Ом). −107 dBm ≈ 1 мкВ на 50 Ом, 0 dBµV = −107 dBm.</li>
+    <li>Децибелы складываются: <a class="term mono" data-term="f-sum" href="../decibels.html#db">P<sub>вых</sub>(dBm) = P<sub>вх</sub>(dBm) + G(dB) − L(dB)</a>.
     +3 dB — вдвое по мощности, +6 dB — вдвое по напряжению, +10 dB — в 10 раз по мощности.</li>
-    <li>Длина волны: <span class="mono">λ(м) = 300 / f(МГц)</span>.</li>
-    <li>Потери в свободном пространстве: <span class="mono">FSPL = 20·lg d(км) + 20·lg f(МГц) + 32,44</span>.</li>
-    <li>Излучаемая мощность: <span class="mono">P<sub>изл</sub> = P<sub>перед</sub> − потери фидера − потери в антенне</span>; ЭИИМ — эквивалент в направлении на приёмник: <span class="mono">ЭИИМ(θ) = P<sub>вх</sub> + G(θ) = P<sub>изл</sub> + D(θ)</span> (G — усиление с учётом КПД, D — направленность).</li>
-    <li>Поле: <span class="mono">E(В/м) = √(30·ЭИИМ(Вт)) / d(м)</span>; ЭДС полуволнового диполя <span class="mono">U = E·λ/π</span>.</li>
-    <li>Шум в полосе B: <span class="mono">N(dBm) = −174 + КШ + 10·lg B(Гц)</span>.</li>
-    <li>Котельников–Найквист: <span class="mono">f<sub>д</sub> &gt; 2·F<sub>max</sub></span>; С/Ш квантования ≈ <span class="mono">6,02·N + 1,76 dB</span>.</li>
-    <li>Полоса FM (Карсон): <span class="mono">B ≈ 2·(Δf + F<sub>max</sub>)</span>; полоса AM: <span class="mono">2·F<sub>max</sub></span>.</li>
+    <li>Длина волны: <a class="term mono" data-term="f-lambda" href="../antennas.html#lambda">λ(м) = 300 / f(МГц)</a>.</li>
+    <li>Потери в свободном пространстве: <a class="term mono" data-term="f-fspl" href="#b-air">FSPL = 20·lg d(км) + 20·lg f(МГц) + 32,44</a>.</li>
+    <li>Излучаемая мощность: <a class="term mono" data-term="f-prad" href="#b-txant">P<sub>изл</sub> = P<sub>перед</sub> − потери фидера − потери в антенне</a>; ЭИИМ — эквивалент в направлении на приёмник: <a class="term mono" data-term="f-eirp" href="#b-txant">ЭИИМ(θ) = P<sub>вх</sub> + G(θ) = P<sub>изл</sub> + D(θ)</a> (G — усиление с учётом КПД, D — направленность).</li>
+    <li>Поле: <a class="term mono" data-term="f-field" href="#b-air">E(В/м) = √(30·ЭИИМ(Вт)) / d(м)</a>; ЭДС полуволнового диполя <a class="term mono" data-term="f-emf" href="#b-rxant">U = E·λ/π</a>.</li>
+    <li>Шум в полосе B: <a class="term mono" data-term="f-noise" href="#b-lna">N(dBm) = −174 + КШ + 10·lg B(Гц)</a>.</li>
+    <li>Котельников–Найквист: <a class="term mono" data-term="f-nyq" href="#b-adc">f<sub>д</sub> &gt; 2·F<sub>max</sub></a>; С/Ш квантования ≈ <a class="term mono" data-term="f-qsnr" href="#b-adc">6,02·N + 1,76 dB</a>.</li>
+    <li>Полоса FM (Карсон): <a class="term mono" data-term="f-carson" href="#b-mod">B ≈ 2·(Δf + F<sub>max</sub>)</a>; полоса AM: <a class="term mono" data-term="f-am" href="#b-mod">2·F<sub>max</sub></a>.</li>
   </ul>
 </div>
 

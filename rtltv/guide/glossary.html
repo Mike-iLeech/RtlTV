@@ -31,11 +31,11 @@
 <p><b>Граунд-плейн</b> (Ground Plane) — вертикальный штырь λ/4 с противовесами. <a href="antennas.html#whip">→</a></p>
 
 <h2><a name="ru-d"></a>Д</h2>
-<p><b>дБ</b> — логарифм отношения: 10·lg для мощности, 20·lg для напряжения. <a href="decibels.html#db">→</a></p>
-<p><a name="t-dbi"></a><b>дБi / дБd</b> — усиление антенны относительно изотропной / диполя; дБi = дБd + 2,15. <a href="decibels.html#dbi">→</a></p>
-<p><a name="t-dbm"></a><b>дБм</b> — мощность относительно 1 мВт. <a href="decibels.html#dbm">→</a></p>
-<p><a name="t-dbuv"></a><b>дБмкВ</b> — напряжение относительно 1 мкВ; на 50 Ом = дБм + 107. <a href="decibels.html#dbm">→</a></p>
-<p><a name="t-dbfs"></a><b>дБFS</b> — уровень относительно полной шкалы АЦП. <a href="decibels.html#dbfs">→</a></p>
+<p><a name="t-db"></a><b>dB</b> — логарифм отношения: 10·lg для мощности, 20·lg для напряжения. <a href="decibels.html#db">→</a></p>
+<p><a name="t-dbi"></a><b>dBi / dBd</b> — усиление антенны относительно изотропной / диполя; dBi = dBd + 2,15. <a href="decibels.html#dbi">→</a></p>
+<p><a name="t-dbm"></a><b>dBm</b> — мощность относительно 1 мВт. <a href="decibels.html#dbm">→</a></p>
+<p><a name="t-dbuv"></a><b>dBµV</b> — напряжение относительно 1 мкВ; на 50 Ом = dBm + 107. <a href="decibels.html#dbm">→</a></p>
+<p><a name="t-dbfs"></a><b>dBFS</b> — уровень относительно полной шкалы АЦП. <a href="decibels.html#dbfs">→</a></p>
 <p><b>DC-пик</b> — пик постоянной составляющей в центре полосы приёмника. <a href="spectrum.html#dc">→</a></p>
 <p><b>Девиация</b> — наибольшее отклонение частоты при ЧМ: ±75 кГц у WFM, ±2,5/±5 кГц у NFM. <a href="modulation.html#bw">→</a></p>
 <p><b>Децимация</b> — понижение частоты дискретизации с фильтрацией; даёт выигрыш в шуме. <a href="sdr.html#adc">→</a></p>
@@ -63,7 +63,7 @@
 <h2><a name="ru-l"></a>Л</h2>
 <p><b>LRIT</b> — передача снимков «Электро-Л» на 1691 МГц (BPSK). <a href="mode-sat.html">→</a></p>
 <p><a name="t-lrpt"></a><b>LRPT</b> — передача снимков «Метеор-М» на 137,9 МГц (OQPSK 72k). <a href="satellites.html#meteor">→</a></p>
-<p><b>λ (лямбда)</b> — длина волны: λ (м) = 300 / f (МГц). <a href="antennas.html#lambda">→</a></p>
+<p><a name="t-lambda"></a><b>λ (лямбда)</b> — длина волны: λ (м) = 300 / f (МГц). <a href="antennas.html#lambda">→</a></p>
 
 <h2><a name="ru-m"></a>М</h2>
 <p><b>Мода S</b> (Mode S) — система ответчиков самолётов на 1090 МГц, частью которой является ADS-B. <a href="mode-adsb.html">→</a></p>
@@ -77,7 +77,7 @@
 
 <h2><a name="ru-o"></a>О</h2>
 <p><b>OFDM</b> — тысячи узких поднесущих одновременно; DVB-T2. <a href="modulation.html#digital">→</a></p>
-<p><a name="t-snr"></a><b>ОСШ</b> (SNR) — отношение сигнал/шум, дБ. <a href="decibels.html#snr">→</a></p>
+<p><a name="t-snr"></a><b>ОСШ</b> (SNR) — отношение сигнал/шум, dB. <a href="decibels.html#snr">→</a></p>
 
 <h2><a name="ru-p"></a>П</h2>
 <p><b>Перегрузка</b> — выход сигнала за шкалу АЦП или линейный диапазон усилителя. <a href="gain.html#overload">→</a></p>
@@ -128,7 +128,7 @@
 <p><b>Шумовая дорожка</b> — «ковёр» шума внизу спектра. <a href="spectrum.html#read">→</a></p>
 
 <h2><a name="ru-ya"></a>Я</h2>
-<p><b>Яги</b> (Яги — Уда) — направленная антенна с директорами и рефлектором. <a href="antennas.html#yagi">→</a></p>
+<p><a name="t-yagi"></a><b>Яги</b> (Яги — Уда) — направленная антенна с директорами и рефлектором. <a href="antennas.html#yagi">→</a></p>
 
 <h2><a name="latin"></a>A–Z (сокращения)</h2>
 <table class="t" border="1" cellspacing="0" cellpadding="4" width="99%">
@@ -152,19 +152,21 @@
 </table>
 
 <h2><a name="abbr"></a>Сокращения со страницы «Путь радиосигнала»</h2>
+<p><a name="t-lpda"></a><b>Логопериодическая антенна (LPDA)</b> — вибраторы растущей длины на двух собирающих линиях с перекрёстным питанием: направленная (5–8 dBi, задний лепесток −15…−20 dB) и широкополосная — усиление почти постоянно, например, в 100–1300 МГц. <a href="pipeline.html">→</a></p>
+<p><a name="t-colinear"></a><b>Коллинеар</b> — вертикальная антенна из нескольких полуволновых вибраторов друг над другом, питаемых синфазно: всенаправленная по азимуту, излучение прижато к горизонту (6 dBi — вертикальный лепесток ≈ 27°). <a href="antennas.html#types">→</a></p>
 <p><a name="t-adsb"></a><b>ADS-B</b> — Automatic Dependent Surveillance–Broadcast: самолёт сам передаёт координаты и высоту на 1090 МГц. <a href="pipeline.html">→</a></p>
 <p><a name="t-ambe"></a><b>AMBE+2</b> — вокодер DMR: сжимает речь до 2,45 кбит/с, кадр 72 бита = 20 мс речи. <a href="pipeline.html">→</a></p>
 <p><a name="t-aeff"></a><b>Aэфф</b> — эффективная площадь антенны: Aэфф = Gλ²/4π. Принимаемая мощность = плотность потока × Aэфф. <a href="pipeline.html">→</a></p>
 <p><a name="t-cach"></a><b>CACH</b> — Common Announcement Channel — 24 бита служебного канала ретранслятора DMR между таймслотами. <a href="pipeline.html">→</a></p>
 <p><a name="t-enob"></a><b>ENOB</b> — effective number of bits — эффективная разрядность АЦП с учётом шума аналоговой части. <a href="pipeline.html">→</a></p>
-<p><a name="t-fspl"></a><b>FSPL</b> — free-space path loss — потери в свободном пространстве: 20·lg d(км) + 20·lg f(МГц) + 32,44 дБ. <a href="pipeline.html">→</a></p>
-<p><a name="t-iaru"></a><b>IARU</b> — Международный союз радиолюбителей; задаёт шкалу S-метра: S9 = −73 дБм ниже 30 МГц и −93 дБм выше. <a href="pipeline.html">→</a></p>
+<p><a name="t-fspl"></a><b>FSPL</b> — free-space path loss — потери в свободном пространстве: 20·lg d(км) + 20·lg f(МГц) + 32,44 dB. <a href="pipeline.html">→</a></p>
+<p><a name="t-iaru"></a><b>IARU</b> — Международный союз радиолюбителей; задаёт шкалу S-метра: S9 = −73 dBm ниже 30 МГц и −93 dBm выше. <a href="pipeline.html">→</a></p>
 <p><a name="t-mrc"></a><b>MRC</b> — maximal-ratio combining — сложение сигналов двух антенн в фазе с весами (разнесённый приём). <a href="pipeline.html">→</a></p>
 <p><a name="t-pulse-ppm"></a><b>PPM (модуляция)</b> — импульсно-позиционная модуляция: бит задаётся положением импульса (так передаёт ADS-B). Не путать с ppm — точностью частоты. <a href="pipeline.html">→</a></p>
 <p><a name="t-qpsk"></a><b>QPSK</b> — квадратурная фазовая манипуляция: четыре фазы, по 2 бита на символ («Метеор», LRPT). <a href="pipeline.html">→</a></p>
 <p><a name="t-rbw"></a><b>RBW</b> — resolution bandwidth — полоса разрешения анализатора спектра; в БПФ ≈ fд/N × 1,5 для окна Ханна. <a href="pipeline.html">→</a></p>
 <p><a name="t-rssi"></a><b>RSSI</b> — received signal strength indicator — мощность в полосе канала на входе приёмника (показание S-метра). <a href="pipeline.html">→</a></p>
-<p><a name="t-sinad"></a><b>SINAD</b> — (сигнал + шум + искажения) / (шум + искажения) после демодулятора; 12 дБ SINAD — порог чувствительности рации. <a href="pipeline.html">→</a></p>
+<p><a name="t-sinad"></a><b>SINAD</b> — (сигнал + шум + искажения) / (шум + искажения) после демодулятора; 12 dB SINAD — порог чувствительности рации. <a href="pipeline.html">→</a></p>
 <p><a name="t-vbw"></a><b>VBW</b> — video bandwidth — видеофильтр анализатора спектра: сглаживает показания, не опуская средний шум. <a href="pipeline.html">→</a></p>
 <p><a name="t-dn"></a><b>ДН</b> — диаграмма направленности: как усиление антенны зависит от направления. <a href="pipeline.html">→</a></p>
 <p><a name="t-eff"></a><b>КПД</b> — коэффициент полезного действия: у антенны — какая доля мощности излучилась, а не нагрела её. <a href="pipeline.html">→</a></p>
@@ -172,5 +174,5 @@
 <p><a name="t-dac"></a><b>ЦАП</b> — цифро-аналоговый преобразователь: превращает числа обратно в напряжение (звуковая карта). <a href="pipeline.html">→</a></p>
 <p><a name="t-emf"></a><b>ЭДС</b> — электродвижущая сила; у антенны — напряжение холостого хода, на согласованной нагрузке остаётся половина. <a href="pipeline.html">→</a></p>
 <p><a name="t-eirp"></a><b>ЭИИМ</b> — эквивалентная изотропно излучаемая мощность (EIRP) в направлении главного лепестка: эквивалент, а не дополнительная энергия. <a href="pipeline.html">→</a></p>
-<p><a name="t-erp"></a><b>ЭИМ</b> — эффективная излучаемая мощность (ERP), относительно полуволнового диполя: ЭИМ = ЭИИМ − 2,15 дБ. <a href="pipeline.html">→</a></p>
+<p><a name="t-erp"></a><b>ЭИМ</b> — эффективная излучаемая мощность (ERP), относительно полуволнового диполя: ЭИМ = ЭИИМ − 2,15 dB. <a href="pipeline.html">→</a></p>
 </body></html>

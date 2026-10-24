@@ -260,6 +260,15 @@ ul.tight li { margin: .2rem 0; }
 footer { margin: 3rem 0 2rem; color: var(--dim); font-size: .88rem; border-top: 1px solid var(--grid); padding-top: 14px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+.antcmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.antcmp figure { margin: 0; background: var(--panel2); border-radius: 10px; padding: 8px 10px; }
+.antcmp svg { width: 100%; max-width: 220px; height: auto; display: block; margin: 0 auto 4px; }
+.antcmp .boom { stroke: var(--dim); stroke-width: 3; }
+.antcmp .el { stroke-width: 3; stroke-linecap: round; }
+.antcmp .el.r { stroke: var(--noise); } .antcmp .el.a { stroke: var(--tx); } .antcmp .el.d { stroke: var(--accent); }
+.antcmp .arr { stroke: var(--rx); fill: none; stroke-width: 2; }
+.antcmp .lobe { fill: none; stroke: var(--tx); stroke-dasharray: 4 3; }
+.antcmp figcaption { font-size: .86rem; }
 /* сокращения: ссылка с подсказкой */
 a.term { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--accent) 70%, transparent);
   text-underline-offset: 3px; cursor: help; }

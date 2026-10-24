@@ -250,13 +250,29 @@ def test_pipeline_terms_dictionary():
     gloss = _anchors(gw.read_page("glossary"))
     words = []
     for t in terms:
-        assert t["full"] and t["tip"] and t["w"], t["id"]
+        assert t["full"] and t["tip"], t["id"]
+        if t["id"].startswith("f-"):  # формулы: ссылка проставлена вручную в «Формулах на одной странице»
+            assert 'data-term="%s"' % t["id"] in page, t["id"]
+        else:
+            assert t["w"], t["id"]
         assert t["gl"] in gloss, f"{t['id']}: нет якоря {t['gl']} в glossary.html"
-        if t["href"]:
+        if t["href"].startswith("#"):
             assert re.search(r'\sid="%s"' % re.escape(t["href"][1:]), page), f"{t['id']}: нет {t['href']}"
+        elif t["href"]:  # страница руководства: ../decibels.html#dbm
+            target, _, frag = t["href"][3:].partition("#")
+            assert t["href"].startswith("../") and frag in _anchors(gw.read_page(target[:-5])), t["href"]
         words += t["w"]
     assert len(words) == len(set(words))
     for must in ("ЭИИМ", "МШУ", "АЦП", "ПЧ", "IQ", "БПФ", "RBW", "VBW", "RSSI", "С/Ш", "КШ", "SINAD", "ENOB", "ЭДС",
                  "КПД", "FSPL", "ДН", "AM", "FM", "FSK", "QPSK", "DMR", "AMBE", "CACH", "ADS-B", "PPM", "IARU", "ЦАП",
                  "VFO", "PMR", "LRPT", "MRC"):
         assert must in words, must
+
+
+def test_search_db_synonyms():
+    """Единицы в руководстве по-английски, но поиск находит и «дБм», и «dBm»."""
+    texts = {pid: gw.page_text(src) for pid, src in _all().items()}
+    assert "дБ" not in " ".join(texts.values())
+    for q in ("дБмкВ", "dBµV", "дБм", "dBm", "дБFS", "dbfs"):
+        assert "decibels" in [pid for pid, _n, _s in gw.search(q, texts)], q
+    assert gw.word_variants("дБм") == ["дбм", "dbm"]

@@ -115,10 +115,32 @@ def page_text(src):
     return re.sub(r" ([.,;:!?»)])", r"\1", text)
 
 
+# единицы в руководстве пишутся по-английски (dBm), но искать можно и по-русски (дБм) — и наоборот
+_DB_PAIRS = [("дбмкв", "dbµv"), ("дбfs", "dbfs"), ("дбм", "dbm"), ("дбi", "dbi"), ("дбd", "dbd"), ("дбc", "dbc"),
+             ("дб", "db")]
+
+
+def word_variants(word):
+    """Слово запроса и его написания с «дБ…» ↔ «dB…»: ['дбм', 'dbm']."""
+    w = word.lower()
+    ru2en, en2ru = w, w
+    for ru, en in _DB_PAIRS:
+        ru2en = ru2en.replace(ru, en)
+    for ru, en in _DB_PAIRS:
+        en2ru = en2ru.replace(en, ru)
+    if "dbuv" in w:
+        ru2en = ru2en.replace("dbuv", "dbµv")
+    out = []
+    for v in (w, ru2en, en2ru):
+        if v not in out:
+            out.append(v)
+    return out
+
+
 def search(query, texts=None):
     """Поиск по всем страницам: все слова запроса должны встретиться. -> [(id, число совпадений, отрывок)]."""
-    words = [w for w in query.lower().split() if w]
-    if not words:
+    groups = [word_variants(w) for w in query.lower().split() if w]
+    if not groups:
         return []
     if texts is None:
         texts = {pid: page_text(read_page(pid)) for pid, _t in pages() if os.path.exists(page_path(pid))}
@@ -126,11 +148,12 @@ def search(query, texts=None):
     for pid, _title in pages():
         text = texts.get(pid, "")
         low = text.lower()
-        if not all(w in low for w in words):
+        if not all(any(v in low for v in vs) for vs in groups):
             continue
-        n = sum(low.count(w) for w in words)
-        i = low.find(words[0])
-        a, b = max(0, i - 60), min(len(text), i + len(words[0]) + 90)
+        n = sum(max(low.count(v) for v in vs) for vs in groups)
+        first = next(v for v in groups[0] if v in low)
+        i = low.find(first)
+        a, b = max(0, i - 60), min(len(text), i + len(first) + 90)
         snip = ("…" if a else "") + text[a:b] + ("…" if b < len(text) else "")
         found.append((pid, n, snip))
     found.sort(key=lambda r: -r[1])
@@ -498,7 +521,7 @@ class GuideWindow(QWidget):
 
     def _search(self, text):
         text = text.strip()
-        self._query_words = [w for w in text.lower().split() if w]
+        self._query_words = [v for w in text.lower().split() if w for v in word_variants(w)]
         self.results.clear()
         if len(text) < 2:
             self.stack.setCurrentWidget(self.tree)
@@ -554,11 +577,11 @@ class GuideWindow(QWidget):
             return False
         if from_top:
             self.view.moveCursor(QTextCursor.Start)
-        w = self._query_words[0]
-        if not self.view.find(w):
-            self.view.moveCursor(QTextCursor.Start)
-            return self.view.find(w)
-        return True
+        for w in self._query_words:  # первое слово запроса в любом из написаний (дБм / dBm)
+            if self.view.find(w):
+                return True
+        self.view.moveCursor(QTextCursor.Start)
+        return any(self.view.find(w) for w in self._query_words)
 
 
 _window = None
