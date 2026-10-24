@@ -178,11 +178,13 @@
     </div>
     <div class="diagram-wrap"><svg id="budgetSvg" viewBox="0 0 860 370" role="img" aria-label="Диаграмма уровня сигнала вдоль тракта"></svg></div>
     <div class="legend small">
-      <span><i class="sw up"></i><b>dB</b> — относительное изменение мощности (+ рост, − падение)</span>
-      <span><b>dBm</b> — абсолютная мощность: 0 dBm = 1 мВт</span>
-      <span><b>dBi</b> — усиление антенны относительно изотропной: перераспределение по направлениям, не энергия</span>
-      <span><b>dBFS</b> — относительно полной шкалы АЦП в программе SDR</span>
-      <span><i class="sw eq"></i>пунктирный кружок — ЭИИМ, эквивалент «излучено» в сторону приёмника</span>
+      <span><i class="sw up"></i><b>dB</b> — относительное изменение мощности: +27 dB — в 500 раз больше, −3 dB — вдвое меньше</span>
+      <span><b>dBm</b> — абсолютная мощность: 0 dBm = 1 мВт, −30 dBm = 1 мкВт, −90 dBm = 1 пВт</span>
+      <span><b>dBi</b> — усиление антенны относительно изотропной (перераспределение по направлениям, не энергия): диполь 2,15 dBi</span>
+      <span><b>dBd</b> — относительно диполя: dBd = dBi − 2,15, то есть 0 dBd = 2,15 dBi</span>
+      <span><b>dBµV</b> — уровень напряжения на 50 Ом: dBµV = dBm + 107, −107 dBm = 0 dBµV = 1 мкВ</span>
+      <span><b>dBFS</b> — относительно полной шкалы АЦП: 0 dBFS — потолок, −20 dBFS — на 20 dB ниже</span>
+      <span><i class="sw eq"></i>пунктирный кружок — ЭИИМ в dBm (экв.), эквивалент «излучено» в сторону приёмника</span>
     </div>
     <p class="small dim" id="presetNote"></p>
     <div class="tw fit" id="budgetWrap"><table class="t" id="budgetTable">
@@ -204,7 +206,8 @@
     <div class="kpi"><div class="k">S-метр</div><div class="v" data-live="smeter">—</div><div class="small dim" data-live="smeter_sub"></div></div>
     <div class="kpi" id="k-margin"><div class="k">Запас по связи</div><div class="v" data-live="margin">—</div><div class="small dim" data-live="margin_sub"></div></div>
   </div>
-  <svg id="smeterSvg" viewBox="0 0 760 94" role="img" aria-label="Шкала S-метра с отметками сигнала и шума" style="width:100%;height:auto;display:block"></svg>
+  <svg id="smeterSvg" viewBox="0 0 760 122" role="img" aria-label="Шкала S-метра с отметками сигнала и шума" style="width:100%;height:auto;display:block"></svg>
+  <p class="small dim" id="smeterCap" style="margin:2px 0 6px"></p>
   <div class="cols" style="margin-top:8px">
     <div>
       <div class="row"><label for="rqMode">Вид связи (требуемое С/Ш)</label>
@@ -322,6 +325,16 @@
         <div class="row"><label for="adcBits">Разрядность</label><output id="o-adcBits"></output>
           <input type="range" id="adcBits" min="0" max="11" step="1" value="2"></div>
       </div>
+      <div class="ctrls">
+        <button type="button" class="btn" id="adcPlayO">▶ Оригинал</button>
+        <button type="button" class="btn" id="adcPlayD">▶ Оцифрованный</button>
+        <label class="small">Восстановление:
+          <select id="adcRecon"><option value="zoh">удержание отсчёта (ZOH)</option><option value="lin">линейное</option></select></label>
+      </div>
+      <p class="cap">Звук — те же тоны 1 и 3 кГц, 1,5 секунды, громкость ограничена. «Оцифрованный» — после дискретизации
+      с выбранной f<sub>д</sub> и квантования N бит, затем восстановлен удержанием отсчёта (ступеньки, как ЦАП без
+      фильтра — слышен «звон» зеркальных частот) или линейно. При f<sub>д</sub> ниже 6 кГц тон 3 кГц превращается в
+      другой (наложение спектров), при 1–4 битах слышен шум квантования.</p>
       <p class="cap">Сигнал — смесь тонов 1 и 3 кГц. Точки — отсчёты, ступеньки — квантованный сигнал, внизу — коды
       первых отсчётов. Опустите f<sub>д</sub> ниже 6 кГц — появится наложение. С 8 бит и выше ступеньки уже не
       различить глазом — разница только в уровне шума квантования.</p>
@@ -339,7 +352,10 @@
       <ul class="tight">
         <li><b>AM</b> (амплитудная) — громкость звука меняет <b>размах</b> несущей. Полоса = 2 × F<sub>max</sub>
         (для авиасвязи около 6–8 кГц).</li>
-        <li><b>FM</b> (частотная) — звук меняет <b>частоту</b> несущей на ±девиацию. Полоса по Карсону
+        <li><b>FM</b> (частотная) — <b>мгновенное значение</b> звукового сигнала (напряжение микрофона в данный момент)
+        задаёт отклонение частоты несущей: <b>громкость</b> (амплитуда звука) определяет, насколько далеко уходит частота
+        — это девиация; <b>частота звука</b> — как быстро частота несущей качается туда-сюда. Звук меняет <b>частоту</b>
+        несущей на ±девиацию. Полоса по Карсону
         ≈ 2·(Δf + F<sub>max</sub>): NFM ±2,5 кГц → канал 12,5 кГц (≈ 11 кГц по Карсону), ±5 кГц → канал 25 кГц (≈ 16 кГц), вещание
         ±75 кГц → около 200 кГц.</li>
         <li><b>FSK</b> — цифра частотой: «0» и «1» — две разные частоты. DMR использует 4FSK: четыре частоты, по 2 бита
@@ -354,10 +370,26 @@
       <canvas id="cv-mod" height="280" data-demo="mod" aria-label="Модулированная несущая"></canvas>
       <div class="ctrls">
         <span class="seg" id="modMode"><button type="button" class="on" data-v="am">AM</button><button type="button" data-v="fm">FM</button><button type="button" data-v="fsk">FSK</button><button type="button" data-v="qpsk">QPSK</button></span>
-        <div class="row"><label for="modDepth" id="modDepthLbl">Глубина</label><output id="o-modDepth"></output>
+        <div class="row mod-analog"><label for="modVol">Громкость звука</label><output id="o-modVol"></output>
+          <input type="range" id="modVol" min="0" max="100" step="1" value="70"></div>
+        <div class="row mod-analog"><label for="modFa">Частота звука</label><output id="o-modFa"></output>
+          <input type="range" id="modFa" min="1" max="8" step="0.5" value="2"></div>
+        <div class="row mod-digital" hidden><label for="modDepth" id="modDepthLbl">Разнос частот</label><output id="o-modDepth"></output>
           <input type="range" id="modDepth" min="0" max="100" step="1" value="70"></div>
       </div>
+      <div class="ctrls mod-analog">
+        <button type="button" class="btn" id="modPlayM">▶ Звук (модулирующий)</button>
+        <button type="button" class="btn" id="modPlayC">▶ Несущая с модуляцией</button>
+        <button type="button" class="btn" id="modPlayD">▶ После демодуляции</button>
+      </div>
       <p class="cap" id="modCap"></p>
+      <p class="cap mod-analog">Звук: 2 секунды, громкость ограничена. Несущая сдвинута в слышимый диапазон — <b>условно 2 кГц,
+      в реальности это сотни мегагерц</b>, их не услышать. «После демодуляции» — честный расчёт: перенос несущей в ноль
+      (IQ), фильтр, огибающая (AM) или скорость поворота фазы (FM).</p>
+      <canvas id="cv-modsch" height="250" data-demo="modsch" aria-label="Схема модулятора"></canvas>
+      <p class="cap">Упрощённая схема передатчика: источник звука и генератор несущей (кварц) соединяются в смесителе (AM)
+      либо звук управляет частотой генератора через варикап (FM, VCO); дальше — усилитель мощности и антенна. Точки
+      показывают ток по проводам, окошки — что на этом проводе (звук, несущая, результат).</p>
     </div>
   </div>
 </details>
@@ -495,10 +527,16 @@
       </ul>
     </div>
     <div class="demo">
-      <div class="ctrls" style="margin:0 0 8px">
-        <span class="seg" id="patType"><button type="button" data-v="iso">Изотропная</button><button type="button" class="on" data-v="dipole">Штырь / диполь</button><button type="button" data-v="colinear">Коллинеар</button><button type="button" data-v="yagi">Яги (волновой канал)</button><button type="button" data-v="lpda">Логопериодическая (LPDA)</button></span>
-        <span class="seg" id="patPol"><button type="button" class="on" data-v="v">Вертикальная поляризация</button><button type="button" data-v="h">Горизонтальная</button></span>
-        <span class="seg" id="patView"><button type="button" class="on" data-v="3d">3D</button><button type="button" data-v="v">Вертикальное сечение (вид сбоку)</button><button type="button" data-v="h">Горизонтальное сечение (вид сверху)</button></span>
+      <div class="patctl">
+        <div class="antpick" id="patType" role="group" aria-label="Тип антенны">
+          <button type="button" data-v="iso"><svg viewBox="0 0 40 28" aria-hidden="true"><circle cx="20" cy="14" r="10" stroke-dasharray="3 2"/><circle cx="20" cy="14" r="2" class="fill"/></svg><span class="n">Изотропная</span><span class="d">эталон, 0 dBi</span></button>
+          <button type="button" class="on" data-v="dipole"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M20 2v11M20 15v11"/><path d="M15 26h10"/></svg><span class="n">Штырь / диполь</span><span class="d">«бублик»</span></button>
+          <button type="button" data-v="colinear"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M20 1v7M20 10v7M20 19v8"/><path d="M17 8.5h6M17 17.5h6"/></svg><span class="n">Коллинеар</span><span class="d">сплющенный «бублик»</span></button>
+          <button type="button" data-v="yagi"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 14h34"/><path d="M8 4v20M16 6v16M23 7v14M30 8v12"/></svg><span class="n">Яги</span><span class="d">(волновой канал)</span></button>
+          <button type="button" data-v="lpda"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 13h34M3 15h34"/><path d="M7 2v24M13 4v20M19 6v16M25 8v12M30 10v8M34 11.5v5"/></svg><span class="n">Логопериодическая</span><span class="d">(LPDA)</span></button>
+        </div>
+        <div class="optrow"><span class="lbl">Поляризация:</span><span class="seg" id="patPol"><button type="button" class="on" data-v="v">Вертикальная</button><button type="button" data-v="h">Горизонтальная</button></span></div>
+        <div class="optrow"><span class="lbl">Вид:</span><span class="seg seg2" id="patView"><button type="button" class="on" data-v="3d">3D<small>поворот мышью</small></button><button type="button" data-v="v">Вертикальное сечение<small>(вид сбоку)</small></button><button type="button" data-v="h">Горизонтальное сечение<small>(вид сверху)</small></button></span></div>
       </div>
       <canvas id="cv-pattern" height="320" data-demo="pattern" aria-label="Диаграмма направленности передающей антенны"></canvas>
       <p class="cap">Диаграмма направленности передающей антенны: тот же тип и то же усиление, что в расчёте

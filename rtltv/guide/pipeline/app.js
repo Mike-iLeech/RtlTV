@@ -180,30 +180,43 @@
           ["good", "нормально: есть запас до перегрузки, шум антенны выше шума квантования"];
     var stEl = document.getElementById("dbfs_state");
     if (stEl) { stEl.textContent = st[1]; stEl.style.color = C[st[0]]; }
-    // мини-шкала S-метра
+    // шкала S-метра: баллы IARU сверху, вторая ось — dBm для текущего диапазона частот
     var svg = document.getElementById("smeterSvg");
     while (svg.firstChild) { svg.removeChild(svg.firstChild); }
-    var W = 760, L = 20, Rr = 740, lo = s9 - 54, hi = s9 + 60, X = function (d) { return L + (Rr - L) * (Math.max(lo, Math.min(hi, d)) - lo) / (hi - lo); };
+    var W = 760, L = 70, Rr = 740, lo = s9 - 54, hi = s9 + 60, X = function (d) { return L + (Rr - L) * (Math.max(lo, Math.min(hi, d)) - lo) / (hi - lo); };
+    var T = function (x, y, txt, at) { svg.appendChild(svgEl("text", Object.assign({ x: x, y: y, "font-size": 11, fill: C.dim }, at || {}), txt)); };
+    T(4, 22, "баллы S", { "font-weight": 600, fill: C.fg });
+    T(4, 66, "dBm", { "font-weight": 600, fill: C.fg });
     svg.appendChild(svgEl("rect", { x: L, y: 30, width: X(s9) - L, height: 10, rx: 3, fill: C.good, opacity: 0.55 }));
     svg.appendChild(svgEl("rect", { x: X(s9), y: 30, width: Rr - X(s9), height: 10, rx: 3, fill: C.bad, opacity: 0.55 }));
     for (var k = 1; k <= 9; k++) {
       var xk = X(s9 - (9 - k) * 6);
-      svg.appendChild(svgEl("line", { x1: xk, x2: xk, y1: 26, y2: 44, stroke: C.fg, "stroke-width": 1 }));
-      svg.appendChild(svgEl("text", { x: xk, y: 20, "text-anchor": "middle", "font-size": 12, fill: C.fg }, String(k)));
+      svg.appendChild(svgEl("line", { x1: xk, x2: xk, y1: 26, y2: 52, stroke: C.fg, "stroke-width": 1 }));
+      T(xk, 22, "S" + k, { "text-anchor": "middle", "font-size": 12, fill: C.fg });
+      if (k % 2 || k === 9) { T(xk, 66, num(s9 - (9 - k) * 6, 0), { "text-anchor": "middle" }); }
     }
-    [20, 40, 60].forEach(function (p) {
-      var xp = X(s9 + p);
-      svg.appendChild(svgEl("line", { x1: xp, x2: xp, y1: 26, y2: 44, stroke: C.bad, "stroke-width": 1 }));
-      svg.appendChild(svgEl("text", { x: xp, y: 20, "text-anchor": p === 60 ? "end" : "middle", "font-size": 12, fill: C.bad }, "+" + p));
+    [20, 40, 60].forEach(function (pp) {
+      var xp = X(s9 + pp);
+      svg.appendChild(svgEl("line", { x1: xp, x2: xp, y1: 26, y2: 52, stroke: C.bad, "stroke-width": 1 }));
+      T(xp, 22, "+" + pp + " dB", { "text-anchor": pp === 60 ? "end" : "middle", "font-size": 12, fill: C.bad });
+      T(xp, 66, num(s9 + pp, 0), { "text-anchor": pp === 60 ? "end" : "middle" });
     });
     var mark = function (d, col, lbl, up) {
       var xm = X(d);
-      svg.appendChild(svgEl("polygon", { points: (xm - 6) + ",58 " + (xm + 6) + ",58 " + xm + ",46", fill: col }));
-      svg.appendChild(svgEl("text", { x: Math.max(50, Math.min(W - 50, xm)), y: up ? 88 : 72, "text-anchor": "middle",
+      svg.appendChild(svgEl("polygon", { points: (xm - 6) + ",84 " + (xm + 6) + ",84 " + xm + ",72", fill: col }));
+      svg.appendChild(svgEl("text", { x: Math.max(110, Math.min(W - 110, xm)), y: up ? 114 : 98, "text-anchor": "middle",
         "font-size": 12, "font-weight": 600, fill: col }, lbl));
     };
-    mark(nrssi, C.noise, "шум " + sUnits(nrssi), false);
+    mark(nrssi, C.noise, "шум " + sUnits(nrssi) + " (" + num(nrssi, 0) + " dBm)", false);
     mark(meas, C.accent, "показание " + sUnits(meas) + " (" + num(meas, 0) + " dBm)", true);
+    var cap = document.getElementById("smeterCap");
+    if (cap) {
+      cap.textContent = "Шкала S-метра по IARU: баллы S1…S9 по 6 dB на балл, выше S9 — сколько dB над S9 (+20, +40, +60 dB). " +
+        "Привязка: S9 = " + num(s9, 0) + " dBm (" + (S.freq < 30 ? "50 мкВ" : "5 мкВ") + " на 50 Ом), потому что частота " +
+        fmtMHz(S.freq) + (S.freq < 30 ? " ниже" : " выше") + " 30 МГц (ниже 30 МГц S9 = −73 dBm, выше — −93 dBm). " +
+        "Зелёная часть — баллы S1…S9, красная — сильные сигналы «S9+», как на стрелочных S-метрах раций. " +
+        "Нижняя ось — те же деления в dBm.";
+    }
   }
   function readControls() {
     IDS.forEach(function (k) {
@@ -320,12 +333,12 @@
     o("exc", fmtDbm(S.exc || 0, 1) + " = " + fmtW(dbmW(S.exc || 0)) + " ≈ " + fmtV(dbmV(S.exc || 0)));
     o("pTx", fmtW(dbmW(S.pTx)) + " · " + fmtDbm(S.pTx, 1) + " · УМ " + fmtDb(S.pTx - (S.exc || 0), 1));
     o("txLen", S.txLen > 0 ? fmtLen(S.txLen) + " · " + fmtLoss(r.txLoss, 2) : "нет кабеля");
-    o("gTx", num(S.gTx, 1) + " dBi");
+    o("gTx", num(S.gTx, 1) + " dBi = " + num(S.gTx - 2.15, 2) + " dBd");
     o("thTx", num(S.thTx, 0) + "° → G = " + num(r.gTxEff, 1) + " dBi");
     o("dist", fmtKm(S.dist));
     o("freq", fmtMHz(S.freq) + " · λ = " + fmtLen(r.lambda));
     o("extra", fmtLoss(S.extra, 0));
-    o("gRx", num(S.gRx, 1) + " dBi");
+    o("gRx", num(S.gRx, 1) + " dBi = " + num(S.gRx - 2.15, 2) + " dBd");
     o("thRx", num(S.thRx, 0) + "° → G = " + num(r.gRxEff, 1) + " dBi");
     o("gLna", "+" + num(S.gLna, 1) + " dB" + (S.lnaOn ? "" : " (выкл.)"));
     o("rxLen", (S.rxLen > 0 ? fmtLen(S.rxLen) : "только разъёмы") + " · " + fmtLoss(r.rxLoss, 2));
@@ -492,53 +505,86 @@
       svg.appendChild(svgEl("text", { x: x(j), y: H - B + 20, "text-anchor": "middle", "font-size": 12, fill: C.fg }, n.short));
     });
 
-    // ---- подписи без наложений: каждая занимает прямоугольник, кандидаты перебираются по порядку
-    var boxes = [{ x0: 0, y0: 0, x1: 300, y1: 18 }, { x0: 0, y0: H - B + 6, x1: W, y1: H }];
+    // ---- подписи-пилюли без наложений: не пересекают друг друга, точки и отрезки линий графика
+    var boxes = [{ x0: 0, y0: 0, x1: 330, y1: 20 }, { x0: 0, y0: H - B + 6, x1: W, y1: H }];
     NODES.forEach(function (n, j) { boxes.push({ x0: x(j) - 8, y0: y(vals[j]) - 8, x1: x(j) + 8, y1: y(vals[j]) + 8 }); });
     boxes.push({ x0: xe - 7, y0: ye - 7, x1: xe + 7, y1: ye + 7 });
-    var free = function (b) {
-      if (b.x0 < L - 2 || b.x1 > W - 2 || b.y0 < 2 || b.y1 > H - B + 6) { return false; }
-      return boxes.every(function (o) { return b.x1 <= o.x0 || b.x0 >= o.x1 || b.y1 <= o.y0 || b.y0 >= o.y1; });
-    };
-    var place = function (txt, px, py, cands, attrs) {
-      var fs = attrs["font-size"] || 11, w = txt.length * fs * 0.56, pick = null;
-      for (var c = 0; c < cands.length && !pick; c++) {
-        var dx = cands[c][0], dy = cands[c][1], anc = cands[c][2] || "middle";
-        var x0 = anc === "middle" ? px + dx - w / 2 : anc === "start" ? px + dx : px + dx - w;
-        var b = { x0: x0 - 1, y0: py + dy - fs, x1: x0 + w + 1, y1: py + dy + 3 };
-        if (free(b)) { pick = [px + dx, py + dy, anc, b]; }
+    var segs = [];
+    for (var sg = 1; sg < NODES.length; sg++) { segs.push([x(sg - 1), y(vals[sg - 1]), x(sg), y(vals[sg])]); }
+    segs.push([x(5), y(noiseRx[0]), x(6), y(noiseRx[1])], [x(6), y(noiseRx[1]), x(7), y(noiseRx[2])]);
+    segs.push([xs, y(vals[5]) + 6, xs, y(noiseRx[0]) - 4], [x(3), y(vals[3]), xe, ye]);
+    if (over) { segs.push([x(5) - 30, y(-30), W - Rm, y(-30)]); }
+    var hitSeg = function (b, s) {  // пересекает ли отрезок прямоугольник (отсечение Лианга — Барски)
+      var x1 = s[0], y1 = s[1], dx = s[2] - s[0], dy = s[3] - s[1], t0 = 0, t1 = 1;
+      var P = [-dx, dx, -dy, dy], Q = [x1 - b.x0, b.x1 - x1, y1 - b.y0, b.y1 - y1];
+      for (var i = 0; i < 4; i++) {
+        if (P[i] === 0) { if (Q[i] < 0) { return false; } continue; }
+        var tt = Q[i] / P[i];
+        if (P[i] < 0) { if (tt > t1) { return false; } if (tt > t0) { t0 = tt; } } else { if (tt < t0) { return false; } if (tt < t1) { t1 = tt; } }
       }
-      if (!pick) { return false; }  // места нет — подпись уходит в таблицу/легенду
-      boxes.push(pick[3]);
-      svg.appendChild(svgEl("text", Object.assign({ x: pick[0], y: pick[1], "text-anchor": pick[2] }, attrs), txt));
       return true;
     };
-    var AROUND = [[0, -12], [0, 21], [0, -26], [0, 35], [12, 4, "start"], [-12, 4, "end"], [12, -12, "start"],
-      [-12, -12, "end"], [12, 20, "start"], [-12, 20, "end"]];
+    var free = function (b) {
+      if (b.x0 < L - 2 || b.x1 > W - 2 || b.y0 < 2 || b.y1 > H - B + 6) { return false; }
+      if (!boxes.every(function (o) { return b.x1 <= o.x0 || b.x0 >= o.x1 || b.y1 <= o.y0 || b.y0 >= o.y1; })) { return false; }
+      return !segs.some(function (s) { return hitSeg(b, s); });
+    };
+    var place = function (txt, px, py, cands, attrs, pillCol) {  // txt может быть в несколько строк через \n
+      var lines = txt.split("\n"), fs = attrs["font-size"] || 11, pick = null;
+      var w = Math.max.apply(null, lines.map(function (l) { return l.length; })) * fs * 0.55 + 12, hgt = lines.length * (fs + 2) + 5;
+      for (var c = 0; c < cands.length && !pick; c++) {
+        var dx = cands[c][0], dy = cands[c][1], anc = cands[c][2] || "middle";
+        var cxp = anc === "middle" ? px + dx : anc === "start" ? px + dx + w / 2 : px + dx - w / 2;
+        var b = { x0: cxp - w / 2, y0: py + dy - hgt / 2, x1: cxp + w / 2, y1: py + dy + hgt / 2 };
+        if (free(b)) { pick = [cxp, py + dy, b]; }
+      }
+      if (!pick) { return false; }  // места нет — значение есть в таблице под графиком
+      boxes.push(pick[2]);
+      if (Math.hypot(pick[0] - px, pick[1] - py) > 34) {  // далёкая подпись — тонкая выноска к своей точке
+        var bx = Math.max(pick[2].x0, Math.min(pick[2].x1, px)), by = Math.max(pick[2].y0, Math.min(pick[2].y1, py));
+        svg.appendChild(svgEl("line", { x1: px, y1: py, x2: bx, y2: by, stroke: pillCol || C.dim, "stroke-width": 0.8,
+          "stroke-dasharray": "2 3", opacity: 0.8 }));
+      }
+      svg.appendChild(svgEl("rect", { x: pick[2].x0, y: pick[2].y0, width: w, height: hgt, rx: hgt / 2, fill: C.panel,
+        stroke: pillCol || C.grid, "stroke-width": 1, opacity: 0.96 }));
+      var te = svgEl("text", Object.assign({ x: pick[0], y: pick[1] - (lines.length - 1) * (fs + 2) / 2 + fs * 0.36, "text-anchor": "middle" }, attrs));
+      lines.forEach(function (l, i) { te.appendChild(svgEl("tspan", { x: pick[0], dy: i ? fs + 2 : 0 }, l)); });
+      svg.appendChild(te);
+      return true;
+    };
+    var ring = function (r1) {  // кандидаты по кругу вокруг точки, ближние — первыми
+      var out = [];
+      [r1, r1 + 14, r1 + 28, r1 + 44, r1 + 62, r1 + 84, r1 + 110].forEach(function (rr) {
+        [[0, -1], [0, 1], [1, -0.6], [-1, -0.6], [1, 0.6], [-1, 0.6], [1, 0], [-1, 0]].forEach(function (d) {
+          out.push([d[0] * rr * 1.6, d[1] * rr]);
+        });
+      });
+      return out;
+    };
     NODES.forEach(function (n, j) {
-      var lbl = j === 0 ? fmtDbm(vals[0], 0) + " (" + fmtW(dbmW(vals[0])) + ")" : num(vals[j], 0);
-      place(lbl, x(j), y(vals[j]), AROUND, { "font-size": 12, "font-weight": 600, fill: C.fg });
+      var d = vals[j], lbl = fmtDbm(d, 0);
+      if (j === 0) { lbl += " (" + fmtW(dbmW(d)) + ")"; }
+      if (n.k === "air") { lbl += "\n" + fmtW(dbmW(d)) + " · " + fmtV(dbmV(d)); }
+      if (n.k === "rxin") { lbl += "\n" + fmtW(dbmW(d)) + " · " + fmtV(dbmV(d)) + "\n= " + num(d + 107, 1) + " dBµV"; }
+      place(lbl, x(j), y(d), ring(16), { "font-size": 11, "font-weight": 600, fill: C.fg }, C[n.st]);
     });
-    place("ЭИИМ " + num(r.eirp, 0) + " dBm (экв.)", xe, ye,
-      [[9, -6, "start"], [9, 14, "start"], [0, -12], [0, 22], [9, -20, "start"], [9, 28, "start"]],
-      { "font-size": 11, fill: C.tx });
-    var WHY = { pa: "усилитель", txfeed: "кабель", prad: "КПД антенны", air: "эфир, G(θ)", rxant: "антенна",
-      lna: "МШУ", rxin: "кабель" };
+    place("ЭИИМ " + fmtDbm(r.eirp, 0) + " (экв.)", xe, ye, ring(14), { "font-size": 10.5, fill: C.tx }, C.tx);
+    var WHY = { pa: "усилитель", txfeed: "кабель", prad: "КПД антенны", air: "эфир", rxant: "антенна", lna: "МШУ", rxin: "кабель" };
     for (var q = 1; q < NODES.length; q++) {
       var dlt = vals[q] - vals[q - 1];
       if (Math.abs(dlt) < 0.05) { continue; }
+      var why = WHY[NODES[q].k];
+      if (NODES[q].k === "air") { why += ", G(θ) " + fmtDb(r.gTxEff, 1) + "i"; }
+      if (NODES[q].k === "rxant") { why += ", G(θ) " + fmtDb(r.gRxEff, 1) + "i"; }
       var mxp = (x(q - 1) + x(q)) / 2, myp = (y(vals[q - 1]) + y(vals[q])) / 2;
-      place((dlt > 0 ? "+" : "−") + num(Math.abs(dlt), Math.abs(dlt) < 10 ? 1 : 0) + " dB (" + WHY[NODES[q].k] + ")",
-        mxp, myp, [[0, -8], [0, 16], [0, -22], [0, 30], [0, -36], [0, 44]],
-        { "font-size": 10, "font-weight": 600, fill: dlt > 0 ? C.good : C.bad });
+      place((dlt > 0 ? "+" : "−") + num(Math.abs(dlt), Math.abs(dlt) < 10 ? 1 : 0) + " dB (" + why + ")",
+        mxp, myp, ring(14), { "font-size": 10, "font-weight": 600, fill: dlt > 0 ? C.good : C.bad }, dlt > 0 ? C.good : C.bad);
     }
     var ysn = (y(vals[5]) + y(noiseRx[0])) / 2;
-    place("С/Ш " + num(r.snr, 0) + " dB", xs, ysn, [[5, 4, "start"], [5, -12, "start"], [5, 20, "start"], [-5, 4, "end"]],
-      { "font-size": 11, fill: C.dim });
-    place("шум", x(5), y(noiseRx[0]), [[-14, 4, "end"], [0, 16], [0, -8], [-14, 16, "end"]], { "font-size": 11, fill: C.noise });
+    place("С/Ш " + num(r.snr, 0) + " dB", xs, ysn, [[40, 0], [-40, 0], [40, -16], [40, 16], [-40, 16]].concat(ring(20)), { "font-size": 10.5, fill: C.dim });
+    place("шум " + fmtDbm(r.noiseAnt, 0), x(5), y(noiseRx[0]), ring(14), { "font-size": 10.5, fill: C.noise }, C.noise);
     if (over) {
-      place("перегрузка (≈ RTL-SDR)", W - Rm - 2, y(-30), [[0, -4, "end"], [0, 13, "end"], [-120, -4, "end"]],
-        { "font-size": 11, fill: C.warn });
+      place("перегрузка приёмника", W - Rm - 70, y(-30), [[0, -10], [0, 12], [-120, -10], [-120, 12]], { "font-size": 10.5, fill: C.warn }, C.warn);
     }
   }
 
@@ -861,20 +907,34 @@
     while (fskPre.length <= n) { var i = fskPre.length - 1; fskPre.push(fskPre[i] + (hash(i + 777) > 0.5 ? 1 : -1)); }
     return fskPre[n];
   }
-  function modMsg(u) { return 0.7 * Math.sin(TAU * u) + 0.3 * Math.sin(TAU * 2.3 * u + 1); }
-  function modMsgInt(u) { return -0.7 * Math.cos(TAU * u) / TAU - 0.3 * Math.cos(TAU * 2.3 * u + 1) / (TAU * 2.3); }
+  function modVol() { var el = document.getElementById("modVol"); return el ? Number(el.value) / 100 : 0.7; }
+  function modFa() { var el = document.getElementById("modFa"); return el ? Number(el.value) : 2; }
+  function modLoud(u) { return 0.6 + 0.4 * Math.sin(TAU * 0.23 * u); }  // громкость фразы медленно меняется
+  // звук: громкость × медленная огибающая фразы × тон; FM берёт чистый тон, чтобы фаза считалась точно
+  function modMsg(u) { return modVol() * modLoud(u) * Math.sin(TAU * modFa() * u); }
+  function modMsgFm(u) { return modVol() * Math.sin(TAU * modFa() * u); }
+  function modMsgFmInt(u) { return -modVol() * Math.cos(TAU * modFa() * u) / (TAU * modFa()); }
   function modUpdate() {
-    var v = Number(document.getElementById("modDepth").value);
-    var lbl = { am: "Глубина модуляции", fm: "Девиация частоты", fsk: "Разнос частот", qpsk: "Символов на экране" }[modMode];
+    var v = Number(document.getElementById("modDepth").value), analog = modMode === "am" || modMode === "fm";
+    var lbl = { am: "", fm: "", fsk: "Разнос частот", qpsk: "Символов на экране" }[modMode];
     document.getElementById("modDepthLbl").textContent = lbl;
     document.getElementById("o-modDepth").textContent = modMode === "qpsk" ? String(Math.round(4 + v / 10)) : v + " %";
+    $$(".mod-analog").forEach(function (el) { el.hidden = !analog; });
+    $$(".mod-digital").forEach(function (el) { el.hidden = analog; });
+    var vol = modVol(), fa = modFa();
+    var ov = document.getElementById("o-modVol"), of = document.getElementById("o-modFa");
+    if (ov) { ov.textContent = num(vol * 100, 0) + " %"; }
+    if (of) { of.textContent = "≈ " + num(150 * fa, 0) + " Гц (условно)"; }
     document.getElementById("modCap").textContent = {
-      am: "Сверху звук, снизу несущая: её размах повторяет звук (пунктир — огибающая). При 100 % несущая в паузах звука " +
-        "почти исчезает, больше — искажения.",
-      fm: "Размах постоянный, меняется частота: где звук выше — волны гуще. Девиация — насколько сильно звук сдвигает частоту.",
+      am: "Сверху звук, снизу несущая. Огибающая несущей (пунктир) повторяет форму звука: громче звук — больше размах " +
+        "огибающей. При 100 % несущая в самых тихих местах почти исчезает, больше — искажения.",
+      fm: "Размах несущей постоянный. Мгновенное значение звука (напряжение в этот момент) сдвигает частоту: плюс — волны " +
+        "гуще, минус — реже. Громкость задаёт, насколько далеко уходит частота (девиацию), частота звука — как быстро " +
+        "частота несущей качается туда-сюда.",
       fsk: "Ноль — одна частота, единица — другая. Переход без скачка фазы (непрерывная фаза), чтобы сигнал не был широким.",
       qpsk: "Каждые 2 бита — одна из четырёх фаз. Справа созвездие: точка текущего символа (по линии посередине)."
     }[modMode];
+    if (DEMOS.modsch) { DEMOS.modsch.dirty = true; }
   }
   demo("mod", true, function (d) {
     var ctx = d.ctx, w = d.w, h = d.h, v = Number(document.getElementById("modDepth").value) / 100;
@@ -885,20 +945,26 @@
     var U = function (x) { return (x - L0) / (R0 - L0) + d.t * speed; };
     hline(ctx, L0, R0, topY, C.grid);
     hline(ctx, L0, R0, rfY, C.grid);
-    text(ctx, modMode === "am" || modMode === "fm" ? "звук" : "биты", L0, 13, C.dim);
+    text(ctx, modMode === "am" || modMode === "fm" ? "звук (мгновенное напряжение микрофона)" : "биты", L0, 13, C.dim);
     text(ctx, "несущая в эфире", L0, rfY - rfA - 8, C.dim);
     var N = Math.round(R0 - L0) * 2;
-    if (modMode === "am" || modMode === "fm") {
-      plot(ctx, L0, R0, N / 2, function (x) { return topY - topA * modMsg(U(x)); }, C.tx, 1.8);
-    }
     if (modMode === "am") {
-      var k = v;
-      plot(ctx, L0, R0, N, function (x) { var u = U(x); return rfY - rfA * (1 + k * modMsg(u)) / (1 + k) * Math.cos(TAU * fc * u); }, C.accent, 1.4);
-      plot(ctx, L0, R0, N / 4, function (x) { return rfY - rfA * (1 + k * modMsg(U(x))) / (1 + k); }, C.tx, 1, [4, 4]);
-      plot(ctx, L0, R0, N / 4, function (x) { return rfY + rfA * (1 + k * modMsg(U(x))) / (1 + k); }, C.tx, 1, [4, 4]);
+      plot(ctx, L0, R0, N / 2, function (x) { return topY - topA * modMsg(U(x)); }, C.tx, 1.8);
+      var env = function (u) { return (1 + modMsg(u)) / 2; };  // размах несущей ∝ 1 + m(t), m ≤ 1
+      plot(ctx, L0, R0, N, function (x) { var u = U(x); return rfY - rfA * env(u) * Math.cos(TAU * fc * u); }, C.accent, 1.4);
+      plot(ctx, L0, R0, N / 4, function (x) { return rfY - rfA * env(U(x)); }, C.tx, 1, [4, 4]);
+      plot(ctx, L0, R0, N / 4, function (x) { return rfY + rfA * env(U(x)); }, C.tx, 1, [4, 4]);
     } else if (modMode === "fm") {
-      var dev = v * 0.5 * fc;
-      plot(ctx, L0, R0, N, function (x) { var u = U(x); return rfY - rfA * Math.cos(TAU * fc * u + TAU * dev * modMsgInt(u)); }, C.accent, 1.4);
+      plot(ctx, L0, R0, N / 2, function (x) { return topY - topA * modMsgFm(U(x)); }, C.tx, 1.8);
+      var dev = 0.45 * fc;  // девиация при громкости 100 %
+      plot(ctx, L0, R0, N, function (x) { var u = U(x); return rfY - rfA * Math.cos(TAU * fc * u + TAU * dev * modMsgFmInt(u)); }, C.accent, 1.4);
+      // где частота выше, а где ниже
+      var u0f = U(L0);
+      for (var kk = Math.ceil(u0f * modFa() * 2); (kk / 2) / modFa() < U(R0); kk++) {
+        var uu = (kk / 2 + 0.25) / modFa(), xq = L0 + (uu - u0f) * (R0 - L0);
+        if (xq < L0 + 20 || xq > R0 - 20 || modVol() < 0.15) { continue; }
+        text(ctx, kk % 2 === 0 ? "чаще" : "реже", xq, rfY + rfA + 14, kk % 2 === 0 ? C.good : C.warn, "center", "11px 'Segoe UI', sans-serif");
+      }
     } else if (modMode === "fsk") {
       var bps = 6, sh = 0.15 + v * 0.45, bits = [];
       plot(ctx, L0, R0, N, function (x) {
@@ -943,6 +1009,153 @@
       line(ctx, [[mid, topY - topA - 4], [mid, rfY + rfA + 4]], C.tx, 1, [3, 3]);
     }
   });
+
+  // схема модулятора: условные обозначения, «осциллограммы» на проводах и бегущие точки тока
+  demo("modsch", true, function (d) {
+    var ctx = d.ctx, w = d.w, h = d.h, t = d.t, fm = modMode === "fm" || modMode === "fsk", dig = modMode === "fsk" || modMode === "qpsk";
+    var S1 = Math.min(1, w / 640), yA = h * 0.3, yC = h * 0.74, F11 = "11px 'Segoe UI', sans-serif";
+    var xs = function (f) { return 14 + (w - 28) * f; };
+    var wire = function (pts, phase) {  // провод и бегущие по нему точки
+      line(ctx, pts, C.dim, 1.6);
+      var len = 0, segs = [];
+      for (var i = 1; i < pts.length; i++) { var l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); segs.push(l); len += l; }
+      for (var k = 0; k < Math.max(2, Math.floor(len / 28)); k++) {
+        var pos = ((t * 40 + phase) + k * 28) % len, j = 0;
+        while (j < segs.length - 1 && pos > segs[j]) { pos -= segs[j]; j++; }
+        var f = segs[j] ? pos / segs[j] : 0, px = pts[j][0] + (pts[j + 1][0] - pts[j][0]) * f, py = pts[j][1] + (pts[j + 1][1] - pts[j][1]) * f;
+        ctx.beginPath(); ctx.arc(px, py, 2.2, 0, TAU); ctx.fillStyle = C.accent; ctx.fill();
+      }
+    };
+    var scope = function (cx, cy, fn, col, lbl, below) {  // маленькая осциллограмма над (или под) проводом
+      var bw = 70 * S1 + 20, bh = 26, y0 = below ? cy + 6 : cy - bh - 6;
+      ctx.fillStyle = C.panel; ctx.fillRect(cx - bw / 2, y0, bw, bh);
+      ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.strokeRect(cx - bw / 2, y0, bw, bh);
+      plot(ctx, cx - bw / 2 + 2, cx + bw / 2 - 2, 160, function (x, f) { return y0 + bh / 2 - fn(f + t * 0.15) * (bh / 2 - 3); }, col, 1.2);
+      text(ctx, lbl, cx, below ? y0 + bh + 12 : y0 - 3, C.dim, "center", "10px 'Segoe UI', sans-serif");
+    };
+    var audio = dig ? function (u) { return hash(Math.floor(u * 4) + 777) > 0.5 ? 0.8 : -0.8; } : function (u) { return 0.85 * modLoud(u * 3) * Math.sin(TAU * 1.5 * u); };
+    var carrier = function (u) { return Math.sin(TAU * 10 * u); };
+    var am = function (u) { return 0.5 * (1 + audio(u)) * carrier(u); };
+    var fmw = function (u) {  // фаза FM для отображения: интеграл звука, численно по 40 шагам
+      var ph = 0, n = 40;
+      for (var i = 0; i < n; i++) { ph += audio(u * (i + 0.5) / n) * u / n; }
+      return Math.sin(TAU * 10 * u + TAU * 4 * ph);
+    };
+    var out = fm ? fmw : am;
+    // источник звука: микрофон → микрофонный усилитель (или биты)
+    var mx = xs(0.04), ax = xs(0.2), modx = xs(0.5), pax = xs(0.76), antx = xs(0.94);
+    if (dig) {
+      ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.strokeRect(mx - 14, yA - 12, 28, 24);
+      text(ctx, "101", mx, yA + 4, C.fg, "center", "600 11px Consolas, monospace");
+      text(ctx, "данные", mx, yA + 28, C.dim, "center", F11);
+    } else {
+      ctx.beginPath(); ctx.arc(mx, yA, 11, 0, TAU); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.stroke();
+      line(ctx, [[mx - 11, yA - 13], [mx - 11, yA + 13]], C.fg, 2.5);
+      text(ctx, "микрофон", mx, yA + 28, C.dim, "center", F11);
+    }
+    var tri = function (x0, y0, lbl, above) {  // усилитель — треугольник
+      ctx.beginPath(); ctx.moveTo(x0 - 14, y0 - 14); ctx.lineTo(x0 - 14, y0 + 14); ctx.lineTo(x0 + 14, y0); ctx.closePath();
+      ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.stroke();
+      text(ctx, lbl, x0, above ? y0 - 20 : y0 + 30, C.dim, "center", F11);
+    };
+    tri(ax, yA, dig ? "формирователь" : "микр. усилитель");
+    wire([[mx + 13, yA], [ax - 14, yA]], 0);
+    if (!fm) {
+      // генератор несущей (кварц) → смеситель ⊗ ← звук
+      var gx = xs(0.2);
+      ctx.beginPath(); ctx.arc(gx, yC, 14, 0, TAU); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.stroke();
+      plot(ctx, gx - 8, gx + 8, 20, function (x, f) { return yC - 5 * Math.sin(TAU * f); }, C.fg, 1.4);
+      ctx.strokeRect(gx - 34, yC - 6, 10, 12);  // кварц
+      text(ctx, "генератор", gx - 6, yC + 28, C.dim, "center", F11);
+      text(ctx, "несущей (кварц)", gx - 6, yC + 41, C.dim, "center", F11);
+      ctx.beginPath(); ctx.arc(modx, (yA + yC) / 2, 15, 0, TAU); ctx.stroke();
+      line(ctx, [[modx - 10, (yA + yC) / 2 - 10], [modx + 10, (yA + yC) / 2 + 10]], C.fg, 1.6);
+      line(ctx, [[modx - 10, (yA + yC) / 2 + 10], [modx + 10, (yA + yC) / 2 - 10]], C.fg, 1.6);
+      text(ctx, modMode === "qpsk" ? "I/Q-модулятор" : "смеситель (умножитель)", modx - 20, (yA + yC) / 2 + 26, C.dim, "right", F11);
+      wire([[ax + 14, yA], [modx, yA], [modx, (yA + yC) / 2 - 15]], 10);
+      wire([[gx + 14, yC], [modx, yC], [modx, (yA + yC) / 2 + 15]], 20);
+      scope((ax + modx) / 2, yA, audio, C.tx, dig ? "биты" : "звук");
+      scope((gx + modx) / 2 + 22, yC, carrier, C.fg, "несущая", true);
+      wire([[modx + 15, (yA + yC) / 2], [pax - 14, (yA + yC) / 2]], 30);
+      scope((modx + pax) / 2, (yA + yC) / 2, out, C.accent, modMode === "qpsk" ? "QPSK" : "AM");
+    } else {
+      // VCO: звук подаётся на управляющий вход (варикап меняет ёмкость контура → частоту)
+      var vy = (yA + yC) / 2 + 10;
+      ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.strokeRect(modx - 30, vy - 22, 60, 44);
+      plot(ctx, modx - 18, modx + 18, 40, function (x, f) { return vy - 6 * Math.sin(TAU * f * (2 + 1.5 * f)); }, C.fg, 1.4);
+      text(ctx, "VCO", modx, vy + 18, C.fg, "center", "600 11px 'Segoe UI', sans-serif");
+      // варикап на управляющем входе
+      var vx = modx, vty = vy - 40;
+      ctx.beginPath(); ctx.moveTo(vx - 7, vty - 6); ctx.lineTo(vx + 7, vty - 6); ctx.lineTo(vx, vty + 4); ctx.closePath(); ctx.stroke();
+      line(ctx, [[vx - 7, vty + 4], [vx + 7, vty + 4]], C.fg, 1.6); line(ctx, [[vx - 7, vty + 7], [vx + 7, vty + 7]], C.fg, 1.6);
+      line(ctx, [[vx + 10, vty + 2], [vx + 18, vty - 6]], C.fg, 1.2);
+      text(ctx, "варикап", vx - 12, vty + 4, C.dim, "right", F11);
+      wire([[ax + 14, yA], [vx - 40, yA], [vx - 40, vty - 14], [vx, vty - 14], [vx, vty - 6]], 10);
+      line(ctx, [[vx, vty + 7], [vx, vy - 22]], C.dim, 1.6);
+      scope((ax + vx - 40) / 2, yA, audio, C.tx, dig ? "биты" : "звук → управляющее напряжение");
+      text(ctx, "генератор, управляемый", modx, vy + 38, C.dim, "center", F11);
+      text(ctx, "напряжением", modx, vy + 51, C.dim, "center", F11);
+      wire([[modx + 30, vy], [pax - 14, vy]], 30);
+      scope((modx + pax) / 2 + 6, vy, out, C.accent, modMode === "fsk" ? "FSK" : "FM");
+    }
+    var py0 = fm ? (yA + yC) / 2 + 10 : (yA + yC) / 2;
+    tri(pax, py0, "усилитель мощности", false);
+    wire([[pax + 14, py0], [antx, py0], [antx, py0 - 30]], 40);
+    line(ctx, [[antx, py0 - 30], [antx - 10, py0 - 46]], C.fg, 2); line(ctx, [[antx, py0 - 30], [antx + 10, py0 - 46]], C.fg, 2);
+    line(ctx, [[antx, py0 - 30], [antx, py0 - 48]], C.fg, 2);
+    text(ctx, "антенна", antx, py0 + 18, C.dim, "center", F11);
+    text(ctx, fm ? "Частотная модуляция: звук управляет частотой генератора (VCO)" :
+      (modMode === "qpsk" ? "Фазовая модуляция: биты задают фазу несущей в I/Q-смесителе" : "Амплитудная модуляция: звук умножается на несущую в смесителе"),
+      10, 14, C.fg, "left", "600 12px 'Segoe UI', sans-serif");
+  });
+
+  // звук модуляции: модулирующий сигнал, несущая со сдвигом в звуковой диапазон (условно 2 кГц) и результат демодуляции
+  function modPlay(kind) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || !(modMode === "am" || modMode === "fm")) { return; }
+    if (!actx) { actx = new AC(); }
+    if (actx.state === "suspended") { actx.resume(); }
+    var sr = actx.sampleRate, n = Math.round(sr * 2), buf = actx.createBuffer(1, n, sr), x = buf.getChannelData(0);
+    var vol = modVol(), fa = 150 * modFa(), fc = 2000, dev = 700, ph = 0, phm = 0, msg = new Float32Array(n), sig = new Float32Array(n);
+    for (var i = 0; i < n; i++) {
+      var t = i / sr;
+      phm += TAU * fa / sr;
+      var loud = modMode === "am" ? 0.6 + 0.4 * Math.sin(TAU * 0.7 * t) : 1, m = vol * loud * Math.sin(phm);
+      msg[i] = m;
+      if (modMode === "am") { ph += TAU * fc / sr; sig[i] = 0.5 * (1 + m) * Math.cos(ph); }
+      else { ph += TAU * (fc + dev * m) / sr; sig[i] = Math.cos(ph); }
+    }
+    var outA = msg;
+    if (kind === "c") { outA = sig; }
+    if (kind === "d") {  // честная демодуляция: перенос в ноль (I/Q), скользящее среднее на период несущей, огибающая или фаза
+      var L = Math.round(sr / fc), I = new Float32Array(n), Q = new Float32Array(n), si = 0, sq = 0, dem = new Float32Array(n), pr = 0, pi = 0;
+      for (var k = 0; k < n; k++) {
+        var a = TAU * fc * k / sr;
+        I[k] = sig[k] * Math.cos(a); Q[k] = -sig[k] * Math.sin(a);
+        si += I[k]; sq += Q[k];
+        if (k >= L) { si -= I[k - L]; sq -= Q[k - L]; }
+        var zi = si / L, zq = sq / L;
+        if (modMode === "am") { dem[k] = 2 * Math.hypot(zi, zq); }
+        else { dem[k] = Math.atan2(zq * pr - zi * pi, zi * pr + zq * pi) * sr / (TAU * dev); }
+        pr = zi; pi = zq;
+      }
+      var mean = 0;
+      for (k = 0; k < n; k++) { mean += dem[k]; }
+      mean /= n;
+      for (k = 0; k < n; k++) { dem[k] -= modMode === "am" ? mean : 0; }
+      outA = dem;
+    }
+    var peak = 1e-6;
+    for (i = 0; i < n; i++) { peak = Math.max(peak, Math.abs(outA[i])); }
+    for (i = 0; i < n; i++) {
+      var env = Math.min(1, i / sr * 20, (2 - i / sr) * 20);
+      x[i] = outA[i] / peak * 0.18 * env;
+    }
+    var src = actx.createBufferSource();
+    src.buffer = buf;
+    src.connect(actx.destination);
+    src.start();
+  }
 
   /* ------------------------------------------------------------------ 4. диаграмма направленности */
   function omniM(G) {  // показатель cos^m(угол места) для всенаправленной антенны с КНД G
@@ -1140,8 +1353,15 @@
       }
       ctx.fillStyle = alpha(C.air, 0.08); ctx.fill();
       ctx.strokeStyle = alpha(C.air, 0.6); ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
-      var pt = function (e, az) {  // точка поверхности диаграммы: угол места e, азимут az
-        var ux = Math.cos(e) * Math.cos(az), uy = Math.cos(e) * Math.sin(az), uz = Math.sin(e);
+      // сетка строится вокруг оси симметрии фигуры: у бублика — ось вибратора, у Яги/LPDA — ось луча,
+      // поэтому «бублик» при горизонтальной поляризации виден как бублик с горизонтальной осью
+      var pole = dir === "yagi" ? [1, 0, 0] : dir === "omni" ? polAxis(pol) : [0, 0, 1];
+      var b1 = pole[0] ? [0, 1, 0] : pole[1] ? [1, 0, 0] : [1, 0, 0], b2 = pole[0] ? [0, 0, 1] : pole[1] ? [0, 0, 1] : [0, 1, 0];
+      var pt = function (e, az) {  // точка поверхности: e — «широта» от экватора фигуры, az — поворот вокруг её оси
+        var ce = Math.cos(e), se = Math.sin(e), ca = Math.cos(az), sa = Math.sin(az);
+        var ux = ce * (ca * b1[0] + sa * b2[0]) + se * pole[0];
+        var uy = ce * (ca * b1[1] + sa * b2[1]) + se * pole[1];
+        var uz = ce * (ca * b1[2] + sa * b2[2]) + se * pole[2];
         var r = rad(10 * LOG10(Math.max(1e-6, sh.f3(ux, uy, uz))));
         return proj(r * ux, r * uy, r * uz);
       };
@@ -1255,17 +1475,27 @@
           "10px 'Segoe UI', sans-serif");
       });
     }
-    text(ctx, ANT_TYPES[type].name + " · " + num(g, 2).replace(/0$/, "") + " dBi · КПД " + num(100 * antEff(g, type), 0) + " % · " +
-      (S.txPol === "c" ? "круговая (рисуется как вертикальная)" : POL_NAME[pol]), 10, 14, C.fg,
-      "left", "600 12px 'Segoe UI', sans-serif");
+    var hdr1 = ANT_TYPES[type].name + " · " + num(g, 2).replace(/0$/, "") + " dBi",
+      hdr2 = "КПД " + num(100 * antEff(g, type), 0) + " % · " + (S.txPol === "c" ? "круговая (рисуется как вертикальная)" : POL_NAME[pol]);
     var bwf = function (v) { return v === null ? "360°" : num(v, 0) + "°"; };
     var bwt = dir === "iso" ? "ширина луча: во все стороны одинаково" :
       "по −3 dB: сбоку (" + (pol === "h" ? "H" : "E") + ") " + bwf(bw[0]) + ", сверху (" + (pol === "h" ? "E" : "H") + ") " + bwf(bw[1]);
     ctx.font = "600 12px 'Segoe UI', sans-serif";
-    var tw1 = ctx.measureText(ANT_TYPES[type].name + " · 00,00 dBi · КПД 100 % · горизонтальная").width;
+    var wH = ctx.measureText(hdr1 + " · " + hdr2).width;
     ctx.font = "600 11px 'Segoe UI', sans-serif";
-    var twoLines = tw1 + ctx.measureText(bwt).width + 30 > w;
-    text(ctx, bwt, twoLines ? 10 : w - 10, twoLines ? 30 : 14, C.tx, twoLines ? "left" : "right", "600 11px 'Segoe UI', sans-serif");
+    var wB = ctx.measureText(bwt).width;
+    var F12 = "600 12px 'Segoe UI', sans-serif";
+    if (wH + wB + 30 <= w) {               // широко: всё в одну строку
+      text(ctx, hdr1 + " · " + hdr2, 10, 14, C.fg, "left", F12);
+      text(ctx, bwt, w - 10, 14, C.tx, "right", "600 11px 'Segoe UI', sans-serif");
+    } else if (wH + 20 <= w) {             // средне: заголовок, под ним ширина луча
+      text(ctx, hdr1 + " · " + hdr2, 10, 14, C.fg, "left", F12);
+      text(ctx, bwt, 10, 29, C.tx, "left", "600 11px 'Segoe UI', sans-serif");
+    } else {                               // узко: три строки
+      text(ctx, hdr1, 10, 14, C.fg, "left", F12);
+      text(ctx, hdr2, 10, 28, C.dim, "left", "11px 'Segoe UI', sans-serif");
+      text(ctx, bwt, 10, 42, C.tx, "left", "600 10px 'Segoe UI', sans-serif");
+    }
     var bwEl = document.getElementById("patBw");
     if (bwEl) { bwEl.textContent = bwt.replace("по −3 dB: ", ""); }
     var note = document.getElementById("patNote"), nt = PAT_NOTE[type] || "";
@@ -2185,6 +2415,29 @@
   }
   function hideTip() { if (tipEl) { tipEl.hidden = true; } tipFor = null; }
 
+  // звук оцифровки: оригинал или после дискретизации и квантования (только по щелчку, громкость ограничена)
+  function adcPlay(kind) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { return; }
+    if (!actx) { actx = new AC(); }
+    if (actx.state === "suspended") { actx.resume(); }
+    var s = adcState(), sr = actx.sampleRate, n = Math.round(sr * 1.5), buf = actx.createBuffer(1, n, sr), x = buf.getChannelData(0);
+    var lin2 = (document.getElementById("adcRecon") || {}).value === "lin";
+    for (var i = 0; i < n; i++) {
+      var t = i / sr, v;
+      if (kind === "o") { v = adcSig(t); } else {
+        var u = t * s.fs, k = Math.floor(u), q0 = quant(adcSig(k / s.fs), s.L).v;
+        v = lin2 ? q0 + (quant(adcSig((k + 1) / s.fs), s.L).v - q0) * (u - k) : q0;
+      }
+      var env = Math.min(1, t * 20, (1.5 - t) * 20);
+      x[i] = Math.max(-1, Math.min(1, v)) * 0.16 * env;
+    }
+    var src = actx.createBufferSource();
+    src.buffer = buf;
+    src.connect(actx.destination);
+    src.start();
+  }
+
   /* ------------------------------------------------------------------ навигация по блокам */
   function openBlock(id, scroll) {
     var el = document.getElementById(id);
@@ -2246,7 +2499,13 @@
     setPause(paused);
     pb.addEventListener("click", function () { setPause(!paused); });
     ["adcFs", "adcBits"].forEach(function (id) { document.getElementById(id).addEventListener("input", adcUpdate); });
+    document.getElementById("adcPlayO").addEventListener("click", function () { adcPlay("o"); });
+    document.getElementById("adcPlayD").addEventListener("click", function () { adcPlay("d"); });
     document.getElementById("modDepth").addEventListener("input", modUpdate);
+    ["modVol", "modFa"].forEach(function (id) { document.getElementById(id).addEventListener("input", modUpdate); });
+    document.getElementById("modPlayM").addEventListener("click", function () { modPlay("m"); });
+    document.getElementById("modPlayC").addEventListener("click", function () { modPlay("c"); });
+    document.getElementById("modPlayD").addEventListener("click", function () { modPlay("d"); });
     document.getElementById("iqOff").addEventListener("input", iqUpdate);
     document.getElementById("demodNoise").addEventListener("input", function () {
       document.getElementById("o-demodNoise").textContent = this.value + " %";
