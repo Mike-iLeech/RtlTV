@@ -95,3 +95,18 @@ def test_screens_small():
     for f in names:
         assert os.path.getsize(os.path.join(shots, f)) <= bs.SCREEN_MAX_BYTES, f
         assert bs.image_size(os.path.join(shots, f)), f
+
+
+def test_interactive_pipeline_on_site():
+    """Интерактивная схема копируется на сайт как есть, на неё ведут кнопка в «Пути радиосигнала» и главная."""
+    _build()
+    src_dir = os.path.join(ROOT, "rtltv", "guide", "pipeline")
+    dst_dir = os.path.join(DOCS, "guide", "pipeline")
+    for name in os.listdir(src_dir):
+        with open(os.path.join(src_dir, name), "rb") as a, open(os.path.join(dst_dir, name), "rb") as b:
+            assert a.read() == b.read(), name
+    page = _read("guide/pipeline.html")
+    assert re.search(r'<a class="btn big" href="pipeline/index.html">', page)
+    assert 'href="guide/pipeline/index.html"' in _read("index.html")
+    assert "guide/pipeline/index.html" in _read("sitemap.xml")
+    assert bs.interactive_dirs() == ["pipeline"]

@@ -44,6 +44,10 @@ def test_internal_links_and_anchors():
             if href.startswith(("http://", "https://", "mailto:")):
                 continue
             target, _, frag = href.partition("#")
+            if "/" in target:  # интерактивная страница в подпапке (pipeline/index.html) — открывается в браузере
+                if not os.path.isfile(os.path.join(gw.guide_dir(), *target.split("/"))):
+                    bad.append(f"{pid}: {href} — нет файла")
+                continue
             tid = target[:-5] if target.endswith(".html") else (target or pid)
             if tid not in pages:
                 bad.append(f"{pid}: {href} — нет страницы")
@@ -156,3 +160,77 @@ def test_help_menu_in_mode_window(monkeypatch):
         assert gw._window is not None and gw._window.current_page() == gw.page_for(w)
         gw._window.close()
         w.close()
+
+
+def test_pipeline_page_in_toc():
+    """«Путь радиосигнала» — в разделе «Основы радиоприёма», со схемой и кнопкой интерактивной страницы."""
+    groups = {key: [pid for pid, _t in val] for key, val in gw.TOC if isinstance(val, list)}
+    assert "pipeline" in groups["Основы радиоприёма"]
+    assert gw.page_title("pipeline") == "Путь радиосигнала"
+    src = gw.read_page("pipeline")
+    assert 'src="img/pipeline.svg"' in src
+    assert re.search(r'<table class="btn"[^>]*>\s*<tr>\s*<td>\s*<a href="pipeline/index.html">', src)
+    assert '<a href="pipeline.html">' in gw.read_page("index")
+    texts = {pid: gw.page_text(s) for pid, s in _all().items()}
+    assert "pipeline" in [pid for pid, _n, _s in gw.search("фидер МШУ", texts)]
+
+
+def test_interactive_page_offline():
+    """Интерактивная схема работает из файла: всё своё рядом, без CDN и внешних шрифтов."""
+    base = os.path.join(gw.guide_dir(), "pipeline")
+    with open(os.path.join(base, "index.html"), encoding="utf-8") as f:
+        src = f.read()
+    assert '<meta charset="utf-8">' in src and 'name="viewport"' in src
+    assert not re.search(r"""(src|href)=["'](https?:)?//""", src)
+    for ref in re.findall(r"""(?:src|href)=["']([^"'#:]+)["']""", src):
+        assert os.path.isfile(os.path.normpath(os.path.join(base, ref))), ref
+    for name in ("app.js", "style.css"):
+        with open(os.path.join(base, name), encoding="utf-8") as f:
+            txt = f.read()
+        assert "http://" not in txt.replace("http://www.w3.org/2000/svg", "") and "https://" not in txt, name
+        assert "@import" not in txt and "fonts.googleapis" not in txt
+    for anchor in re.findall(r'href="#([\w-]+)"', src):
+        assert f'id="{anchor}"' in src, anchor
+
+
+def test_interactive_link_opens_external_browser(monkeypatch):
+    """Ссылка на pipeline/index.html не грузится в QTextBrowser, а уходит в системный браузер (file://)."""
+    monkeypatch.setattr(gw.settings, "save", lambda *_a: None)
+    opened = []
+    monkeypatch.setattr(gw, "open_in_browser", lambda path: opened.append(path) or True)
+    from PySide6.QtCore import QUrl
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    w = gw.show_guide("pipeline")
+    app.processEvents()
+    assert w.current_page() == "pipeline"
+    src = w.view.source()
+    hist = w.view.backwardHistoryCount()
+    w.view.setSource(src.resolved(QUrl("pipeline/index.html")))
+    app.processEvents()
+    want = os.path.join(gw.guide_dir(), "pipeline", "index.html")
+    assert [os.path.normcase(p) for p in opened] == [os.path.normcase(want)]
+    assert w.view.source() == src and w.current_page() == "pipeline"  # окно осталось на своей странице
+    assert w.view.backwardHistoryCount() == hist  # в историю не попало
+    # настоящий щелчок мышью по кнопке-ссылке на странице
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+    opened.clear()
+    w.resize(1100, 760)
+    app.processEvents()
+    cur = w.view.document().find("Открыть интерактивную схему")
+    assert not cur.isNull()
+    w.view.setTextCursor(cur)
+    w.view.ensureCursorVisible()
+    app.processEvents()
+    r = w.view.cursorRect(cur)
+    pos = QPoint(r.left() - 40, r.center().y())
+    QTest.mouseClick(w.view.viewport(), Qt.LeftButton, Qt.NoModifier, pos)
+    app.processEvents()
+    assert [os.path.normcase(p) for p in opened] == [os.path.normcase(want)]
+    assert w.current_page() == "pipeline"
+    # обычные страницы и картинки — не «интерактивные»
+    assert gw.interactive_path(QUrl.fromLocalFile(gw.page_path("sdr"))) is None
+    assert gw.interactive_path(QUrl.fromLocalFile(os.path.join(gw.guide_dir(), "img", "pipeline.svg"))) is None
+    assert gw.interactive_path(QUrl("https://example.org/pipeline/index.html")) is None
+    w.close()

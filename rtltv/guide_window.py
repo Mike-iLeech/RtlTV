@@ -4,6 +4,8 @@
 вместо {{fg}}, {{accent}}… Слева дерево разделов и поиск по всем страницам, справа QTextBrowser.
 show_guide(page, parent) открывает единственное окно на нужной странице («radio», «antennas#v-dipole»).
 В сборке PyInstaller папку надо положить как данные: --add-data "rtltv\\guide;rtltv\\guide".
+Интерактивные страницы с JavaScript лежат в подпапках (guide/pipeline/index.html): QTextBrowser их не
+показывает, ссылка на них открывается во внешнем браузере как file://.
 """
 import html
 import os
@@ -11,7 +13,8 @@ import re
 import sys
 
 from PySide6.QtCore import QByteArray, QSize, Qt, QTimer, QUrl
-from PySide6.QtGui import QColor, QImage, QKeySequence, QPainter, QShortcut, QTextCursor, QTextDocument
+from PySide6.QtGui import (QColor, QDesktopServices, QImage, QKeySequence, QPainter, QShortcut, QTextCursor,
+                           QTextDocument)
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
                                QSplitter, QStackedWidget, QTextBrowser, QTextEdit, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout, QWidget)
@@ -28,6 +31,7 @@ TOC = [
         ("legal", "Закон и этика эфира"),
     ]),
     ("Основы радиоприёма", [
+        ("pipeline", "Путь радиосигнала"),
         ("sdr", "Приёмники SDR"),
         ("decibels", "Единицы и децибелы"),
         ("gain", "Усиление и АРУ"),
@@ -151,11 +155,33 @@ def doc_css(t):
                   margin-top: 8px; margin-bottom: 8px; }}
     table.warn {{ background-color: {t['panel2']}; border-color: #d9822b; border-style: solid;
                   margin-top: 8px; margin-bottom: 8px; }}
+    table.btn {{ background-color: {t['accent']}; margin-top: 10px; margin-bottom: 4px; }}
+    table.btn a {{ color: {t['bg']}; font-size: large; }}
     code, .mono {{ font-family: Consolas, 'Courier New', monospace; color: {t['lcd']}; }}
     .dim {{ color: {t['dim']}; }}
     .k {{ font-family: Consolas, monospace; background-color: {t['panel2']}; color: {t['fg']}; }}
     .crumbs {{ color: {t['dim']}; }}
     """
+
+
+def interactive_path(url):
+    """Путь к интерактивной странице (HTML в подпапке руководства, например pipeline/index.html) или None.
+    Такие страницы написаны для браузера (JavaScript, Canvas), а не для QTextBrowser."""
+    if not url.isLocalFile():
+        return None
+    path = os.path.abspath(url.toLocalFile())
+    if not path.lower().endswith((".html", ".htm")):
+        return None
+    root = os.path.normcase(os.path.abspath(guide_dir()))
+    norm = os.path.normcase(path)
+    if norm.startswith(root + os.sep) and os.path.dirname(norm) != root:
+        return path
+    return None
+
+
+def open_in_browser(path):
+    """Открыть локальную страницу в системном браузере (file://). Отдельная функция — чтобы подменять в тестах."""
+    return QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
 
 def render_svg(data, t, width=0):
@@ -217,6 +243,15 @@ class GuideBrowser(QTextBrowser):
         frac = bar.value() / max(1, bar.maximum())
         self.reload()
         bar.setValue(int(frac * bar.maximum()))
+
+    def doSetSource(self, url, kind=QTextDocument.UnknownResource):
+        """Интерактивные страницы (pipeline/index.html) — во внешний браузер, остальное — как обычно."""
+        path = interactive_path(url)
+        if path:
+            if os.path.exists(path):
+                open_in_browser(path)
+            return
+        super().doSetSource(url, kind)
 
     def loadResource(self, kind, url):
         path = url.toLocalFile() if url.isLocalFile() else ""

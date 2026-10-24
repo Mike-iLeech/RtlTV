@@ -12,6 +12,7 @@
 Генератор владеет docs/index.html, install.html, 404.html, sitemap.xml, .nojekyll, docs/guide/ и
 docs/assets/ — их он пересоздаёт; docs/img/ не трогает (кроме --screens).
 Схемы SVG перекрашиваются под тему: img/x.svg (светлая) и img/x-dark.svg (тёмная, через <picture>).
+Интерактивные страницы — подпапки руководства с index.html (rtltv/guide/pipeline/) — копируются как есть.
 """
 import argparse
 import ast
@@ -70,6 +71,11 @@ def guide_pages(toc):
     for key, val in toc:
         out.extend(val if isinstance(val, list) else [(key, val)])
     return out
+
+
+def interactive_dirs():
+    """Подпапки руководства с самостоятельными интерактивными страницами (index.html внутри), кроме img."""
+    return sorted(d for d in os.listdir(GUIDE) if d != "img" and os.path.isfile(os.path.join(GUIDE, d, "index.html")))
 
 
 def theme_colors(name):
@@ -209,6 +215,9 @@ def convert_guide(pid, src):
     # якоря: <h2><a name="x"></a>Текст</h2> → <h2 id="x">Текст <a class="anchor" href="#x">#</a></h2>
     body = re.sub(r'(?s)<(h[1-6])><a name="([^"]+)"></a>(.*?)</\1>', _heading_anchor, body)
     body = re.sub(r'<a name="([^"]+)">', r'<a id="\1">', body)
+    # кнопка-ссылка (таблица из одной ячейки с классом btn) → обычная кнопка сайта
+    body = re.sub(r'(?s)<table class="btn"[^>]*>\s*<tr>\s*<td>\s*<a ([^>]*)>(.*?)</a>\s*</td>\s*</tr>\s*</table>',
+                  r'<p class="cta"><a class="btn big" \1>\2</a></p>', body)
     # врезки-таблицы из одной ячейки → блоки
     body = re.sub(r'(?s)<table class="(note|warn)"[^>]*>\s*<tr>\s*<td>(.*?)</td>\s*</tr>\s*</table>',
                   _callout, body)
@@ -489,7 +498,8 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 <h2 id="guide">Руководство<a class="anchor" href="#guide" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="cards">
 <a class="card" href="{g}quickstart.html"><b>Первые шаги</b><span>Быстрый старт, что можно принимать, закон и этика эфира.</span></a>
-<a class="card" href="{g}sdr.html"><b>Основы радиоприёма</b><span>SDR, децибелы, усиление, антенны, модуляция, спектр, доплер.</span></a>
+<a class="card" href="{g}pipeline.html"><b>Основы радиоприёма</b><span>Путь радиосигнала, SDR, децибелы, усиление, антенны, модуляция, спектр, доплер.</span></a>
+<a class="card" href="{g}pipeline/index.html"><b>Интерактивная схема</b><span>Путь сигнала от микрофона до динамика: модуляция, эфир, спектр и водопад, демодуляция, уровни в дБм, ваттах и вольтах.</span></a>
 <a class="card" href="{g}mode-radio.html"><b>Режимы SDR4NOOB</b><span>ТВ, Радио, SSTV, Спутники, ADS-B, APRS — каждое окно по карточкам.</span></a>
 <a class="card" href="{g}troubleshooting.html"><b>Помощь</b><span>Помехи и неполадки, словарь терминов.</span></a>
 </div>
@@ -931,6 +941,9 @@ def build(verbose=True):
         if name.endswith(".svg"):
             for out, txt in svg_variants(name, light, dark).items():
                 write(os.path.join(DOCS, "guide", "img", out), txt)
+    # интерактивные страницы (своя вёрстка и JavaScript, напр. guide/pipeline/) — как есть
+    for name in interactive_dirs():
+        shutil.copytree(os.path.join(GUIDE, name), os.path.join(DOCS, "guide", name))
 
     order = [("index.html", "Главная"), ("install.html", "Установка и обновление")] + \
             [(f"guide/{pid}.html", t) for pid, t in gpages]
@@ -962,7 +975,8 @@ def build(verbose=True):
     write(os.path.join(DOCS, "assets", "search-index.js"),
           "window.SDR4NOOB_SEARCH = " + json.dumps(index, ensure_ascii=False, separators=(",", ":")) + ";\n")
     write(os.path.join(DOCS, "404.html"), NOT_FOUND)
-    urls = "".join(f"  <url><loc>{SITE_URL}{'' if p == 'index.html' else p}</loc></url>\n" for p in made)
+    pages_all = made + [f"guide/{d}/index.html" for d in interactive_dirs()]
+    urls = "".join(f"  <url><loc>{SITE_URL}{'' if p == 'index.html' else p}</loc></url>\n" for p in pages_all)
     write(os.path.join(DOCS, "sitemap.xml"),
           '<?xml version="1.0" encoding="UTF-8"?>\n'
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + "</urlset>\n")

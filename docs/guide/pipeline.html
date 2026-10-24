@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Путь радиосигнала — SDR4NOOB</title>
+<meta name="description" content="Как голос из рации попадает в динамик вашего компьютера: что происходит с сигналом в передатчике, в эфире, в антенне, в кабеле и внутри RTL-SDR, и какой у него уровень в каждой точке — в децибелах, ва">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/pipeline.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
+<meta property="og:title" content="Путь радиосигнала — SDR4NOOB">
+<meta property="og:description" content="Как голос из рации попадает в динамик вашего компьютера: что происходит с сигналом в передатчике, в эфире, в антенне, в кабеле и внутри RTL-SDR, и какой у него уровень в каждой точке — в децибелах, ва">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html" aria-current="page" class="cur">Путь радиосигнала</a></li><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Основы радиоприёма</p>
+<h1>Путь радиосигнала</h1>
+<p>Как голос из рации попадает в динамик вашего компьютера: что происходит с сигналом в передатчике, в эфире,
+в антенне, в кабеле и внутри RTL-SDR, и какой у него уровень в каждой точке — в децибелах, ваттах и вольтах.</p>
+
+<p class="cta"><a class="btn big" href="pipeline/index.html"><b>▶ Открыть интерактивную схему</b></a></p>
+<p class="dim">Схема откроется в браузере: анимации модуляции, оцифровки, спектра и водопада, демодуляции AM и FM,
+калькулятор уровней с ползунками и сравнение аналога и цифры при шуме. Интернет не нужен.</p>
+
+<p><figure class="diagram"><picture><source srcset="img/pipeline-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/pipeline.svg" alt="Путь радиосигнала от источника до звука" width="760" height="440" loading="lazy"></picture></figure></p>
+
+<h2 id="chain">Цепочка по шагам<a class="anchor" href="#chain" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li><b>Источник.</b> Микрофон даёт единицы милливольт; после усилителя и модулятора на выходе возбудителя около
+1 мВт (0 дБм, 0,22 В на 50 Ом).</li>
+<li><b>Оцифровка</b> — только в цифровом тракте: <a href="sdr.html#adc">АЦП</a> измеряет звук f<sub>д</sub> раз в
+секунду (дискретизация) и округляет до 2<sup>N</sup> уровней (квантование).</li>
+<li><b>Модуляция</b> — сообщение меняет амплитуду (AM), частоту (FM, FSK) или фазу (QPSK) несущей
+(<a href="modulation.html">подробнее</a>).</li>
+<li><b>Усилитель мощности</b> поднимает уровень до ватт и киловатт: усиление в дБ прибавляется к дБм.</li>
+<li><b>Фидер</b> (кабель) отнимает часть мощности, тем больше, чем он длиннее и выше частота.</li>
+<li><b>Антенна</b> направляет энергию: её усиление (дБi) даёт <b>ЭИИМ</b> = мощность − потери фидера + усиление.</li>
+<li><b>Эфир.</b> Волна расходится сферой: потери FSPL = 20·lg d + 20·lg f + 32,44 (d в км, f в МГц). Дома, лес и
+рельеф добавляют ещё 10–40 дБ.</li>
+<li><b>Приёмная антенна.</b> Поле волны толкает электроны в проводе, на выходе антенны появляется напряжение:
+у полуволнового диполя ЭДС = E·λ/π.</li>
+<li><b>МШУ (LNA)</b> нужен только на участке <b>антенна → приёмник</b>: он перекрывает потери кабеля и шум
+приёмника. Ставить его надо у антенны, до кабеля (<a href="antennas.html#lna">подробнее</a>).</li>
+<li><b>Фидер к приёмнику</b> — снова потери: на 10 м RG-58 около 1,6 дБ на 100 МГц и 3,6 дБ на 446 МГц; плюс
+0,1–0,3 дБ на каждый разъём; намокший кабель теряет в разы больше.</li>
+<li><b>Приёмник RTL-SDR:</b> входной фильтр → тюнер (усиление, перенос на ПЧ) → АЦП 8 бит → цифровой смеситель
+и децимация (поток IQ) → БПФ (<a href="spectrum.html">спектр и водопад</a>) → фильтр канала → демодулятор (AM —
+длина вектора IQ, FM — скорость поворота фазы) → декодер для цифры (DMR: символы → биты → кадры → вокодер) →
+дешифратор, если сигнал зашифрован → звук.</li>
+</ol>
+<div class="callout warn"><b>Шифрованные каналы SDR4NOOB не расшифровывает.</b> Расшифровывать чужие переговоры незаконно; ключ можно
+использовать только в собственной системе. Подробнее — в разделе <a href="legal.html">«Закон и этика эфира»</a>.</div>
+
+<h2 id="levels">Таблица уровней<a class="anchor" href="#levels" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Сквозной расчёт для свободного пространства. Мощность в милливаттах P = 10<sup>дБм/10</sup>, напряжение на
+нагрузке U = √(P·R), R = 50 Ом.</p>
+<div class="tw"><table class="t">
+<tr><th>Точка тракта</th><th>Рация PMR, 0,5 Вт, 2 км</th><th>FM-вещание, 10 кВт, 50 км</th><th>«Метеор-М», 5 Вт, 800 км</th></tr>
+<tr><td>Возбудитель</td><td>0 дБм · 1 мВт · 0,22 В</td><td>0 дБм · 1 мВт · 0,22 В</td><td>0 дБм · 1 мВт · 0,22 В</td></tr>
+<tr><td>После усилителя</td><td>27 дБм · 0,5 Вт · 5 В</td><td>70 дБм · 10 кВт · 707 В</td><td>37 дБм · 5 Вт · 16 В</td></tr>
+<tr><td>Фидер передатчика</td><td>нет (антенна на рации)</td><td>50 м LMR-400: −2,4 дБ</td><td>1 м: −0,5 дБ</td></tr>
+<tr><td>Антенна, ЭИИМ</td><td>0 дБi → 0,5 Вт</td><td>6 дБi → 23 кВт</td><td>0 дБi → 4,5 Вт</td></tr>
+<tr><td>Потери в эфире</td><td>−91 дБ (446 МГц)</td><td>−106 дБ (100 МГц)</td><td>−133 дБ + 3 дБ поляризация (137,9 МГц)</td></tr>
+<tr><td>Выход приёмной антенны</td><td>−64 дБм · 360 пВт · 134 мкВ</td><td>−33 дБм · 0,5 мкВт · 5 мВ</td><td>−98 дБм · 0,17 пВт · 2,9 мкВ (диполь 2 дБi)</td></tr>
+<tr><td>МШУ</td><td>не нужен</td><td>не нужен</td><td>+20 дБ → −78 дБм · 29 мкВ</td></tr>
+<tr><td>Вход приёмника</td><td>2 м RG-58: −65 дБм · 121 мкВ</td><td>10 м RG-6: −34 дБм · 4,5 мВ</td><td>10 м RG-58: −80 дБм · 22 мкВ</td></tr>
+<tr><td>Шум в канале</td><td>−128 дБм (12,5 кГц)</td><td>−115 дБм (200 кГц)</td><td>−122 дБм (120 кГц, КШ с МШУ 0,9 дБ)</td></tr>
+<tr><td>Сигнал/шум</td><td>≈ 63 дБ</td><td>≈ 83 дБ</td><td>≈ 25 дБ</td></tr>
+</table></div>
+<ul>
+<li>В городе за домами рация теряет ещё 20–30 дБ — поэтому реальная дальность PMR — сотни метров, а не десятки
+километров.</li>
+<li>«Метеор» у горизонта дальше в три раза (≈ 2400 км): ещё −10 дБ. На спектре RTL-SDR сигнал шириной 120 кГц
+делится на бины по ~1 кГц, поэтому в одном бине он выглядит на ~20 дБ слабее — около −120 дБм.</li>
+<li>Сильнее −30 дБм на входе RTL-SDR начинается перегрузка, самые слабые различимые сигналы — около
+−120…−130 дБм (доли микровольта).</li>
+</ul>
+
+<h2 id="units">Децибелы, ватты и вольты<a class="anchor" href="#units" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th>дБм</th><th>Мощность</th><th>Напряжение на 50 Ом</th><th>Пример</th></tr>
+<tr><td>+70</td><td>10 кВт</td><td>707 В</td><td>FM-передатчик большого города</td></tr>
+<tr><td>+27</td><td>0,5 Вт</td><td>5 В</td><td>рация PMR446</td></tr>
+<tr><td>0</td><td>1 мВт</td><td>224 мВ</td><td>выход возбудителя, генератор</td></tr>
+<tr><td>−30</td><td>1 мкВт</td><td>7 мВ</td><td>перегрузка RTL-SDR</td></tr>
+<tr><td>−60</td><td>1 нВт</td><td>224 мкВ</td><td>рация в соседнем доме</td></tr>
+<tr><td>−107</td><td>20 фВт</td><td>1 мкВ</td><td>0 дБмкВ: слабая, но разборчивая станция</td></tr>
+<tr><td>−120</td><td>1 фВт</td><td>0,22 мкВ</td><td>на грани шума в узком канале</td></tr>
+</table></div>
+<p>Подробно о децибелах — в разделе <a href="decibels.html">«Единицы и децибелы»</a>. Все формулы и ползунки,
+которые пересчитывают уровни по цепочке, — в <a href="pipeline/index.html">интерактивной схеме</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/legal.html"><span>← Назад</span>Закон и этика эфира</a><a class="next" href="../guide/sdr.html"><span>Дальше →</span>Приёмники SDR</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>
