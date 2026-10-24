@@ -10,6 +10,11 @@ import sys
 import numpy as np
 
 
+TIMEOUT_HINT = ("Донгл не отдаёт данные (USB: тайм-аут чтения). Так бывает после аварийного закрытия программы, "
+                "которая с ним работала. Выдерните донгл из USB, подождите 5 секунд и вставьте снова "
+                "(лучше в порт на самом компьютере, не в хаб).")
+
+
 class RtlSdrError(RuntimeError):
     pass
 
@@ -168,6 +173,8 @@ class RtlSdr:
             self._buf = (C.c_ubyte * nbytes)()
         got = C.c_int(0)
         r = self.L.rtlsdr_read_sync(self.dev, C.addressof(self._buf), nbytes, C.byref(got))
+        if r == -7:
+            raise RtlSdrError(TIMEOUT_HINT)
         if r < 0:
             raise RtlSdrError(f"Чтение USB: ошибка {r} (донгл отключён?)")
         return bytes(memoryview(self._buf)[:got.value])

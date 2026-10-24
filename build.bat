@@ -15,9 +15,8 @@ cd /d "%~dp0"
   --hidden-import PySide6.QtSvg ^
   --exclude-module tkinter ^
   run.py
-rem копия под прежним именем: обновлятор версий 2.x ищет RtlTV.exe и запускает его после обновления
-copy /y dist\SDR4NOOB\SDR4NOOB.exe dist\SDR4NOOB\RtlTV.exe >nul
 copy /y LICENSE dist\SDR4NOOB\ >nul
 copy /y THIRD_PARTY.md dist\SDR4NOOB\ >nul
 copy /y README.md dist\SDR4NOOB\ >nul
 copy /y CHANGELOG.md dist\SDR4NOOB\ >nul
+rem установщик (нужен Inno Setup 6): iscc /DAppVersion=<версия> installer\sdr4noob.iss → release\SDR4NOOB-<версия>-setup.exe

@@ -2,12 +2,39 @@ import argparse
 import importlib
 import sys
 
-from PySide6.QtWidgets import QApplication
 
-from .launcher import MODES, Launcher
+
+def configure(data_dir=None, updates=None):
+    """Записать выбор из установщика в настройки (app.json) и выйти. Окон не открывает."""
+    import os
+    from . import paths, settings
+    s = settings.load("app", {})
+    if data_dir:
+        root = os.path.abspath(os.path.expandvars(data_dir))
+        old = paths.data_root()
+        if os.path.normcase(root) != os.path.normcase(old):
+            s["data_dir_prev"] = old
+        s["data_dir"] = None if os.path.normcase(root) == os.path.normcase(paths.DEFAULT_DATA) else root
+        try:
+            os.makedirs(root, exist_ok=True)
+        except OSError:
+            pass
+    if updates in ("daily", "weekly", "never"):
+        s["update_check"] = updates
+    settings.save("app", s)
+    return 0
 
 
 def main():
+    if "--configure" in sys.argv:
+        cp = argparse.ArgumentParser(prog="SDR4NOOB --configure")
+        cp.add_argument("--configure", action="store_true")
+        cp.add_argument("--data-dir")
+        cp.add_argument("--updates", choices=["daily", "weekly", "never"])
+        c, _rest = cp.parse_known_args()
+        sys.exit(configure(c.data_dir, c.updates))
+    from PySide6.QtWidgets import QApplication
+    from .launcher import MODES, Launcher
     ap = argparse.ArgumentParser(prog="SDR4NOOB", description="SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на RTL-SDR")
     ap.add_argument("--mode", choices=[m[0] for m in MODES], help="сразу открыть режим, минуя выбор")
     ap.add_argument("--test", action="store_true", help="тестовый эфир вместо донгла")

@@ -186,21 +186,21 @@ def test_install_script_rolls_back_when_exe_locked(tmp_path):
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="PowerShell")
-def test_install_script_migrates_rtltv_to_sdr4noob(tmp_path):
-    """Установка 2.x (только RtlTV.exe) обновляется до 3.0: появляются SDR4NOOB.exe и новая копия RtlTV.exe."""
+def test_install_script_removes_old_rtltv_exe(tmp_path):
+    """Установка 2.x/3.0 (с RtlTV.exe) обновляется архивом без копии: RtlTV.exe убирается, ставится SDR4NOOB.exe."""
     app = tmp_path / "app"
     (app / "_internal").mkdir(parents=True)
     (app / "RtlTV.exe").write_bytes(b"old-exe")
+    (app / "SDR4NOOB.exe").write_bytes(b"old-exe")
     new = tmp_path / "new"
     (new / "_internal").mkdir(parents=True)
     (new / "SDR4NOOB.exe").write_bytes(b"new-exe")
-    (new / "RtlTV.exe").write_bytes(b"new-exe")
     (new / "LICENSE").write_text("GPL")
     r, log = _run_ps(tmp_path, app, new)
     assert r.returncode == 0, (r.stdout, r.stderr, log)
     assert (app / "SDR4NOOB.exe").read_bytes() == b"new-exe"
-    assert (app / "RtlTV.exe").read_bytes() == b"new-exe"
-    assert (app / "LICENSE").exists() and not (app / "RtlTV.exe.old").exists()
+    assert not (app / "RtlTV.exe").exists() and not (app / "RtlTV.exe.old").exists()
+    assert (app / "LICENSE").exists()
 
 
 def test_prepare_accepts_old_layout_and_start_name(tmp_path):
@@ -211,3 +211,60 @@ def test_prepare_accepts_old_layout_and_start_name(tmp_path):
     p2 = tmp_path / "new.zip"
     p2.write_bytes(_zip_bytes({"SDR4NOOB/SDR4NOOB.exe": b"e", "SDR4NOOB/RtlTV.exe": b"e", "SDR4NOOB/_internal/x": b"x"}))
     assert updater.start_name(updater.prepare(str(p2))) == "SDR4NOOB.exe"
+
+
+def test_check_latest_setup_asset(monkeypatch):
+    def fake(url, timeout=15):
+        if url.endswith("setup.exe.sha256"):
+            return b"feedbeef  SDR4NOOB-3.1.0-setup.exe\n"
+        return json.dumps({"tag_name": "v3.1.0", "body": "", "html_url": "https://g/r", "assets": [
+            {"name": "SDR4NOOB-3.1.0-win64.zip", "browser_download_url": "https://x/z", "size": 5, "digest": "sha256:AA"},
+            {"name": "SDR4NOOB-3.1.0-setup.exe", "browser_download_url": "https://x/s", "size": 7},
+            {"name": "SDR4NOOB-3.1.0-setup.exe.sha256", "browser_download_url": "https://x/setup.exe.sha256"},
+        ]}).encode()
+    monkeypatch.setattr(updater, "_get", fake)
+    info = updater.check_latest()
+    assert info["asset"]["sha256"] == "aa"
+    assert info["setup"]["name"] == "SDR4NOOB-3.1.0-setup.exe" and info["setup"]["sha256"] == "feedbeef"
+
+
+def test_update_kind(monkeypatch, tmp_path):
+    info = {"asset": {"url": "z"}, "setup": {"url": "s"}}
+    monkeypatch.setattr(updater, "app_dir", lambda: str(tmp_path))
+    assert updater.update_kind(info) == "asset"              # переносная копия — архивом
+    (tmp_path / "unins000.exe").write_bytes(b"x")
+    assert updater.update_kind(info) == "setup"              # поставлено установщиком — установщиком
+    assert updater.update_kind({"asset": {"url": "z"}}) == "asset"   # в релизе нет установщика
+
+
+def test_configure_writes_settings(tmp_path):
+    from rtltv import __main__ as m, paths, settings
+    data = tmp_path / "Мои записи"
+    assert m.configure(str(data), "never") == 0
+    s = settings.load("app", {})
+    assert s["data_dir"] == str(data) and s["update_check"] == "never" and data.is_dir()
+    m.configure(paths.DEFAULT_DATA, "daily")
+    s = settings.load("app", {})
+    assert s["data_dir"] is None and s["update_check"] == "daily"
+
+
+def test_migrate_merges_and_retries(tmp_path, monkeypatch):
+    from rtltv import paths
+    old, new = tmp_path / "RtlTV", tmp_path / "SDR4NOOB"
+    (old / "tiles" / "5").mkdir(parents=True)
+    (old / "tiles" / "5" / "a.png").write_bytes(b"old-a")
+    (old / "tiles" / "5" / "b.png").write_bytes(b"old-b")
+    (old / "adsb_history.json").write_text("old")
+    (old / "updates").mkdir()
+    (new / "tiles" / "5").mkdir(parents=True)
+    (new / "tiles" / "5" / "a.png").write_bytes(b"new-a")            # уже перенесено/скачано заново
+    monkeypatch.setattr(paths, "OLD_LOCAL", str(old))
+    monkeypatch.setattr(paths, "LOCAL", str(new))
+    monkeypatch.setattr(paths, "OLD_DEFAULT_DATA", str(tmp_path / "нет"))
+    monkeypatch.delenv("RTLTV_NO_MIGRATE", raising=False)
+    paths.migrate()
+    assert (new / "tiles" / "5" / "a.png").read_bytes() == b"new-a"   # новое не перезаписано
+    assert (new / "tiles" / "5" / "b.png").read_bytes() == b"old-b"   # недостающее дозаехало
+    assert (new / "adsb_history.json").read_text() == "old"
+    assert (old / "updates").is_dir() and not (new / "updates").exists()
+    assert (new / paths.MIGRATED_MARK).exists()
