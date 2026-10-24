@@ -272,7 +272,7 @@ def make_web_view(owner):
                 return True
             kind, arg = web_nav(url)
             if kind == "guide":
-                QTimer.singleShot(0, lambda: owner.open_page(arg))
+                QTimer.singleShot(0, lambda: owner.open_from_web(arg))
             elif kind == "external":
                 QDesktopServices.openUrl(arg)
             return kind == "web"
@@ -294,10 +294,16 @@ def make_web_view(owner):
     page.settings().setAttribute(WA.PluginsEnabled, False)
     view.setPage(page)
 
+    restarts = [0]
+
     def crashed(status, code):
         if status != QWebEnginePage.RenderProcessTerminationStatus.NormalTerminationStatus:
+            restarts[0] += 1
+            if restarts[0] > 3:  # падает раз за разом (драйвер, GPU) — не крутить перезагрузку бесконечно
+                log.error("схема: процесс страницы завершился (%s, код %s), больше не перезагружаю", status, code)
+                return
             log.warning("схема: процесс страницы завершился (%s, код %s) — перезагрузка", status, code)
-            QTimer.singleShot(500, view.reload)
+            QTimer.singleShot(500 * restarts[0], view.reload)
     page.renderProcessTerminated.connect(crashed)
     return view
 
@@ -489,6 +495,9 @@ class GuideWindow(QWidget):
         self._web_theme = None
         self._web_fwd = False      # «Вперёд» со страницы вернёт на схему, с которой ушли «Назад»
         self._web_from = None      # страница, с которой открыта схема
+        self._web_page = None      # id страницы-описания схемы (pipeline) — для заголовка
+        self._back_to_web = None   # страница, открытая ссылкой со схемы: «Назад» с неё — снова на схему
+        self._web_next = None      # «Вперёд» со схемы — на страницу, с которой вернулись на неё «Назад»
         self.pages = QStackedWidget()
         self.pages.addWidget(self.view)
 
@@ -597,13 +606,19 @@ class GuideWindow(QWidget):
                 and cur.query() == url.query())
         if frag:
             url.setFragment(frag)
+        self._set_web_active(True)
         if not same:
             self.web.load(url)
-        elif frag:  # блок схемы по якорю: страница сама откроет его и прокрутит (обработчик hashchange)
-            self.web.page().runJavaScript("location.hash = " + repr("#" + frag))
+        elif frag:  # блок схемы по якорю: страница сама откроет его и прокрутит (обработчик hashchange);
+            # тот же хэш событие не вызывает — тогда шлём его сами, чтобы снова прокрутить к блоку
+            self.web.page().runJavaScript(
+                "(function (h) { if (location.hash === h) { window.dispatchEvent(new HashChangeEvent('hashchange')); }"
+                " else { location.hash = h; } })(" + repr("#" + frag) + ")")
         self._web_fwd = False
+        self._web_next = None
+        self._back_to_web = None
         self._web_from = self.current_page()
-        self._set_web_active(True)
+        self._web_page = os.path.basename(os.path.dirname(path))
         self.pages.setCurrentWidget(self.web)
         self._web_title()
         self._sync_nav()
@@ -612,7 +627,7 @@ class GuideWindow(QWidget):
         return True
 
     def _web_title(self):
-        title = page_title(self.current_page())
+        title = page_title(self._web_page or self.current_page())
         self.title.setText(f"{title} — интерактивная схема")
         self.setWindowTitle(f"SDR4NOOB — руководство: {title} (схема)")
 
@@ -635,33 +650,59 @@ class GuideWindow(QWidget):
             self._source_changed(self.view.source())
         self._sync_nav()
 
+    def open_from_web(self, page):
+        """Ссылка со схемы на обычную страницу (словарь, «Децибелы»…): открыть её, «Назад» вернёт на схему."""
+        self.open_page(page)
+        self._back_to_web = self.current_page()
+        self._web_next = page
+        self._sync_nav()
+
+    def _back_web_ready(self):
+        return (self.web is not None and not self.web_shown() and self._back_to_web is not None
+                and self._back_to_web == self.current_page())
+
+    def _return_to_web(self):
+        self._set_web_active(True)
+        self.pages.setCurrentWidget(self.web)
+        self._web_title()
+        self._sync_nav()
+
     def go_back(self):
-        """«Назад»: со схемы — на страницу, откуда её открыли; иначе — по истории страниц."""
+        """«Назад»: со схемы — на страницу, откуда её открыли; со страницы, открытой ссылкой со схемы, — на
+        схему; иначе — по истории страниц."""
         if self.web_shown():
+            self._web_next = None
             self._show_text()
             self._web_fwd = True
             self._sync_nav()
+        elif self._back_web_ready():
+            self._back_to_web = None   # _web_next остаётся: «Вперёд» со схемы — снова на эту страницу
+            self._return_to_web()
         else:
             self.view.backward()
 
     def go_forward(self):
-        if not self.web_shown() and self._web_fwd and not self.view.isForwardAvailable():
+        """«Вперёд»: на схему, с которой ушли «Назад» (важнее истории страниц), со схемы — на страницу, куда
+        уходили по ссылке; иначе — по истории страниц."""
+        if self.web_shown():
+            if self._web_next:
+                self.open_from_web(self._web_next)
+        elif self._web_fwd and self.web is not None and self.current_page() == self._web_from:
             self._web_fwd = False
-            self._set_web_active(True)
-            self.pages.setCurrentWidget(self.web)
-            self._web_title()
-            self._sync_nav()
+            self._return_to_web()
         else:
             self.view.forward()
 
     def _sync_nav(self):
         web = self.web_shown()
-        self.b_back.setEnabled(web or self.view.isBackwardAvailable())
-        self.b_fwd.setEnabled(not web and (self.view.isForwardAvailable() or self._web_fwd))
+        self.b_back.setEnabled(web or self.view.isBackwardAvailable() or self._back_web_ready())
+        self.b_fwd.setEnabled(bool(self._web_next) if web else
+                              (self.view.isForwardAvailable() or (self._web_fwd and self.current_page() == self._web_from)))
 
     def hideEvent(self, e):
         super().hideEvent(e)
-        self._set_web_active(False)
+        if not e.spontaneous():  # окно закрыто (не свёрнуто): заморозить, когда скроются и дочерние виджеты
+            QTimer.singleShot(0, lambda: None if self.isVisible() else self._set_web_active(False))
 
     def release_web(self):
         """Удалить встроенный браузер раньше его профиля (QtWebEngine падает, если профиль уходит первым)."""
@@ -693,6 +734,8 @@ class GuideWindow(QWidget):
             url.setFragment(frag)
         self._show_text()
         self._web_fwd = False
+        self._back_to_web = None
+        self._web_next = None
         self.view.setSource(url)
         self.raise_()
         self.activateWindow()
@@ -709,7 +752,10 @@ class GuideWindow(QWidget):
         pid = self._pid_of(url)
         if self._web_fwd and pid != self._web_from:  # ушли по ссылке на другую страницу — «Вперёд» уже не на схему
             self._web_fwd = False
-            self._sync_nav()
+        if self._back_to_web is not None and pid != self._back_to_web:  # и «Назад» отсюда — уже по истории
+            self._back_to_web = None
+            self._web_next = None
+        self._sync_nav()
         if self.web_shown():
             self._web_title()
         else:
@@ -776,6 +822,7 @@ class GuideWindow(QWidget):
         if pid != self.current_page():
             self.open_page(pid)
         else:
+            self._show_text()   # результат на странице, с которой открыта схема, — показать текст
             self._highlight()
         self._find_next(from_top=True)
 
@@ -804,6 +851,7 @@ class GuideWindow(QWidget):
     def _find_next(self, from_top=False):
         if not self._query_words:
             return False
+        self._show_text()
         if from_top:
             self.view.moveCursor(QTextCursor.Start)
         for w in self._query_words:  # первое слово запроса в любом из написаний (дБм / dBm)

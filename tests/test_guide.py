@@ -317,6 +317,73 @@ def test_interactive_page_embedded(monkeypatch):
     assert w.web is None and not w.web_shown()
 
 
+def test_interactive_navigation_cases(monkeypatch):
+    """Навигация между схемой и страницами: «Назад» со страницы, открытой ссылкой со схемы, — на схему;
+    «Вперёд» на схему важнее истории; поиск по той же странице показывает текст; закрытое окно — схема заморожена."""
+    if gw.web_engine() is None:
+        import pytest
+        pytest.skip("нет QtWebEngine")
+    monkeypatch.setattr(gw.settings, "save", lambda *_a: None)
+    monkeypatch.setattr(gw, "open_in_browser", lambda path: True)
+    from PySide6.QtCore import QUrl
+    from PySide6.QtWebEngineCore import QWebEnginePage
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    ip = os.path.join(gw.guide_dir(), "pipeline", "index.html")
+    w = gw.GuideWindow("pipeline")
+    w.resize(1100, 760)
+    w.show()
+    app.processEvents()
+    w.show_interactive(ip)
+    page = w.web.page()
+    assert _wait(app, lambda: _js(app, page, "!!window.SDR4NOOB_PIPELINE") is True)
+    assert w.title.text() == "Путь радиосигнала — интерактивная схема"
+    # ссылка со схемы в словарь → «Назад» снова на схему → «Вперёд» снова в словарь
+    _js(app, page, "location.href = '../glossary.html#t-fspl'")
+    assert _wait(app, lambda: not w.web_shown() and w.current_page() == "glossary")
+    assert w.b_back.isEnabled()
+    w.go_back()
+    app.processEvents()
+    assert w.web_shown() and w.b_fwd.isEnabled()
+    w.go_forward()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "glossary" and w.view.source().fragment() == "t-fspl"
+    # A → B → «Назад» на A → схема с A → «Назад» → «Вперёд» ведёт на схему, а не на B
+    w.open_page("sdr")
+    w.open_page("decibels")
+    w.go_back()
+    app.processEvents()
+    assert w.current_page() == "sdr" and w.view.isForwardAvailable()
+    w.view.setSource(QUrl.fromLocalFile(ip))
+    app.processEvents()
+    assert w.web_shown()
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "sdr"
+    w.go_forward()
+    app.processEvents()
+    assert w.web_shown()
+    # поиск: результат на странице, с которой открыта схема, — показывается текст
+    w.q.setText("АЦП")
+    app.processEvents()
+    it = next(w.results.item(i) for i in range(w.results.count()) if w.results.item(i).data(gw.Qt.UserRole) == "sdr")
+    w._result_clicked(it)
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "sdr"
+    w.q.clear()
+    # закрытое окно: схема заморожена и без звука; открыли снова — ожила
+    w.show_interactive(ip)
+    app.processEvents()
+    w.close()
+    assert _wait(app, lambda: page.lifecycleState() == QWebEnginePage.LifecycleState.Frozen, 5)
+    assert page.isAudioMuted()
+    w.show()
+    app.processEvents()
+    assert page.lifecycleState() == QWebEnginePage.LifecycleState.Active and not page.isAudioMuted()
+    w.close()
+    w.release_web()
+
+
 def test_selftest_guide_exits_cleanly():
     """SDR4NOOB --selftest-guide (шаг CI для собранного EXE): схема оживает, процесс выходит с кодом 0 — без
     падения при выходе (профиль QtWebEngine должен пережить страницу)."""

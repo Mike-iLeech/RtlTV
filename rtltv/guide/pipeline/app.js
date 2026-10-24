@@ -748,6 +748,17 @@
     ctx.stroke();
     ctx.setLineDash([]);
   }
+  // история осциллограммы: точка на каждые 1/60 с (как при 60 кадрах/с), промежуточные — по прямой между
+  // прошлой и новой, чтобы при 30 кадрах/с волна не сжималась вдвое; dt = 0 (перерисовка) — без новых точек
+  function histPush(h, v, dt) {
+    if (!h.length) { h.push(v); return; }
+    if (!(dt > 0)) { return; }
+    var k = Math.max(1, Math.min(6, Math.round(dt * 60))), p = h[h.length - 1];
+    for (var j = 1; j <= k; j++) {
+      var a = j / k;
+      h.push(typeof v === "number" ? p + (v - p) * a : v.map(function (x, c) { return p[c] + (x - p[c]) * a; }));
+    }
+  }
   function hline(ctx, x0, x1, y, col, dash) { line(ctx, [[x0, y], [x1, y]], col, 1, dash); }
   function hash(i) {
     var x = (i | 0) * 2654435761 ^ 0x5bd1e995;
@@ -1965,7 +1976,7 @@
     line(ctx, [[xd, cy - 5], [split - 10, cy - 5]], C.dim, 1);
     line(ctx, [[xd, cy + 5], [split - 10, cy + 5]], C.dim, 1);
     // осциллограмма напряжения
-    if (dt > 0 || !rxHist.length) { rxHist.push(e0); }
+    histPush(rxHist, e0, dt);
     var nmax = Math.round(w - split - 16);
     while (rxHist.length > nmax) { rxHist.shift(); }
     var x0 = split + 6, x1 = w - 8;
@@ -2086,7 +2097,7 @@
     ctx.beginPath(); ctx.arc(cx + r * I, cy - r * Q, 5, 0, TAU); ctx.fillStyle = C.sdr; ctx.fill();
     line(ctx, [[cx + r * I, cy - r * Q], [cx + r * I, cy]], alpha(C.rx, 0.6), 1, [3, 3]);
     line(ctx, [[cx + r * I, cy - r * Q], [cx, cy - r * Q]], alpha(C.sdr, 0.6), 1, [3, 3]);
-    if (dt > 0 || !iqHist.length) { iqHist.push([I, Q]); }
+    histPush(iqHist, [I, Q], dt);
     var x0 = cx + r + 30, x1 = w - 10, n = Math.round(x1 - x0);
     while (iqHist.length > n) { iqHist.shift(); }
     hline(ctx, x0, x1, cy, C.grid);
@@ -2466,7 +2477,7 @@
       }
       if (f < cut[0] || f > cut[1]) { target *= 0.03; }
       target = Math.min(1, target * (0.92 + 0.16 * Math.random()));
-      audBars[i] += (target - audBars[i]) * Math.min(1, dt * 10 || 1);
+      audBars[i] += (target - audBars[i]) * Math.min(1, paused || !d.anim ? 1 : dt * 10);  // dt = 0 — без шага
     }
     var bw = (R0 - L0) / nb;
     var X = function (f) { return L0 + (R0 - L0) * f / fmax; };
