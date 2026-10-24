@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RtlTV — приёмник на RTL-SDR</title>
+<meta name="description" content="RtlTV — бесплатный приёмник на RTL-SDR для Windows: ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/search-index.js" defer></script>
+<script src="assets/site.js" defer></script>
+</head>
+<body data-root="" class="home">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="index.html" aria-current="page" class="cur">Главная</a></li><li><a href="install.html">Установка и обновление</a></li><li><a href="guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="guide/quickstart.html">Быстрый старт</a></li><li><a href="guide/bands.html">Что можно принимать</a></li><li><a href="guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="guide/sdr.html">Приёмники SDR</a></li><li><a href="guide/decibels.html">Единицы и децибелы</a></li><li><a href="guide/gain.html">Усиление и АРУ</a></li><li><a href="guide/antennas.html">Антенны и кабели</a></li><li><a href="guide/modulation.html">Виды модуляции</a></li><li><a href="guide/spectrum.html">Спектр и водопад</a></li><li><a href="guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="guide/mode-tv.html">ТВ</a></li><li><a href="guide/mode-radio.html">Радио</a></li><li><a href="guide/mode-sstv.html">SSTV</a></li><li><a href="guide/mode-sat.html">Спутники</a></li><li><a href="guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+
+<section class="hero">
+  <div>
+    <h1>RtlTV — приёмник на RTL-SDR</h1>
+    <p class="lead">Бесплатная программа для Windows, которая превращает недорогой USB-донгл RTL-SDR
+    в радиоприёмник, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов.
+    Всё в одном окне, по-русски, со встроенным драйвером и подробным руководством для начинающих.</p>
+    <p class="cta"><a class="btn big" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать для Windows</a>
+    <a class="btn ghost big" href="install.html">Как установить</a>
+    <a class="btn ghost big" href="guide/quickstart.html">Быстрый старт</a></p>
+    <p class="dim">Windows 10/11 x64 · RTL-SDR Blog V3/V4 и другие донглы на RTL2832U · без антенны есть
+    тестовый эфир для знакомства</p>
+  </div>
+  <figure class="shot"><a href="img/screens/launcher.webp"><img src="img/screens/launcher.webp" alt="Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов." width="1600" height="900" loading="lazy"></a><figcaption>Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов.</figcaption></figure>
+</section>
+
+<h2 id="modes">Возможности по режимам<a class="anchor" href="#modes" aria-label="Ссылка на этот раздел">#</a></h2>
+
+<section class="mode">
+<h3 id="radio">Радио</h3>
+<p>Универсальный приёмник в духе SDR# и SDR++: спектр и водопад всей полосы с масштабом, настройка щелчком,
+демодуляторы <b>WFM-стерео с RDS</b>, NFM, AM, USB/LSB, CW и цифровой <b>DMR с голосом</b> (номера абонентов,
+слоты, цветовой код, вокодер AMBE+2 через mbelib). АРУ, шумодав, шумоподавитель звука, бланкер помех,
+<b>поиск DMR</b> по диапазонам, <b>менеджер частот</b> (импорт CSV и Frequencies.xml из SDR#), запись звука в WAV,
+запись и воспроизведение <b>базовой полосы IQ</b> (WAV из SDR#/SDR++, cu8 из rtl_sdr).</p>
+<div class="shots two">
+<figure class="shot"><a href="img/screens/radio-wfm.webp"><img src="img/screens/radio-wfm.webp" alt="WFM-стерео: станция тестового эфира, RDS — название и радиотекст." width="1600" height="900" loading="lazy"></a><figcaption>WFM-стерео: станция тестового эфира, RDS — название и радиотекст.</figcaption></figure>
+<figure class="shot"><a href="img/screens/radio-dmr.webp"><img src="img/screens/radio-dmr.webp" alt="DMR: слоты, кто кому говорит, голос; слева — карточки настроек." width="1600" height="900" loading="lazy"></a><figcaption>DMR: слоты, кто кому говорит, голос; слева — карточки настроек.</figcaption></figure>
+</div>
+<p><a href="guide/mode-radio.html">Подробно о режиме «Радио» →</a></p>
+</section>
+
+<section class="mode">
+<h3 id="sat">Спутники</h3>
+<p>Прогноз пролётов по TLE (SGP4) на карте и в таблице с фильтрами, приём снимков <b>«Метеор-М» №2-3/№2-4</b>
+(LRPT 137,9 МГц, OQPSK 72k и 80k с перемежением — режим определяется сам) с композитами и
+<b>автоприёмом по расписанию</b>, запись и декодирование IQ-файлов, снимки геостационарных <b>«Электро-Л»</b>
+(LRIT 1691 МГц), прослушивание <b>МКС</b> и любительских спутников с автоматической коррекцией доплера,
+<b>свои спутники</b> по номеру NORAD и галерея принятых снимков.</p>
+<div class="shots two">
+<figure class="shot"><a href="img/screens/sat-map.webp"><img src="img/screens/sat-map.webp" alt="Карта пролётов, зона видимости и таблица ближайших пролётов." width="1600" height="900" loading="lazy"></a><figcaption>Карта пролётов, зона видимости и таблица ближайших пролётов.</figcaption></figure>
+<figure class="shot"><a href="img/screens/sat-rx.webp"><img src="img/screens/sat-rx.webp" alt="Приём LRPT: спектр, водопад, созвездие QPSK, захват несущей и синхронизация кадров." width="1600" height="900" loading="lazy"></a><figcaption>Приём LRPT: спектр, водопад, созвездие QPSK, захват несущей и синхронизация кадров.</figcaption></figure>
+<figure class="shot"><a href="img/screens/sat-listen.webp"><img src="img/screens/sat-listen.webp" alt="«Слушать»: любительский спутник с доплеровской подстройкой частоты." width="1600" height="900" loading="lazy"></a><figcaption>«Слушать»: любительский спутник с доплеровской подстройкой частоты.</figcaption></figure>
+</div>
+<p><a href="guide/mode-sat.html">Подробно о режиме «Спутники» →</a> ·
+<a href="guide/satellites.html#meteor">«Метеор» пошагово →</a></p>
+</section>
+
+<section class="mode">
+<h3 id="adsb">Самолёты (ADS-B)</h3>
+<p>Приём 1090 МГц: борта на карте OpenStreetMap с курсом, высотой и следами, таблица «Борта сейчас», расшифровка
+каждого сообщения, история сеанса, карточка борта с флагом страны и сведениями о типе и операторе.
+Отдельный список бортов <b>без координат</b> (при подавлении GNSS) и отбраковка подменённых позиций.
+Журнал в CSV/KML.</p>
+<div class="shots one"><figure class="shot"><a href="img/screens/adsb.webp"><img src="img/screens/adsb.webp" alt="Самолёты на карте (демо-генератор): кольца дальности, список «Без координат», таблица бортов." width="1600" height="900" loading="lazy"></a><figcaption>Самолёты на карте (демо-генератор): кольца дальности, список «Без координат», таблица бортов.</figcaption></figure></div>
+<p><a href="guide/mode-adsb.html">Подробно о режиме ADS-B →</a></p>
+</section>
+
+<section class="mode">
+<h3 id="tv">ТВ</h3>
+<p>Два прибора в одном окне. <b>Аналоговое ТВ</b> (SECAM/PAL D/K, PAL B/G, PAL I, NTSC M; сетки каналов
+России, Европы, Великобритании и США) — чёрно-белая картинка или звук, 9 палитр, снимок кадра, поиск каналов.
+<b>Измеритель мультиплексов DVB-T/T2</b> для наведения антенны: канал собирается из пяти перестроек,
+считаются уровень, C/N и неравномерность, по циклическому префиксу определяются режим FFT и защитный интервал.</p>
+<div class="shots two">
+<figure class="shot"><a href="img/screens/tv-analog.webp"><img src="img/screens/tv-analog.webp" alt="Аналоговое ТВ: испытательная таблица тестового генератора." width="1600" height="900" loading="lazy"></a><figcaption>Аналоговое ТВ: испытательная таблица тестового генератора.</figcaption></figure>
+<figure class="shot"><a href="img/screens/tv-digital.webp"><img src="img/screens/tv-digital.webp" alt="Измеритель DVB-T2: «стол» мультиплекса, C/N, режим 32K, GI 1/16." width="1600" height="900" loading="lazy"></a><figcaption>Измеритель DVB-T2: «стол» мультиплекса, C/N, режим 32K, GI 1/16.</figcaption></figure>
+<figure class="shot"><a href="img/screens/tv-digital-real.webp"><img src="img/screens/tv-digital-real.webp" alt="Реальный эфир: мультиплекс на ДМВ 34 (578 МГц), RTL-SDR Blog V4." width="1360" height="860" loading="lazy"></a><figcaption>Реальный эфир: мультиплекс на ДМВ 34 (578 МГц), RTL-SDR Blog V4.</figcaption></figure>
+<figure class="shot"><a href="img/screens/tv-retro.webp"><img src="img/screens/tv-retro.webp" alt="Одна из пяти цветовых схем — «Ретро (янтарь)»." width="1600" height="900" loading="lazy"></a><figcaption>Одна из пяти цветовых схем — «Ретро (янтарь)».</figcaption></figure>
+</div>
+<p><a href="guide/mode-tv.html">Подробно о режиме «ТВ» →</a></p>
+</section>
+
+<section class="mode">
+<h3 id="sstv">SSTV</h3>
+<p>Картинки, которые радиолюбители передают звуком: Robot 36/72, Martin M1/M2, Scottie S1/S2/DX, PD 50–290,
+Wraase SC2-180. Режим определяется по VIS-коду, наклон исправляется автоматически, картинка рисуется строка
+за строкой; галерея принятых и декодирование записанных WAV-файлов. Частоты КВ (14,230 МГц) и МКС (145,800 МГц).</p>
+<div class="shots one"><figure class="shot"><a href="img/screens/sstv.webp"><img src="img/screens/sstv.webp" alt="Приём Robot 36 на тестовом эфире: картинка, режим, строка, тон." width="1600" height="900" loading="lazy"></a><figcaption>Приём Robot 36 на тестовом эфире: картинка, режим, строка, тон.</figcaption></figure></div>
+<p><a href="guide/mode-sstv.html">Подробно о режиме SSTV →</a></p>
+</section>
+
+<section class="mode">
+<h3 id="aprs">APRS</h3>
+<p>Пакеты радиолюбителей (AFSK 1200 бод) на карте: станции, треки, метеостанции, лента пакетов с расшифровкой,
+фильтры, журнал. Наземная сеть 144,800 МГц и ретранслятор МКС 145,825 МГц с коррекцией доплера.</p>
+<div class="shots one"><figure class="shot"><a href="img/screens/aprs.webp"><img src="img/screens/aprs.webp" alt="Станции APRS на карте и список пакетов (тестовый эфир)." width="1600" height="900" loading="lazy"></a><figcaption>Станции APRS на карте и список пакетов (тестовый эфир).</figcaption></figure></div>
+<p><a href="guide/mode-aprs.html">Подробно о режиме APRS →</a></p>
+</section>
+
+<section class="mode">
+<h3 id="more">И ещё</h3>
+<ul>
+<li><b>«Устройства…»</b> — RTL-SDR со встроенным драйвером, сетевой rtl_tcp, HackRF One и Airspy R2/Mini
+(через их DLL), проверка драйвера WinUSB.</li>
+<li><b>«Настройки»</b> — одна папка данных для снимков, записей и журналов; перенос файлов из прежних мест.</li>
+<li><b>Автообновление</b> с GitHub Releases: программа сама предложит новую версию.</li>
+<li><b>Руководство</b> на 19 страниц — от «что такое SDR» и децибел до антенн и доплера; то же, что на этом сайте.</li>
+</ul>
+<div class="shots two">
+<figure class="shot"><a href="img/screens/devices.webp"><img src="img/screens/devices.webp" alt="«Устройства…»: найденные приёмники и их драйвер Windows." width="1100" height="700" loading="lazy"></a><figcaption>«Устройства…»: найденные приёмники и их драйвер Windows.</figcaption></figure>
+<figure class="shot"><a href="img/screens/guide.webp"><img src="img/screens/guide.webp" alt="Встроенное руководство с поиском по всем страницам." width="1600" height="900" loading="lazy"></a><figcaption>Встроенное руководство с поиском по всем страницам.</figcaption></figure>
+</div>
+</section>
+
+<h2 id="requirements">Системные требования<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>Windows 10 или 11, 64 бит.</b> Python ставить не нужно — всё внутри архива.</li>
+<li><b>Приёмник:</b> RTL-SDR Blog V4 (R828D) и V3, другие донглы на RTL2832U (R820T/R820T2 и т. п.);
+также HackRF One, Airspy R2/Mini и сетевой rtl_tcp.</li>
+<li><b>Драйвер WinUSB</b> на донгле — ставится один раз программой <a href="https://zadig.akeo.ie/">Zadig</a>
+(<a href="install.html#zadig">как</a>). Сам librtlsdr уже встроен.</li>
+<li>Двухъядерный процессор и выше; для полосы 2,4 МГц и больше — порт USB 2.0 без перегруженных хабов.</li>
+<li>Интернет нужен только для карт, орбит (TLE), справочника бортов и проверки обновлений.</li>
+</ul>
+
+<h2 id="install">Установка<a class="anchor" href="#install" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Скачайте архив <code>RtlTV-&lt;версия&gt;-win64.zip</code> со страницы
+<a href="https://github.com/Mike-iLeech/RtlTV/releases/latest">последнего выпуска</a>.</li>
+<li>Распакуйте его в папку, куда у вас есть права записи (например, <code>C:\RtlTV</code>).</li>
+<li>Запустите <code>RtlTV.exe</code>. Если донгл ещё не работал с SDR-программами — один раз поставьте WinUSB
+через Zadig.</li>
+<li>Дальше программа обновляется сама.</li>
+</ol>
+<p><a href="install.html">Подробно: установка, драйвер, обновление и удаление →</a></p>
+
+<h2 id="quickstart">Быстрый старт<a class="anchor" href="#quickstart" aria-label="Ссылка на этот раздел">#</a></h2>
+<ol>
+<li>Подключите донгл с антенной из комплекта, запустите RtlTV и выберите <b>«Радио»</b>.</li>
+<li>Нажмите <b>WFM</b>, в «Менеджере частот» дважды щёлкните «FM-вещание 87,5–108 МГц», затем щёлкните
+по «горбу» станции на спектре — зазвучит музыка, появится название (RDS).</li>
+<li>Меню «Режим → Выбрать другой режим…» (Ctrl+M) → <b>«Самолёты (ADS-B)»</b> → «▶ Старт»: через несколько
+секунд на карте появятся борта.</li>
+<li>Нет антенны — поставьте на экране выбора галочку «Без антенны: тестовый эфир» и изучайте окна.</li>
+</ol>
+<p><a href="guide/quickstart.html">Первые 10 минут подробно →</a></p>
+
+<h2 id="guide">Руководство<a class="anchor" href="#guide" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="cards">
+<a class="card" href="guide/quickstart.html"><b>Первые шаги</b><span>Быстрый старт, что можно принимать, закон и этика эфира.</span></a>
+<a class="card" href="guide/sdr.html"><b>Основы радиоприёма</b><span>SDR, децибелы, усиление, антенны, модуляция, спектр, доплер.</span></a>
+<a class="card" href="guide/mode-radio.html"><b>Режимы RtlTV</b><span>ТВ, Радио, SSTV, Спутники, ADS-B, APRS — каждое окно по карточкам.</span></a>
+<a class="card" href="guide/troubleshooting.html"><b>Помощь</b><span>Помехи и неполадки, словарь терминов.</span></a>
+</div>
+
+<h2 id="limits">Честные ограничения<a class="anchor" href="#limits" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>DVB-T2 картинки нет и не будет:</b> мультиплекс занимает 7,8 МГц, а RTL-SDR отдаёт не больше ~3,2 МГц.
+Цифровой режим ТВ — это измеритель для наведения антенны.</li>
+<li><b>Аналоговое эфирное ТВ в России выключено</b> с 2019 года; режим пригодится за рубежом, для кабельных и
+любительских передач и на тестовом генераторе. Картинка <b>чёрно-белая</b> (цветовая поднесущая не помещается
+в полосу), звук и изображение одновременно не принимаются.</li>
+<li><b>«Метеор-М»</b> требует антенны для 137 МГц (V-диполь или QFH) на открытом месте, пролёта с возвышением от
+~30° и тихого эфира без помех; комнатный штырь снимка не даст. <b>«Электро-Л»</b> — только с тарелкой и МШУ.</li>
+<li>Один канал (VFO) за раз; dPMR, NXDN, TETRA, P25, D-STAR и System Fusion не декодируются; APRS 9600 бод —
+тоже.</li>
+<li>RtlTV — только приёмник: передавать он не умеет. Слушать служебные переговоры можно, разглашать — нельзя
+(<a href="guide/legal.html">подробнее</a>).</li>
+</ul>
+
+<h2 id="license">Лицензия<a class="anchor" href="#license" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>RtlTV — свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a>.
+Внутри — librtlsdr (сборка rtl-sdr-blog, GPL-2.0-or-later), mbelib (ISC), Qt/PySide6 (LGPL-3.0), numpy, scipy,
+sgp4 и другие компоненты; полный список с лицензиями и источниками — в
+<a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">THIRD_PARTY.md</a>. Декодирование голоса DMR (AMBE+2) может
+затрагивать патенты — используйте эту функцию на свой страх и риск.</p>
+
+
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

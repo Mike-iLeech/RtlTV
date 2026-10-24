@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="250" viewBox="0 0 760 250">
+  <rect x="0" y="0" width="760" height="250" fill="#eef1f5"/>
+  <!-- сетка -->
+  <line x1="40" y1="40" x2="740" y2="40" stroke="#c9d1dc"/>
+  <line x1="40" y1="90" x2="740" y2="90" stroke="#c9d1dc"/>
+  <line x1="40" y1="140" x2="740" y2="140" stroke="#c9d1dc"/>
+  <line x1="40" y1="190" x2="740" y2="190" stroke="#c9d1dc"/>
+  <line x1="390" y1="30" x2="390" y2="200" stroke="#c9d1dc" stroke-dasharray="4,4"/>
+  <text x="30" y="44" font-family="Segoe UI" font-size="11" fill="#5d6878" text-anchor="end">−20</text>
+  <text x="30" y="94" font-family="Segoe UI" font-size="11" fill="#5d6878" text-anchor="end">−40</text>
+  <text x="30" y="144" font-family="Segoe UI" font-size="11" fill="#5d6878" text-anchor="end">−60</text>
+  <text x="30" y="194" font-family="Segoe UI" font-size="11" fill="#5d6878" text-anchor="end">−80</text>
+  <!-- спектр: шум ~ -70 дБ (y=165), края заваливаются -->
+  <polyline fill="none" stroke="#0a66c2" stroke-width="2" points="
+    40,190 60,178 80,168 100,166 120,164 140,166 160,163 170,165 180,163
+    185,120 190,95 195,85 200,82 205,84 210,80 215,86 220,95 225,120 230,163
+    250,165 270,163 290,166 310,164 330,165 350,163 370,165 385,164 388,120 390,110 392,120 395,164
+    410,165 430,163 450,166 470,164 490,165 510,163 530,165 550,164 563,163
+    566,152 570,146 574,148 578,150 582,163
+    600,165 620,164 640,163 655,165 658,128 660,70 662,128 666,165
+    680,164 690,168 710,175 740,192"/>
+  <!-- подписи -->
+  <text x="207" y="68" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">настоящая станция</text>
+  <text x="390" y="100" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">DC-пик</text>
+  <text x="390" y="215" font-family="Segoe UI" font-size="11" fill="#5d6878" text-anchor="middle">центр полосы (частота донгла)</text>
+  <text x="573" y="136" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">зеркало станции</text>
+  <line x1="573" y1="140" x2="573" y2="146" stroke="#1d2430"/>
+  <text x="660" y="58" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">узкая несущая/помеха</text>
+  <text x="470" y="182" font-family="Segoe UI" font-size="11" fill="#5d6878" text-anchor="middle">шумовая дорожка</text>
+  <text x="65" y="215" font-family="Segoe UI" font-size="11" fill="#5d6878">завал края</text>
+  <text x="390" y="20" font-family="Segoe UI" font-size="13" fill="#0a66c2" text-anchor="middle">Что видно на спектре донгла (дБ относительно шкалы АЦП)</text>
+  <!-- стрелка зеркала -->
+  <path d="M 215 230 Q 390 250 573 230" fill="none" stroke="#0a66c2" stroke-dasharray="5,4"/>
+  <text x="390" y="243" font-family="Segoe UI" font-size="11" fill="#0a66c2" text-anchor="middle">симметрично относительно центра</text>
+</svg>

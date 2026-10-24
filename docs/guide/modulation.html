@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Виды модуляции — RtlTV</title>
+<meta name="description" content="Модуляция — способ «нагрузить» радиоволну (несущую) полезной информацией: меняют её амплитуду, частоту или фазу. Чтобы услышать передачу, приёмник должен применить обратную операцию — демодуляцию того">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/modulation.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html" aria-current="page" class="cur">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Основы радиоприёма</p>
+<h1>Виды модуляции</h1>
+<p><b>Модуляция</b> — способ «нагрузить» радиоволну (несущую) полезной информацией: меняют её амплитуду,
+частоту или фазу. Чтобы услышать передачу, приёмник должен применить обратную операцию — <b>демодуляцию</b>
+того же вида. Не тот режим — и вместо речи слышно шипение, бульканье или тишина.</p>
+
+<h2 id="bw">Полоса, девиация, несущая<a class="anchor" href="#bw" aria-label="Ссылка на этот раздел">#</a></h2>
+<ul>
+<li><b>Полоса</b> — ширина участка спектра, который занимает сигнал. Её же нужно выставить в демодуляторе
+(«Полоса» в «Радио»): шире — лишний шум и соседи, уже — искажения.</li>
+<li><b>Девиация</b> (для ЧМ) — насколько частота отклоняется от несущей при модуляции. Полоса ЧМ по правилу
+Карсона: <span class="mono">B ≈ 2·(девиация + высшая частота звука)</span>.</li>
+<li><b>Несущая</b> — немодулированная составляющая. В AM она видна как узкий пик в центре сигнала.</li>
+</ul>
+
+<h2 id="analog">Аналоговые виды<a class="anchor" href="#analog" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th style="width:12%">Вид</th><th>Что меняется</th><th>Полоса</th><th>Где</th><th>На водопаде</th></tr>
+<tr><td><b>AM</b></td><td>амплитуда</td><td>2 × частота звука: 6–10 кГц</td><td>авиасвязь 118–137 МГц, вещание ДВ/СВ/КВ, CB</td><td>яркая линия несущей с «крыльями» по бокам</td></tr>
+<tr><td><b>WFM</b></td><td>частота, девиация ±75 кГц</td><td>≈ 200 кГц (по Карсону со стерео — до ~260)</td><td>FM-вещание 87,5–108 МГц</td><td>широкая «колбаса» с бахромой</td></tr>
+<tr><td><b>NFM</b></td><td>частота, девиация ±2,5 кГц (сетка 12,5 кГц) или ±5 кГц (сетка 25 кГц)</td><td>11–16 кГц</td><td>рации, ретрансляторы, такси, МКС, морской диапазон</td><td>полоска 10–15 кГц, при молчании — узкая несущая</td></tr>
+<tr><td><b>USB / LSB</b></td><td>однополосная: только одна боковая полоса, без несущей</td><td>≈ 2,4–2,8 кГц</td><td>радиолюбители на КВ и УКВ (USB выше 10 МГц, LSB ниже), SSB-спутники</td><td>«рваная» полоска только с одной стороны от частоты настройки</td></tr>
+<tr><td><b>CW</b></td><td>несущая включается/выключается (азбука Морзе)</td><td>50–500 Гц</td><td>телеграф радиолюбителей, маяки</td><td>пунктир тонкой линии</td></tr>
+</table></div>
+<h3 id="ssb">Почему SSB нужно подстраивать точнее<a class="anchor" href="#ssb" aria-label="Ссылка на этот раздел">#</a></h3>
+<p>В SSB нет несущей, и приёмник сам «додумывает» её. Ошибка настройки на 100 Гц сдвигает все частоты голоса
+на 100 Гц — речь звучит «как у утёнка». Подстраивайтесь шагом 10–100 Гц, пока голос не станет естественным.
+Перепутаете USB и LSB — речь станет неразборчивым бормотанием.</p>
+<h3 id="cw">Как приёмник делает тон из телеграфа<a class="anchor" href="#cw" aria-label="Ссылка на этот раздел">#</a></h3>
+<p>Несущая CW — просто «чистая» частота без звука. RtlTV сдвигает её так, что вы слышите тон 700 Гц —
+поэтому сигнал на спектре должен быть на 700 Гц в стороне от частоты настройки (это делается автоматически).</p>
+
+<h2 id="stereo">FM-стерео и пилот-тон<a class="anchor" href="#stereo" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>После ЧМ-демодулятора FM-станции получается «мультиплексный» сигнал шириной ~60 кГц:</p>
+<p><figure class="diagram"><picture><source srcset="img/fm-mpx-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/fm-mpx.svg" alt="Схема" width="720" height="189" loading="lazy"></picture></figure></p>
+<ul>
+<li><b>L+R</b> (сумма каналов) — обычное моно до 15 кГц: его слышит любой приёмник.</li>
+<li><b>Пилот-тон 19 кГц</b> — метка «здесь стерео». RtlTV включает стерео, только когда слышит пилот
+(галочка «Стерео (WFM)»).</li>
+<li><b>L−R</b> (разность) передаётся на поднесущей 38 кГц = 2 × 19 кГц. Сложив и вычтя L+R и L−R,
+приёмник получает левый и правый каналы.</li>
+<li><b>RDS</b> на 57 кГц — название станции и текст.</li>
+<li>Стерео шумнее моно на слабом сигнале: если шипит — снимите галочку «Стерео».</li>
+<li><b>Предыскажения</b>: передатчик поднимает высокие частоты, приёмник опускает обратно —
+50 мкс в России и Европе, 75 мкс в США (поле «Предыскажения»).</li>
+</ul>
+
+<h2 id="digital">Цифровые виды<a class="anchor" href="#digital" aria-label="Ссылка на этот раздел">#</a></h2>
+<div class="tw"><table class="t">
+<tr><th style="width:16%">Вид</th><th>Принцип</th><th>Где и параметры</th><th>Режим RtlTV</th></tr>
+<tr><td><b>FSK</b></td><td>«0» и «1» — две разные частоты</td><td>пейджеры, телеметрия, датчики</td><td>—</td></tr>
+<tr><td><b>4FSK</b></td><td>четыре частоты — 2 бита на символ</td><td><b>DMR</b>: 4800 символ/с = 9600 бит/с, отклонения ±648 и ±1944 Гц, два слота TDMA по 30 мс в канале 12,5 кГц, голос — вокодер AMBE+2</td><td>«Радио» → DMR</td></tr>
+<tr><td><b>AFSK</b></td><td>FSK тонами звука поверх обычной NFM</td><td><b>APRS</b>: Bell 202, 1200 бод, тоны 1200/2200 Гц, кадры AX.25; 144,800 МГц, МКС 145,825</td><td>«APRS»</td></tr>
+<tr><td><b>PSK / QPSK / OQPSK</b></td><td>информация в фазе: 2 (BPSK) или 4 (QPSK) положения</td><td><b>LRPT «Метеор-М»</b>: OQPSK 72 000 символ/с, полоса ≈120–150 кГц, свёрточный код + Рида — Соломона; <b>LRIT «Электро-Л»</b>: BPSK 294 000 символ/с на 1691 МГц</td><td>«Спутники»</td></tr>
+<tr><td><b>PPM</b></td><td>положение импульса в такте</td><td><b>ADS-B / Mode S</b>: 1 Мбит/с, сообщения 56 и 112 бит, 1090 МГц</td><td>«Самолёты (ADS-B)»</td></tr>
+<tr><td><b>OFDM</b></td><td>тысячи узких поднесущих (QAM) одновременно</td><td><b>DVB-T2</b>: канал 8 МГц, до 32 768 поднесущих (32K), защитный интервал против эха</td><td>«ТВ» — только измеритель</td></tr>
+<tr><td>SSTV</td><td>аналоговая: яркость = частота тона 1500–2300 Гц, синхроимпульсы 1200 Гц</td><td>14,230 МГц USB, МКС 145,800 NFM</td><td>«SSTV»</td></tr>
+</table></div>
+<h3>Как узнать цифровой сигнал на слух</h3>
+<ul>
+<li><b>DMR</b> — жёсткое жужжание с частотой ~33 Гц (пакеты по 30 мс); на водопаде ровная полоска ~10 кГц.</li>
+<li><b>APRS</b> — короткая (0,3–1 с) «трель-щебет».</li>
+<li><b>LRPT</b> — ровное шипение; на водопаде — прямоугольный «столбик» шириной ~120 кГц, который сползает по частоте
+из-за <a href="satellites.html#doppler">доплера</a>.</li>
+<li><b>SSTV</b> — «пиликанье» с ритмичными щелчками строк, длится от 36 с до нескольких минут.</li>
+</ul>
+<p>См. также: <a href="spectrum.html">Спектр и водопад</a>, <a href="mode-radio.html">Режим «Радио»</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/antennas.html"><span>← Назад</span>Антенны и кабели</a><a class="next" href="../guide/spectrum.html"><span>Дальше →</span>Спектр и водопад</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>

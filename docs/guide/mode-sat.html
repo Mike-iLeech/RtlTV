@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Режим «Спутники» — RtlTV</title>
+<meta name="description" content="Прогноз пролётов над вашим домом (SGP4 по TLE), карта с трассами, приём снимков «Метеор-М» (LRPT, 137,9 МГц) и «Электро-Л» (LRIT, 1691 МГц), прослушивание МКС и любительских спутников с автоматической">
+<meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/mode-sat.html">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/search-index.js" defer></script>
+<script src="../assets/site.js" defer></script>
+</head>
+<body data-root="../">
+<a class="skip" href="#content">К содержимому</a>
+<header class="top">
+  <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.0.0</small></a>
+  <div class="search" role="search">
+    <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
+    <div id="results" class="results" role="listbox" hidden></div>
+  </div>
+  <nav class="links" aria-label="Ссылки">
+    <a href="../guide/index.html">Руководство</a>
+    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+  </nav>
+</header>
+<div class="layout">
+<aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
+<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html" aria-current="page" class="cur">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
+</aside>
+<main id="content" class="content">
+<p class="crumbs"><a href="index.html">Содержание</a> › Режимы RtlTV</p>
+<h1>Режим «Спутники»</h1>
+<p>Прогноз пролётов над вашим домом (SGP4 по TLE), карта с трассами, приём снимков <b>«Метеор-М»</b> (LRPT,
+137,9 МГц) и <b>«Электро-Л»</b> (LRIT, 1691 МГц), прослушивание МКС и любительских спутников с автоматической
+коррекцией доплера. Теория — в разделе <a href="satellites.html">«Доплер и спутники»</a>.</p>
+
+<h2>Вкладки</h2>
+<div class="tw"><table class="t">
+<tr><th style="width:20%">Вкладка</th><th>Что в ней</th></tr>
+<tr><td>«Карта»</td><td>Подспутниковые точки и трассы, зона видимости, ваш дом. Ctrl+щелчок — поставить дом.</td></tr>
+<tr><td>«Приём со спутника»</td><td>Спектр/водопад, <b>созвездие</b> QPSK, «Захват несущей», «Синхр. кадров», «Кадры без ошибок RS».</td></tr>
+<tr><td>«Снимки со спутников»</td><td>«Показать:» (композиты 221, 125, 123…), «Растянуть уровни», «Сохранить PNG», «Папка снимков».</td></tr>
+<tr><td>«Слушать»</td><td>«Спутник», «Передатчик», «Частота», уровень, громкость, шумоподавитель, «Подавление шума в звуке», <b>«▶ Слушать»</b>.</td></tr>
+<tr><td>«Электро-Л»</td><td>Выбор аппарата, «Питание МШУ (bias-T)», «▶ Принимать LRIT», «Декодировать файл LRIT…», список принятых файлов.</td></tr>
+</table></div>
+<p>Под вкладками — <b>таблица пролётов</b>: «Спутник», «Начало», «Конец», «Длит.», «Макс.» (наибольшее
+возвышение), «Азимуты», «Частота, режим», «Статус». Над ней — фильтр <b>«Показывать:»</b> по категориям:
+Метео, МКС, FM-ретрансляторы, SSB/CW-транспондеры, Телеметрия, Свои / другие (спутники, добавленные
+пользователем в каталог).</p>
+<p><b>Свои спутники.</b> В карточке «Дом» нажмите <b>«Свои спутники…»</b> → «Добавить». Укажите номер NORAD
+и нажмите «Загрузить TLE с CelesTrak» (или вставьте TLE вручную), название и категорию, затем передатчики:
+частота (и «до» — для транспондера), режим (NFM, WFM, AM, USB, LSB, CW, LRPT, LRIT, IQ), полоса и декодер
+(голос, LRPT, LRIT или только запись IQ). Спутник сразу появится на карте, в пролётах, во вкладках «Слушать»
+и «Приём со спутника». Номер NORAD и частоты удобно брать в базе SatNOGS (db.satnogs.org).</p>
+
+<h2>Правая колонка</h2>
+<div class="tw"><table class="t">
+<tr><th style="width:30%">Карточка</th><th>Что в ней</th></tr>
+<tr><td>«Дом (Ctrl+щелчок по карте)»</td><td>Широта, долгота, «Мин. возвышение», возраст TLE, «Обновить TLE».</td></tr>
+<tr><td>«Приёмник»</td><td>«Источник» (донгл или «Демо-генератор (без антенны)»), «Усиление», «Поправка частоты» ppm, «Питание антенны (bias-T)».</td></tr>
+<tr><td>«Приём со спутника»</td><td>Спутник (№2-3 / №2-4), «Частота» 137,900 (основная) / 137,100 (резервная), «Дискретизация», «Коррекция доплера по TLE», «Записывать IQ (cu8, ~2 МБ/с)», <b>«▶ Принимать сейчас»</b>, <b>«Автоприём по расписанию»</b>, «Декодировать файл…», ближайшие пролёты.</td></tr>
+</table></div>
+
+<h2>Сценарии</h2>
+<h3>Снимок «Метеора»</h3>
+<p>Пошагово — в разделе <a href="satellites.html#meteor">«Доплер и спутники»</a>. Коротко: V-диполь на балконе →
+пролёт с «Макс.» от 30° → «Автоприём по расписанию» → снимок на вкладке «Снимки со спутников» и в папке
+Изображения\RtlTV\meteor.</p>
+<h3>Повторно декодировать запись</h3>
+<p>При включённом «Записывать IQ» сырой поток сохраняется в Документы\RtlTV\meteor-iq (~2 МБ/с, пролёт ~1,5 ГБ).
+«Декодировать файл…» прогонит его через декодер ещё раз — удобно, если во время приёма что-то пошло не так.</p>
+<h3>Послушать МКС или любительский спутник</h3>
+<p>Нажмите на строку пролёта или выберите спутник на вкладке «Слушать» → «Передатчик» → «▶ Слушать». Частота
+с доплером подстраивается сама; колесо мыши над спектром двигает частоту внутри полосы транспондера.
+<a href="satellites.html#iss">Подробнее про МКС</a>.</p>
+<h3>«Электро-Л»</h3>
+<p>Геостационарный спутник, стоит на месте, но сигнал слабый: нужна тарелка 60–100 см с облучателем на
+1691 МГц и МШУ с питанием через bias-T. Это проект «на вырост». Снимки — в Изображения\RtlTV\elektro.</p>
+
+<h2>Ограничения</h2>
+<ul>
+<li>«Метеор» в режиме 80k и старые NOAA (APT) не поддерживаются — NOAA-15/18/19 выключены в 2025 г.</li>
+<li>Для расчёта пролётов нужны TLE: без интернета используются кэшированные, точность со временем падает.</li>
+<li>«Активен» в каталоге не гарантирует, что любительский спутник включён именно на этом витке.</li>
+</ul>
+<p>См. также: <a href="antennas.html#v-dipole">V-диполь</a>, <a href="antennas.html#qfh">QFH</a>,
+<a href="modulation.html#digital">QPSK/BPSK</a>.</p>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/mode-sstv.html"><span>← Назад</span>SSTV</a><a class="next" href="../guide/mode-adsb.html"><span>Дальше →</span>Самолёты (ADS-B)</a></nav>
+</main>
+</div>
+<footer class="foot">
+  <p>RtlTV 2.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
+</footer>
+</body>
+</html>
