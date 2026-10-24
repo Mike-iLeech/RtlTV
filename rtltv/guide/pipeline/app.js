@@ -1273,106 +1273,163 @@
   }
 
   // схема усилителя мощности: возбуждение → согласование → транзистор с питанием через дроссель → П-фильтр → антенна
-  var PA_CLASS = { A: [0.35, "A: ток течёт весь период, линейно, КПД до 50 % (на практике 25–40 %)"],
-    AB: [0.6, "AB: ток чуть больше половины периода — линейно и экономнее, КПД 50–65 % (SSB, AM, QPSK)"],
-    C: [0.75, "C: ток короткими импульсами меньше полупериода, КПД 70–80 %, только для FM/FSK"],
-    E: [0.88, "E: транзистор работает ключом, КПД до 90 %, только постоянная амплитуда (FM)"] };
+  var PA_CLASS = { A: [0.35, "A: ток течёт весь период, усиление линейное, КПД до 50 % (на практике 25–40 %) — годится для любой модуляции."],
+    AB: [0.6, "AB: ток течёт чуть больше половины периода — почти линейно и экономнее, КПД 50–65 % (SSB, AM, QPSK, LTE)."],
+    C: [0.75, "C: ток короткими импульсами меньше полупериода, КПД 70–80 %, но амплитуда искажается — только FM/FSK/LoRa."],
+    E: [0.88, "E: транзистор работает ключом (открыт/закрыт), КПД до 90 %, только постоянная амплитуда (FM, FSK)."] };
+  var PA_DRAIN = {  // форма тока стока за период (u — доля периода), 0…1
+    A: function (u) { return 0.5 + 0.5 * Math.sin(TAU * u); },
+    AB: function (u) { var v = Math.sin(TAU * u); return v > -0.15 ? (v + 0.15) / 1.15 : 0; },
+    C: function (u) { var v = Math.sin(TAU * u); return v > 0.5 ? (v - 0.5) * 2 : 0; },
+    E: function (u) { return (((u % 1) + 1) % 1) < 0.5 ? 1 : 0; }
+  };
+  function paHarm(fn) {  // амплитуды гармоник 1…5 тока стока, dBc (относительно основной)
+    var a = [];
+    for (var k = 1; k <= 5; k++) {
+      var re = 0, im = 0;
+      for (var i = 0; i < 256; i++) { var u = i / 256, v = fn(u); re += v * Math.cos(TAU * k * u); im += v * Math.sin(TAU * k * u); }
+      a.push(Math.hypot(re, im));
+    }
+    return a.map(function (v) { return Math.max(-60, 20 * LOG10(v / a[0] + 1e-9)); });
+  }
+  function paFilt(k) { return k === 1 ? 0 : -10 * LOG10(1 + Math.pow(k / 1.25, 10)); }  // условная АЧХ П-фильтра, dB
   var paCls = "AB";
   demo("pasch", true, function (d) {
-    var ctx = d.ctx, w = d.w, h = d.h, t = d.t, F10 = "10px 'Segoe UI', sans-serif", F11 = "11px 'Segoe UI', sans-serif";
-    var eta = PA_CLASS[paCls][0], yM = h * 0.55, xs = function (f) { return 12 + (w - 24) * f; };
-    var src = xs(0.04), mt = xs(0.2), tr = xs(0.44), pf = xs(0.7), an = xs(0.94);
-    var dots = function (pts, speed) {
+    var ctx = d.ctx, w = d.w, t = d.t, F10 = "10px 'Segoe UI', sans-serif", narrow = w < 560;
+    var eta = PA_CLASS[paCls][0], drain = PA_DRAIN[paCls], xs = function (f) { return 12 + (w - 24) * f; };
+    var yM = 132, yD = yM - 34, yG = yM + 40, vccY = 62;
+    var src = xs(0.05), mt = xs(0.2), tr = xs(0.42), cb = xs(0.54), pf = xs(0.72), an = xs(0.95), dx = tr + 10;
+    var dots = function (pts, speed, col) {
       line(ctx, pts, C.dim, 1.6);
       var len = 0, sg = [];
       for (var i = 1; i < pts.length; i++) { var l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); sg.push(l); len += l; }
-      for (var k = 0; k < Math.max(2, Math.floor(len / 26)); k++) {
-        var pos = ((t * 40 * speed) + k * 26) % len, j = 0;
+      for (var k = 0; k < Math.max(2, Math.floor(len / 22)); k++) {
+        var pos = ((t * 40 * speed) + k * 22) % len, j = 0;
         while (j < sg.length - 1 && pos > sg[j]) { pos -= sg[j]; j++; }
         var fr = sg[j] ? pos / sg[j] : 0;
         ctx.beginPath(); ctx.arc(pts[j][0] + (pts[j + 1][0] - pts[j][0]) * fr, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * fr, 2.2, 0, TAU);
-        ctx.fillStyle = C.accent; ctx.fill();
+        ctx.fillStyle = col || C.accent; ctx.fill();
       }
     };
     var scope = function (cx, top, fn, col, lbl, amp) {
-      var bw = Math.min(96, w * 0.16), bh = 30;
+      var bw = Math.min(110, (w - 24) * 0.27), bh = 34;
       ctx.fillStyle = C.panel; ctx.fillRect(cx - bw / 2, top, bw, bh);
       ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.strokeRect(cx - bw / 2, top, bw, bh);
-      plot(ctx, cx - bw / 2 + 2, cx + bw / 2 - 2, 120, function (x, f) { return top + bh / 2 - fn(f * 3 + t * 0.6) * (bh / 2 - 3) * amp; }, col, 1.3);
-      text(ctx, lbl, cx, top - 3, C.dim, "center", F10);
+      hline(ctx, cx - bw / 2, cx + bw / 2, top + bh / 2, alpha(C.grid, 0.8));
+      plot(ctx, cx - bw / 2 + 2, cx + bw / 2 - 2, 120, function (x, f) { return top + bh / 2 - fn(f * 3 - t * 0.6) * (bh / 2 - 3) * amp; }, col, 1.4);
+      text(ctx, lbl, cx, top + bh + 11, C.dim, "center", F10);
     };
-    var coil = function (x0, y0, x1, y1) {  // катушка — дуги вдоль отрезка
-      var n = 4, dx = (x1 - x0) / n, dy = (y1 - y0) / n;
+    var coilH = function (x0, x1, y) {  // катушка — полуокружности вдоль провода
+      var n = 4, dd = (x1 - x0) / n;
       ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6;
-      for (var i = 0; i < n; i++) {
-        ctx.beginPath();
-        if (Math.abs(dx) > Math.abs(dy)) { ctx.arc(x0 + dx * (i + 0.5), y0, Math.abs(dx) / 2, Math.PI, 0); }
-        else { ctx.arc(x0, y0 + dy * (i + 0.5), Math.abs(dy) / 2, -Math.PI / 2, Math.PI / 2); }
-        ctx.stroke();
-      }
+      for (var i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(x0 + dd * (i + 0.5), y, dd / 2, Math.PI, 0); ctx.stroke(); }
     };
-    var cap = function (x, y0, y1) {  // конденсатор на землю
+    var coilV = function (x, y0, y1) {
+      var n = 4, dd = (y1 - y0) / n;
+      ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6;
+      for (var i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(x, y0 + dd * (i + 0.5), dd / 2, -Math.PI / 2, Math.PI / 2); ctx.stroke(); }
+    };
+    var gnd = function (x, y) {
+      line(ctx, [[x - 8, y], [x + 8, y]], C.fg, 1.6); line(ctx, [[x - 5, y + 3], [x + 5, y + 3]], C.fg, 1.4);
+      line(ctx, [[x - 2, y + 6], [x + 2, y + 6]], C.fg, 1.2);
+    };
+    var capG = function (x, y0, y1) {  // конденсатор на землю
       var ym = (y0 + y1) / 2;
       line(ctx, [[x, y0], [x, ym - 3]], C.fg, 1.6); line(ctx, [[x - 8, ym - 3], [x + 8, ym - 3]], C.fg, 2);
       line(ctx, [[x - 8, ym + 3], [x + 8, ym + 3]], C.fg, 2); line(ctx, [[x, ym + 3], [x, y1]], C.fg, 1.6);
-      line(ctx, [[x - 7, y1], [x + 7, y1]], C.fg, 1.6); line(ctx, [[x - 4, y1 + 3], [x + 4, y1 + 3]], C.fg, 1.4);
+      gnd(x, y1);
     };
+    var capS = function (x, y) {  // последовательный (разделительный) конденсатор
+      line(ctx, [[x - 3, y - 8], [x - 3, y + 8]], C.fg, 2); line(ctx, [[x + 3, y - 8], [x + 3, y + 8]], C.fg, 2);
+    };
+    var node = function (x, y) { ctx.beginPath(); ctx.arc(x, y, 2.8, 0, TAU); ctx.fillStyle = C.fg; ctx.fill(); };
+    // осциллограммы вверху: вход мал, на стоке — форма класса, после фильтра — чистая большая синусоида
+    scope((src + mt) / 2 + 6, 6, function (u) { return Math.sin(TAU * u); }, C.tx, "вход: мало", 0.22);
+    scope(tr + 4, 6, function (u) { return 2 * drain(u) - 1; }, C.bad, "ток стока, класс " + paCls, 1);
+    scope((pf + an) / 2 - 4, 6, function (u) { return Math.sin(TAU * u); }, C.accent, "выход: много", 1);
     // источник возбуждения
     ctx.beginPath(); ctx.arc(src, yM, 12, 0, TAU); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.stroke();
     plot(ctx, src - 7, src + 7, 20, function (x, f) { return yM - 4 * Math.sin(TAU * f); }, C.fg, 1.3);
-    text(ctx, "возбуждение", src, yM + 28, C.dim, "center", F10);
-    text(ctx, fmtDbm(S.exc || 0, 0), src, yM + 40, C.tx, "center", F10);
-    // согласование (L-цепь)
-    dots([[src + 12, yM], [mt - 16, yM]], 0.6);
-    coil(mt - 16, yM, mt + 16, yM);
-    cap(mt + 16, yM, yM + 34);
-    text(ctx, "согласование", mt, yM - 14, C.dim, "center", F10);
-    // транзистор (MOSFET): затвор, сток вверх к дросселю, исток на землю
-    var gx = tr - 16, chx = tr - 6;
-    dots([[mt + 16, yM], [gx, yM]], 0.6);
+    line(ctx, [[src, yM + 12], [src, yG]], C.fg, 1.6); gnd(src, yG);
+    text(ctx, "возбуждение", src - 10, yG + 20, C.dim, "left", F10);
+    text(ctx, fmtDbm(S.exc || 0, 1), src - 10, yG + 32, C.tx, "left", F10);
+    // согласование (L-цепь): последовательная катушка и конденсатор на землю
+    dots([[src + 12, yM], [mt - 16, yM]], 0.5, C.tx);
+    coilH(mt - 16, mt + 16, yM);
+    capG(mt + 16, yM, yG);
+    text(ctx, "согласование", mt, yM - 12, C.dim, "center", F10);
+    // транзистор (n-канальный MOSFET): затвор слева, сток вверх к дросселю, исток на землю
+    var gx = tr - 14, chx = tr - 6, heat = 1 - eta;  // доля мощности питания в тепло — свечение корпуса
+    ctx.beginPath(); ctx.arc(tr, yM, 24, 0, TAU); ctx.fillStyle = alpha(C.bad, 0.06 + 0.4 * heat); ctx.fill();
+    ctx.strokeStyle = C.fg; ctx.lineWidth = 1.2; ctx.stroke();
+    dots([[mt + 16, yM], [gx, yM]], 0.5, C.tx);
     line(ctx, [[gx, yM - 12], [gx, yM + 12]], C.fg, 2);
-    line(ctx, [[chx, yM - 16], [chx, yM + 16]], C.fg, 2.4);
-    line(ctx, [[chx, yM - 12], [tr + 8, yM - 12], [tr + 8, yM - 34]], C.fg, 1.6);
-    line(ctx, [[chx, yM + 12], [tr + 8, yM + 12], [tr + 8, yM + 34]], C.fg, 1.6);
-    line(ctx, [[tr + 1, yM + 34], [tr + 15, yM + 34]], C.fg, 1.6);
-    var heat = 1 - eta;  // доля мощности питания в тепло
-    ctx.beginPath(); ctx.arc(tr, yM, 26, 0, TAU); ctx.fillStyle = alpha(C.bad, 0.08 + 0.35 * heat); ctx.fill();
-    text(ctx, "транзистор", tr, yM + 52, C.dim, "center", F10);
-    // питание через дроссель
-    var vcc = 60;  // ниже окошек осциллограмм
-    line(ctx, [[tr - 14, vcc], [tr + 30, vcc]], C.fg, 2);
-    text(ctx, "+ питание", tr + 34, vcc + 4, C.fg, "left", F11);
-    coil(tr + 8, vcc, tr + 8, yM - 34);
-    text(ctx, "дроссель", tr + 16, (vcc + yM - 34) / 2 + 4, C.dim, "left", F10);
-    dots([[tr + 8, vcc], [tr + 8, vcc + 1]], 0);
-    for (var k2 = 0; k2 < 3; k2++) {  // ток питания по дросселю вниз
-      var yy = vcc + ((t * 30 + k2 * 14) % (yM - 34 - vcc));
-      ctx.beginPath(); ctx.arc(tr + 8, yy, 2.2, 0, TAU); ctx.fillStyle = C.warn; ctx.fill();
+    [-11, 0, 11].forEach(function (o) { line(ctx, [[chx, yM + o - 5], [chx, yM + o + 5]], C.fg, 2.4); });
+    line(ctx, [[chx, yM - 11], [dx, yM - 11], [dx, yD]], C.fg, 1.6);
+    line(ctx, [[chx, yM + 11], [dx, yM + 11], [dx, yG]], C.fg, 1.6);
+    line(ctx, [[chx, yM], [dx, yM], [dx, yM + 11]], C.fg, 1.6);
+    ctx.beginPath(); ctx.moveTo(chx + 1, yM); ctx.lineTo(chx + 7, yM - 3.5); ctx.lineTo(chx + 7, yM + 3.5); ctx.closePath();
+    ctx.fillStyle = C.fg; ctx.fill();  // стрелка n-канала — к каналу
+    gnd(dx, yG);
+    text(ctx, "транзистор", tr - 26, yG + 20, C.dim, "left", F10);
+    text(ctx, "в тепло " + num(heat * 100, 0) + " %", tr - 26, yG + 32, C.bad, "left", F10);
+    // питание через дроссель: постоянный ток идёт вниз, ВЧ назад в источник не пускается
+    line(ctx, [[dx - 16, vccY], [dx + 16, vccY]], C.fg, 2);
+    text(ctx, "+ питание", dx + 20, vccY + 4, C.fg, "left", F10);
+    coilV(dx, vccY, yD - 4);
+    line(ctx, [[dx, yD - 4], [dx, yD]], C.fg, 1.6);
+    text(ctx, "дроссель", dx - 10, (vccY + yD) / 2 + 4, C.dim, "right", F10);
+    var ia = 0.5 + 0.8 * drain(t * 0.6);  // ток питания пульсирует в такт току стока
+    for (var k2 = 0; k2 < 3; k2++) {
+      var yy = vccY + ((t * 26 * ia + k2 * 12) % (yD - vccY));
+      ctx.beginPath(); ctx.arc(dx, yy, 2.2, 0, TAU); ctx.fillStyle = C.warn; ctx.fill();
     }
-    // выход стока → П-фильтр → антенна
-    var yo = yM - 22;
-    dots([[tr + 8, yo], [pf - 30, yo]], 1.4);
-    cap(pf - 30, yo, yo + 44);
-    coil(pf - 30, yo, pf + 30, yo);
-    cap(pf + 30, yo, yo + 44);
-    text(ctx, "П-фильтр (ФНЧ гармоник)", pf, yo + 66, C.dim, "center", F10);
-    dots([[pf + 30, yo], [an, yo], [an, yo - 30]], 1.4);
-    line(ctx, [[an, yo - 30], [an - 10, yo - 46]], C.fg, 2); line(ctx, [[an, yo - 30], [an + 10, yo - 46]], C.fg, 2);
-    line(ctx, [[an, yo - 30], [an, yo - 48]], C.fg, 2);
-    text(ctx, fmtW(dbmW(S.pTx)), an, yo + 16, C.tx, "center", F10);
-    // осциллограммы: вход мал, на стоке — форма класса, после фильтра — чистая большая синусоида
-    var drain = {
-      A: function (u) { return Math.sin(TAU * u); },
-      AB: function (u) { var v = Math.sin(TAU * u); return v > -0.2 ? v : -0.2 + (v + 0.2) * 0.2; },
-      C: function (u) { var v = Math.sin(TAU * u); return v > 0.5 ? (v - 0.5) * 2 : 0; },
-      E: function (u) { return Math.sin(TAU * u) > 0 ? 1 : -1; }
-    }[paCls];
-    scope((src + mt) / 2 + 4, 8, function (u) { return Math.sin(TAU * u); }, C.tx, "вход: мало", 0.25);
-    scope((tr + pf) / 2 - 4, 8, drain, C.bad, "ток стока, класс " + paCls, 1);
-    scope((pf + an) / 2 + 6, 8, function (u) { return Math.sin(TAU * u); }, C.accent, "после фильтра", 1);
-    var pout = dbmW(S.pTx), pheat = pout * (1 / eta - 1);
-    text(ctx, "КПД ≈ " + num(eta * 100, 0) + " % · в тепло ≈ " + fmtW(pheat) + " · усиление " + fmtDb(S.pTx - (S.exc || 0), 1),
-      10, h - 8, C.fg, "left", "600 11px 'Segoe UI', sans-serif");
+    node(dx, yD);
+    // сток → разделительный конденсатор → П-фильтр (C–L–C) → антенна
+    var p0 = pf - 26, p1 = pf + 26;
+    dots([[dx, yD], [cb - 3, yD]], 1.3, C.bad);
+    capS(cb, yD);
+    text(ctx, "C разд.", cb, yD - 12, C.dim, "center", F10);
+    dots([[cb + 3, yD], [p0, yD]], 1.3);
+    capG(p0, yD, yG); node(p0, yD);
+    coilH(p0, p1, yD);
+    capG(p1, yD, yG); node(p1, yD);
+    text(ctx, "П-фильтр (ФНЧ)", pf, yG + 20, C.dim, "center", F10);
+    dots([[p1, yD], [an, yD], [an, yD - 22]], 1.3);
+    line(ctx, [[an, yD - 22], [an - 10, yD - 38]], C.fg, 2); line(ctx, [[an, yD - 22], [an + 10, yD - 38]], C.fg, 2);
+    line(ctx, [[an, yD - 22], [an, yD - 40]], C.fg, 2);
+    text(ctx, "антенна", an, yD + 14, C.dim, "center", F10);
+    text(ctx, fmtDbm(S.pTx, 1), an, yD + 26, C.tx, "center", F10);
+    // спектры гармоник: на стоке и после П-фильтра (уровни условные)
+    var hd = paHarm(drain), sy = yG + 56, sh = 40, bwS = Math.min(170, (w - 40) / 2);
+    var spec = function (x0, lbl, att) {
+      text(ctx, lbl, x0, sy - 6, C.dim, "left", F10);
+      hline(ctx, x0, x0 + bwS, sy + sh, C.grid);
+      for (var k = 1; k <= 5; k++) {
+        var db = Math.max(-60, hd[k - 1] + (att ? paFilt(k) : 0)), hh = sh * (1 + db / 60), bx = x0 + (k - 0.5) * bwS / 5;
+        ctx.fillStyle = k === 1 ? C.accent : C.bad; ctx.fillRect(bx - 5, sy + sh - hh, 10, hh);
+        text(ctx, k === 1 ? "f" : k + "f", bx, sy + sh + 11, C.dim, "center", F10);
+        if (k > 1) { text(ctx, db <= -59 ? "<−60" : num(db, 0), bx, sy + sh - hh - 2, C.dim, "center", "9px 'Segoe UI', sans-serif"); }
+      }
+    };
+    spec(12, "гармоники на стоке, dBc", false);
+    spec(narrow ? 28 + bwS : pf - bwS / 2, "после П-фильтра, dBc", true);
+    // мощности и связь с бюджетом
+    var pout = dbmW(S.pTx), pdc = pout / eta, yT = sy + sh + 32, F11b = "600 11px 'Segoe UI', sans-serif";
+    var l1 = "Питание " + fmtW(pdc) + " → в антенну " + fmtW(pout) + " (КПД ≈ " + num(eta * 100, 0) + " %) + в тепло " + fmtW(pdc - pout);
+    var l2 = "Усиление УМ = выход − вход = " + fmtDbm(S.pTx, 1) + " − " + fmtDbm(S.exc || 0, 1) + " = " + fmtDb(S.pTx - (S.exc || 0), 1);
+    ctx.font = F11b;
+    if (ctx.measureText(l1).width > w - 24) {  // узкий экран: строку о мощностях — в две
+      var cut = l1.indexOf(" + в тепло");
+      text(ctx, l1.slice(0, cut), 12, yT, C.fg, "left", F11b);
+      text(ctx, l1.slice(cut + 3), 12, yT + 15, C.fg, "left", F11b);
+      yT += 15;
+    } else { text(ctx, l1, 12, yT, C.fg, "left", F11b); }
+    if (ctx.measureText(l2).width > w - 24) {
+      var c2 = l2.indexOf(" = ", l2.indexOf("вход"));
+      text(ctx, l2.slice(0, c2), 12, yT + 16, C.tx, "left", F11b);
+      text(ctx, l2.slice(c2 + 1), 12, yT + 31, C.tx, "left", F11b);
+    } else { text(ctx, l2, 12, yT + 16, C.tx, "left", F11b); }
   });
 
   /* ------------------------------------------------------------------ 4. диаграмма направленности */
