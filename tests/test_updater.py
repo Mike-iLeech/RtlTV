@@ -265,6 +265,8 @@ def test_legacy_items_finds_old_default_data(tmp_path, monkeypatch):
     assert got == sorted([(str(old / paths.IQ), str(new / paths.IQ)),
                           (os.path.join(str(old), paths.PICS, paths.PICS_METEOR),
                            os.path.join(str(new), paths.PICS, paths.PICS_METEOR))])
+    monkeypatch.setattr(paths, "_app", lambda: {"data_dir": str(old)})   # ещё работает в ней — из неё не предлагать
+    assert not [i for i in paths.legacy_items(str(new), with_service=False) if i[0].startswith(str(old))]
     monkeypatch.setattr(paths, "_app", lambda: {})
     assert len([i for i in paths.legacy_items(str(new), with_service=False) if i[0].startswith(str(old))]) == 2
     assert not [i for i in paths.legacy_items(str(old), with_service=False) if i[0].startswith(str(old))]

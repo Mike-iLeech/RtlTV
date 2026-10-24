@@ -137,7 +137,7 @@ def legacy_items(root=None, with_service=None):
     ]
     # прежняя папка данных (если пользователь уже раз менял её) и «Документы\RtlTV» (папка по умолчанию
     # версий 2.x — установщик предлагает вместо неё «Документы\SDR4NOOB») — по тем же подпапкам
-    seen = {os.path.normcase(os.path.abspath(root))}
+    seen = {os.path.normcase(os.path.abspath(root)), os.path.normcase(data_root())}   # в себя и из текущей — нет
     for old_root in (_app().get("data_dir_prev"), OLD_DEFAULT_DATA):
         if not old_root or os.path.normcase(os.path.abspath(old_root)) in seen:
             continue
