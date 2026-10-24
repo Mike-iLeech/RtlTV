@@ -106,9 +106,10 @@
       gLna: 20, rxType: "RG-58", rxLen: 3, bw: 2000000, sigBw: 2000000, rq: "adsb", tGain: 49, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "Ответчик самолёта: импульсы 250 Вт на 1090 МГц. За 100 км на коллинеарную антенну 3 dBi; на 1 ГГц " +
         "тонкий RG-58 уже заметно теряет — попробуйте 20 м кабеля без МШУ и с ним." },
-    lora: { txAnt: "dipole", pTx: 20, txType: "RG-58", txLen: 0, gTx: 2, dist: 5, freq: 868.1, extra: 10, gRx: 2, lnaOn: false,
+    lora: { txAnt: "dipole", pTx: 20, txType: "RG-58", txLen: 0, gTx: 2, dist: 5, freq: 868.9, extra: 10, gRx: 2, lnaOn: false,
       gLna: 20, rxType: "RG-58", rxLen: 2, bw: 125000, sigBw: 125000, rq: "lora12", tGain: 40, nfRx: 4.5, nfLna: 0.8, conn: 1,
-      note: "LoRa: 0,1 Вт (20 dBm) на 868,1 МГц (в РФ LoRa работает в полосе 868–869 МГц), антенны ≈ 2 dBi, 5 км, " +
+      note: "LoRa: 0,1 Вт (20 dBm) на 868,9 МГц (российский план RU864: безлицензионные полосы 864–865 и 868,7–869,2 МГц, " +
+        "без лицензии там разрешено около 25 мВт = 14 dBm — 0,1 Вт здесь для примера расчёта), антенны ≈ 2 dBi, 5 км, " +
         "10 dB на дома и деревья. Модуляция CSS — растянутые по частоте «чирпы» в полосе 125 кГц. Приёмник ловит их " +
         "даже ниже шума: требуемое С/Ш при SF12 около −20 dB, при SF7 около −7,5 dB. Чем больше SF, тем ниже порог, " +
         "но тем медленнее передача (SF12 в 125 кГц — около 250 бит/с)." }
@@ -2897,10 +2898,10 @@
     if (document.getElementById("adcSrc")) { segBind("adcSrc", function (v) { ADC_SRC = v; adcUpdate(); }); }
     document.getElementById("adcPlayO").addEventListener("click", function () { adcPlay("o"); });
     if (document.getElementById("paCls")) {
-      segBind("paCls", function (v) { paCls = v; var c = document.getElementById("paClsCap"); if (c) { c.textContent = PA_CLASS[v][1]; } });
+      segBind("paCls", function (v) { paCls = v; var c = document.getElementById("paClsCap"); if (c) { c.textContent = PA_CLASS[v][1]; } if (DEMOS.pasch) { DEMOS.pasch.dirty = true; } });
       document.getElementById("paClsCap").textContent = PA_CLASS[paCls][1];
     }
-    if (document.getElementById("fltOn")) { segBind("fltOn", function (v) { FLT.on = v === "on"; }); }
+    if (document.getElementById("fltOn")) { segBind("fltOn", function (v) { FLT.on = v === "on"; if (paused) { FLT.k = FLT.on ? 1 : 0; } if (DEMOS.filter) { DEMOS.filter.dirty = true; } }); }
     document.getElementById("fltPlayOff").addEventListener("click", function () { filterPlay(false); });
     document.getElementById("fltPlayOn").addEventListener("click", function () { filterPlay(true); });
     document.getElementById("adcPlayD").addEventListener("click", function () { adcPlay("d"); });
