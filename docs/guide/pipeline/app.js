@@ -96,7 +96,7 @@
       gLna: 20, rxType: "RG-6", rxLen: 10, bw: 200000, sigBw: 180000, rq: "wfm", tGain: 0, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "Вещательный передатчик 10 кВт, 50 м кабеля на мачту, антенная решётка 6 dBi (ЭИИМ около 23 кВт). " +
         "Приём за 50 км на диполь и 10 м RG-6: сигнал сильный, МШУ не нужен." },
-    meteor: { txAnt: "dipole", pTx: 37, txType: "LMR-400", txLen: 1, gTx: 0, dist: 800, freq: 137.9, extra: 3, gRx: 2, lnaOn: true,
+    meteor: { txAnt: "dipole", txPol: "c", rxPol: "v", pTx: 37, txType: "LMR-400", txLen: 1, gTx: 0, dist: 800, freq: 137.9, extra: 0, gRx: 2, lnaOn: true,
       gLna: 20, rxType: "RG-58", rxLen: 10, bw: 120000, sigBw: 120000, rq: "lrpt", tGain: 40, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "«Метеор-М»: около 5 Вт на 137,9 МГц, 800 км — пролёт прямо над головой; 3 dB — потери линейной антенны " +
         "на круговой поляризации. Получается около −100 dBm у антенны; на угле места 10° (≈ 2400 км) — ещё на " +
@@ -109,7 +109,7 @@
   };
 
   var IDS = ["pTx", "txType", "txLen", "gTx", "dist", "freq", "extra", "gRx", "lnaOn", "gLna", "rxType", "rxLen",
-    "bw", "nfRx", "nfLna", "conn", "thTx", "thRx", "txAnt", "exc"];
+    "bw", "nfRx", "nfLna", "conn", "thTx", "thRx", "txAnt", "exc", "txPol", "rxPol"];
 
   function setControls(p) {
     var ta = document.getElementById("txAnt");
@@ -124,6 +124,7 @@
     S.note = p.note || "";
     S.sigBw = p.sigBw || 12500;
     ["thTx", "thRx", "exc"].forEach(function (k) { var el = document.getElementById(k); if (el) { el.value = p[k] || 0; } });
+    ["txPol", "rxPol"].forEach(function (k) { var el = document.getElementById(k); if (el) { el.value = p[k] || "v"; } });
     var rq = document.getElementById("rqMode"), tg = document.getElementById("tGain");
     if (rq && p.rq) { rq.value = p.rq; }
     if (tg && p.tGain !== undefined) { tg.value = p.tGain; }
@@ -234,12 +235,13 @@
     r.txOut = r.pa - r.txLoss;
     r.antLoss = -10 * LOG10(antEff(s.gTx, s.txAnt));           // потери в самой антенне: у укороченного штыря < 1,76 dBi
     r.prad = r.txOut - r.antLoss;                     // полная излучаемая мощность — от направленности не зависит
-    r.gTxEff = antGainAt(s.gTx, s.thTx || 0, s.txAnt);         // усиление в сторону приёмника по диаграмме
-    r.gRxEff = antGainAt(s.gRx, s.thRx || 0, "auto");
+    r.gTxEff = antGainAt(s.gTx, s.thTx || 0, s.txAnt, s.txPol === "h" ? "h" : "v");         // усиление в сторону приёмника по диаграмме
+    r.gRxEff = antGainAt(s.gRx, s.thRx || 0, "auto", s.rxPol === "h" ? "h" : "v");
+    r.polLoss = polLoss(s.txPol || "v", s.rxPol || "v");      // несовпадение поляризаций передатчика и приёмника
     r.eirp = r.txOut + r.gTxEff;                      // эквивалент на приёмник (G уже включает КПД), не энергия
     r.fspl = 20 * LOG10(s.dist) + 20 * LOG10(f) + 32.44;
     r.air = r.eirp - r.fspl - s.extra;
-    r.rxAnt = r.air + r.gRxEff;
+    r.rxAnt = r.air + r.gRxEff - r.polLoss;
     r.lnaG = s.lnaOn ? s.gLna : 0;
     r.lna = r.rxAnt + r.lnaG;
     r.rxLoss = cableLoss(s.rxType, f, s.rxLen) + conn;
@@ -278,7 +280,7 @@
     return {
       src: [r.exc, "—"], pa: [r.pa, fmtDb(r.paGain)], txfeed: [r.txOut, S.txLen > 0 ? fmtLoss(r.txLoss, 2) : "нет кабеля"],
       prad: [r.prad, r.antLoss > 0.005 ? "КПД " + num(100 / lin(r.antLoss), 0) + " % (" + fmtLoss(r.antLoss, 1) + ": потери в антенне — часть мощности её греет)" : "КПД 100 % (0 dB)"], air: [r.air, fmtLoss(r.fspl + S.extra, 1) + ", G(θ) " + fmtDb(r.gTxEff) + "i"],
-      rxant: [r.rxAnt, "G(θ) " + fmtDb(r.gRxEff) + "i"], lna: [r.lna, S.lnaOn ? fmtDb(r.lnaG) : "нет МШУ"],
+      rxant: [r.rxAnt, "G(θ) " + fmtDb(r.gRxEff) + "i" + (r.polLoss ? ", поляризация " + fmtLoss(r.polLoss, 0) : "")], lna: [r.lna, S.lnaOn ? fmtDb(r.lnaG) : "нет МШУ"],
       rxin: [r.rxIn, fmtLoss(r.rxLoss, 2)]
     };
   }
@@ -963,40 +965,53 @@
     yagi: { name: "Яги (волновой канал)", lo: 5, hi: 20, def: 10 },
     lpda: { name: "логопериодическая (LPDA)", lo: 5, hi: 8, def: 6.5, band: [100, 1300] }
   };
-  function antKind(g, type) {  // семейство формы: iso / omni (ось вертикальна) / yagi (ось горизонтальна)
+  function antKind(g, type) {  // семейство формы: iso / omni (бублик) / col (сплющенный бублик) / yagi (луч)
     if (type === "iso") { return "iso"; }
     if (type === "yagi" || type === "lpda") { return "yagi"; }
     if (type === "dipole") { return "omni"; }
     if (type === "colinear") { return "col"; }
     return g <= 6 ? "omni" : "yagi";  // приёмная антенна: тип по усилению
   }
-  function antShape(g, type) {
-    // форма диаграммы в линейных единицах. Аргумент a — угол от главного направления (горизонт на приёмник):
-    // у всенаправленных это угол места, у Яги — угол от оси, у изотропной не важен
-    var G = lin(g), kind = antKind(g, type);
-    if (kind === "iso") { return { dir: "iso", f: function () { return G; } }; }
-    if (kind === "omni") {
-      var key = g.toFixed(2);
-      if (OMNI_M[key] === undefined) { OMNI_M[key] = omniM(G); }
-      var m = OMNI_M[key], peak = Math.max(G, 1.5) * (G < 1.5 ? G / 1.5 : 1);
-      return { dir: "omni", m: m, f: function (a) {
-        var e = Math.asin(Math.sin(a));
-        return Math.max(peak * Math.pow(Math.abs(Math.cos(e)), m), peak * 1e-3);  // провал вдоль оси
-      } };
+  // Направление u = (x, y, z): x — горизонт в сторону приёмника, y — горизонт вбок, z — зенит.
+  // Поляризация задаёт, куда смотрят вибраторы: вертикальная — вдоль z, горизонтальная — вдоль y.
+  // Поворот антенны не меняет интеграл по сфере, поэтому нормировка остаётся прежней.
+  function polAxis(pol) { return pol === "h" ? [0, 1, 0] : [0, 0, 1]; }
+  function antShape(g, type, pol) {
+    var G = lin(g), kind = antKind(g, type), P = polAxis(pol), f3;
+    if (kind === "iso") {
+      f3 = function () { return G; };
+    } else if (kind === "omni" || kind === "col") {  // бублик вокруг оси вибратора
+      var fe;
+      if (kind === "omni") {
+        var key = g.toFixed(2);
+        if (OMNI_M[key] === undefined) { OMNI_M[key] = omniM(G); }
+        var m = OMNI_M[key], peak = Math.max(G, 1.5) * (G < 1.5 ? G / 1.5 : 1);
+        fe = function (e) { return Math.max(peak * Math.pow(Math.abs(Math.cos(e)), m), peak * 1e-3); };  // провал вдоль оси
+      } else {
+        var c = COL[g.toFixed(2)] || (COL[g.toFixed(2)] = colFit(G));
+        fe = function (e) { return G * colRel(e, c.m); };
+      }
+      f3 = function (x, y, z) { return fe(Math.asin(Math.max(-1, Math.min(1, x * P[0] + y * P[1] + z * P[2])))); };
+    } else {  // Яги и LPDA: луч вдоль x; множитель вибратора 1 − (u·p)² сужает лепесток в E-плоскости
+      var yk = (type === "lpda" ? "L" : "Y") + g.toFixed(2);
+      var yf = YAGI[yk] || (YAGI[yk] = yagiFit(Math.max(G, 1.01)));
+      f3 = function (x, y, z) {
+        var up = x * P[0] + y * P[1] + z * P[2];
+        return G * yagiRel(Math.acos(Math.max(-1, Math.min(1, x))), yf.n, yf.k) * Math.max(1e-4, 1 - up * up);
+      };
     }
-    if (kind === "col") {  // коллинеар: сплющенный бублик + небольшие лепестки под углом вверх и вниз
-      var c = COL[g.toFixed(2)] || (COL[g.toFixed(2)] = colFit(G));
-      return { dir: "omni", col: true, f: function (a) { return G * colRel(Math.asin(Math.sin(a)), c.m); } };
-    }
-    var y = YAGI[g.toFixed(2)] || (YAGI[g.toFixed(2)] = yagiFit(Math.max(G, 1.01)));
-    return { dir: "yagi", f: function (a) { return G * yagiRel(a, y.n, y.k); } };
+    return {
+      dir: kind === "iso" ? "iso" : kind === "yagi" ? "yagi" : "omni", pol: pol === "h" ? "h" : "v", f3: f3,
+      f: function (a) { return f3(Math.cos(a), 0, Math.sin(a)); },    // вертикальное сечение (вид сбоку)
+      fh: function (a) { return f3(Math.cos(a), Math.sin(a), 0); }    // горизонтальное сечение (вид сверху)
+    };
   }
-  // Яги: форма относительно пика = max(главный лепесток ((1+cos a)/2)^n, k·задние/боковые −15/−20 dB).
-  // Нормировка: среднее по сфере ½∫ f(a)·sin a da = 1/G, тогда G·f даёт ∮G dΩ = 4π (КПД 100 %).
-  // Если боковые −15/−20 dB «съедают» больше 20 % излучения (G > ~10,5 dBi), их уровень k снижается,
-  // а n подбирается так, чтобы главный лепесток давал ровно G (ширина луча ~ 1/√G).
-  // Проверено в браузере (шаг 0,25 dB, 4000 точек): среднее G по сфере / КПД = 1 с ошибкой ≤ 0,12 % для −5…20 dBi
-  // (всенаправленная модель: среднее = КПД = min(1, G/1,5); изотропная: среднее = КПД = G).
+  // Яги: форма относительно пика = max(главный лепесток ((1+cos a)/2)^n, k·задние/боковые −15/−20 dB) × (1 − (u·p)²).
+  // Среднее множителя вибратора по повороту вокруг оси = 1 − sin²a/2, поэтому нормировка — одномерный интеграл:
+  // ½∫ rel(a)·(1 − sin²a/2)·sin a da = 1/G, тогда ∮G dΩ = 4π (КПД 100 %). Если задние/боковые «съедают» больше
+  // 20 % излучения, их уровень k снижается, а n подбирается так, чтобы главный лепесток давал ровно G.
+  // Самопроверка selfTestAnt (двумерный интеграл по сфере, обе поляризации): среднее G / КПД = 1 ± 1 %.
+  // Всенаправленная модель: среднее = КПД = min(1, G/1,5); изотропная: среднее = КПД = G.
   var YAGI = {}, COL = {};
   // коллинеар: форма относительно пика по углу места e = max(|cos e|^m, 0,01·|sin 2e|) — главный лепесток к
   // горизонту и боковые около −20 dB под 45°; m подбирается так, чтобы среднее по сфере было 1/G
@@ -1014,9 +1029,12 @@
   function yagiRel(a, n, k) {
     return Math.max(Math.pow((1 + Math.cos(a)) / 2, n), k * Math.pow(10, -(15 + 5 * Math.abs(Math.sin(a))) / 10));
   }
-  function sphereAvg(f) {  // ½∫₀^π f(a)·sin a da
+  function sphereAvg(f) {  // ½∫₀^π f(a)·(1 − sin²a/2)·sin a da — с множителем вибратора
     var acc = 0, N = 720;
-    for (var i = 0; i < N; i++) { var a = Math.PI * (i + 0.5) / N; acc += f(a) * Math.sin(a) * Math.PI / N; }
+    for (var i = 0; i < N; i++) {
+      var a = Math.PI * (i + 0.5) / N, s = Math.sin(a);
+      acc += f(a) * (1 - s * s / 2) * s * Math.PI / N;
+    }
     return acc / 2;
   }
   function yagiFit(G) {
@@ -1033,14 +1051,23 @@
     var kind = antKind(g, type);
     return kind === "iso" ? Math.min(1, lin(g)) : kind === "omni" ? Math.min(1, lin(g) / 1.5) : 1;  // col, yagi: 100 %
   }
-  function antGainAt(g, deg, type) { return 10 * LOG10(Math.max(1e-6, antShape(g, type).f(deg * Math.PI / 180))); }
-  function beamwidth(sh) {  // ширина главного лепестка по −3 dB: [вертикальная, горизонтальная] в градусах
+  function antGainAt(g, deg, type, pol) { return 10 * LOG10(Math.max(1e-6, antShape(g, type, pol).f(deg * Math.PI / 180))); }
+  function beamwidth(sh) {  // ширина главного лепестка по −3 dB: [вертикальное сечение, горизонтальное], null — нет спада
     if (sh.dir === "iso") { return [null, null]; }
-    var p = sh.f(0), a = 0;
-    while (a < Math.PI && sh.f(a) > p / 2) { a += Math.PI / 1800; }
-    var bw = 2 * a * 180 / Math.PI;
-    return sh.dir === "omni" ? [bw, null] : [bw, bw];
+    var one = function (f) {
+      var p = f(0), a = 0;
+      while (a < Math.PI && f(a) > p / 2) { a += Math.PI / 1800; }
+      return a >= Math.PI ? null : 2 * a * 180 / Math.PI;
+    };
+    return [one(sh.f), one(sh.fh)];
   }
+  // потери на несовпадении поляризаций: одинаковые — 0, круговая против линейной — 3 dB, скрещенные линейные — 20 dB
+  function polLoss(tx, rx) {
+    if (tx === rx) { return 0; }
+    if (tx === "c" || rx === "c") { return 3; }
+    return 20;
+  }
+  var POL_NAME = { v: "вертикальная", h: "горизонтальная", c: "круговая" };
 
   var PAT_NOTE = {
     iso: "Изотропная антенна — воображаемая сфера: во все стороны одинаково, 0 dBi. Эталон для отсчёта dBi.",
@@ -1055,29 +1082,34 @@
     yagi: "Яги (волновой канал) — луч вдоль штанги: с ростом усиления луч сужается в обеих плоскостях, " +
       "задний лепесток около −15 dB, боковые около −20 dB."
   };
-  function drawAnt(ctx, type, P, cx, cy) {  // P(x, y, z) → [sx, sy]; ось лепестка — +x, вверх — +z
-    var seg = function (a, b, lw) { var p0 = P(a[0], a[1], a[2]), p1 = P(b[0], b[1], b[2]); line(ctx, [[p0[0], p0[1]], [p1[0], p1[1]]], C.fg, lw); };
-    if (type === "yagi") {  // штанга вдоль луча, элементы поперёк (вертикальная поляризация)
+  function drawAnt(ctx, type, pol, P, cx, cy) {  // P(x, y, z) → [sx, sy]; луч — +x, вверх — +z
+    var ev = polAxis(pol);
+    var at = function (x, t) { return [x + 0 * t, ev[1] * t, ev[2] * t]; };  // точка вибратора: по штанге x, вдоль ev на t
+    var seg = function (a, b, lw) {
+      var p0 = P(a[0], a[1], a[2]), p1 = P(b[0], b[1], b[2]);
+      if (Math.abs(p0[0] - p1[0]) + Math.abs(p0[1] - p1[1]) < 1.5) {  // вибратор смотрит на нас торцом — точка
+        ctx.beginPath(); ctx.arc(p0[0], p0[1], 2.4, 0, TAU); ctx.fillStyle = C.fg; ctx.fill();
+      } else { line(ctx, [[p0[0], p0[1]], [p1[0], p1[1]]], C.fg, lw); }
+    };
+    if (type === "yagi") {  // штанга вдоль луча, вибраторы поперёк по направлению поляризации
       seg([-16, 0, 0], [18, 0, 0], 3);
-      [[-12, 9], [-4, 8], [4, 7], [12, 6.5]].forEach(function (e) { seg([e[0], 0, -e[1]], [e[0], 0, e[1]], 2); });
-    } else if (type === "lpda") {  // вибраторы растущей длины на двух собирающих линиях, питание перекрещивается
-      seg([-16, 0, 1.5], [18, 0, 1.5], 1.5); seg([-16, 0, -1.5], [18, 0, -1.5], 1.5);
-      var E = [[-14, 12], [-7, 10], [0, 8], [6, 6.5], [11, 5], [15, 4]];
-      E.forEach(function (e, i) {
-        var sg = i % 2 ? 1 : -1;
-        seg([e[0], 0, sg * 1.5], [e[0], 0, sg * e[1]], 2); seg([e[0], 0, -sg * 1.5], [e[0], 0, -sg * e[1]], 2);
-      });
+      [[-12, 9], [-4, 8], [4, 7], [12, 6.5]].forEach(function (e) { seg(at(e[0], -e[1]), at(e[0], e[1]), 2); });
+    } else if (type === "lpda") {  // вибраторы убывающей длины к приёмнику, две собирающие линии, питание крест-накрест
+      seg([-16, 0, 0], [18, 0, 0], 3);
+      [[-14, 12], [-7, 10], [0, 8], [6, 6.5], [11, 5], [15, 4]].forEach(function (e) { seg(at(e[0], -e[1]), at(e[0], e[1]), 2); });
     } else if (type === "iso") {
       ctx.beginPath(); ctx.arc(cx, cy, 4, 0, TAU); ctx.fillStyle = C.fg; ctx.fill();
     } else {
-      seg([0, 0, -16], [0, 0, 16], 3);
-      if (type === "colinear") { [-6, 6].forEach(function (z) { seg([-3, 0, z], [3, 0, z], 2); }); }
+      seg(at(0, -16), at(0, 16), 3);
+      if (type === "colinear") { [-6, 6].forEach(function (t) { var q = at(0, t); seg([q[0] - 3, q[1], q[2]], [q[0] + 3, q[1], q[2]], 2); }); }
     }
   }
   // вид диаграммы: 3D-каркас (поворот мышью/пальцем или автоповорот) и сечения
   var PAT = { view: "3d", yaw: -0.6, pitch: 0.38, drag: null, gShow: null };
   function patTypeSync(t) {
     $$("#patType button").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-v") === t); });
+    var pv = S.txPol === "h" ? "h" : "v";
+    $$("#patPol button").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-v") === pv); });
   }
   demo("pattern", true, function (d, dt) {
     var ctx = d.ctx, w = d.w, h = d.h, type = S.txAnt || "dipole";
@@ -1086,7 +1118,7 @@
     PAT.gShow += (S.gTx - PAT.gShow) * Math.min(1, (dt || 1) * 6);
     if (Math.abs(S.gTx - PAT.gShow) < 0.03) { PAT.gShow = S.gTx; }
     var g = Math.round(PAT.gShow * 20) / 20;
-    var sh = antShape(g, type), shape = sh.f, dir = sh.dir;
+    var pol = S.txPol === "h" ? "h" : "v", sh = antShape(g, type, pol), shape = sh.f, dir = sh.dir;
     var floor = -30, top = 20, Rr = Math.min(w * 0.4, h * 0.38), cx = w / 2, cy = h / 2 + 8;
     var rad = function (db) { return Math.max(0, (db - floor) / (top - floor)) * Rr; };
     var rOf = function (a) { return rad(10 * LOG10(Math.max(1e-6, shape(a)))); };
@@ -1108,16 +1140,12 @@
       }
       ctx.fillStyle = alpha(C.air, 0.08); ctx.fill();
       ctx.strokeStyle = alpha(C.air, 0.6); ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
-      var pt = function (u1, u2) {  // точка поверхности диаграммы
-        var x, y, z, r;
-        if (dir === "yagi") {  // ось вдоль x: u1 — угол от оси, u2 — поворот вокруг оси
-          r = rOf(u1); x = r * Math.cos(u1); y = r * Math.sin(u1) * Math.cos(u2); z = r * Math.sin(u1) * Math.sin(u2);
-        } else {               // ось вертикальна: u1 — угол места, u2 — азимут
-          r = rOf(u1); x = r * Math.cos(u1) * Math.cos(u2); y = r * Math.cos(u1) * Math.sin(u2); z = r * Math.sin(u1);
-        }
-        return proj(x, y, z);
+      var pt = function (e, az) {  // точка поверхности диаграммы: угол места e, азимут az
+        var ux = Math.cos(e) * Math.cos(az), uy = Math.cos(e) * Math.sin(az), uz = Math.sin(e);
+        var r = rad(10 * LOG10(Math.max(1e-6, sh.f3(ux, uy, uz))));
+        return proj(r * ux, r * uy, r * uz);
       };
-      var A1 = dir === "yagi" ? [0, Math.PI] : [-Math.PI / 2, Math.PI / 2];
+      var A1 = [-Math.PI / 2, Math.PI / 2];
       var seg = function (pts) {
         for (var k = 1; k < pts.length; k++) {
           var dz = (pts[k][2] + pts[k - 1][2]) / 2, front = dz < 0;
@@ -1137,7 +1165,7 @@
         seg(line1);
       }
       // антенна и направления
-      drawAnt(ctx, type, proj, cx, cy);
+      drawAnt(ctx, type, pol, proj, cx, cy);
       var th = (S.thTx || 0) * Math.PI / 180, ge = rOf(th);
       var tp = dir === "yagi" ? proj(ge * Math.cos(th), 0, ge * Math.sin(th)) : proj(ge * Math.cos(th), 0, ge * Math.sin(th));
       var far = proj(Rr * 1.15 * Math.cos(th), 0, Rr * 1.15 * Math.sin(th));
@@ -1164,7 +1192,14 @@
         return false;
       };
       // занятые места: антенна и точка на луче
-      pb.push(dir === "yagi" ? { x0: cx - 20, y0: cy - 14, x1: cx + 22, y1: cy + 14 } : { x0: cx - 8, y0: cy - 20, x1: cx + 8, y1: cy + 20 });
+      var P2 = function (x, y, z) { return horiz ? [cx + x, cy - y] : [cx + x, cy - z]; };
+      (function () {  // место под изображением антенны — по её проекции в этом виде
+        var ev = polAxis(pol), pts = [[-16, 0, 0], [18, 0, 0], [0, ev[1] * 16, ev[2] * 16], [0, -ev[1] * 16, -ev[2] * 16]];
+        if (dir === "omni") { pts = [[-3, 0, 0], [3, 0, 0], [0, ev[1] * 16, ev[2] * 16], [0, -ev[1] * 16, -ev[2] * 16]]; }
+        if (dir === "yagi") { pts.push([-14, ev[1] * 12, ev[2] * 12], [-14, -ev[1] * 12, -ev[2] * 12]); }
+        var xs = pts.map(function (q) { return P2(q[0], q[1], q[2])[0]; }), ys = pts.map(function (q) { return P2(q[0], q[1], q[2])[1]; });
+        pb.push({ x0: Math.min.apply(null, xs) - 6, y0: Math.min.apply(null, ys) - 6, x1: Math.max.apply(null, xs) + 6, y1: Math.max.apply(null, ys) + 6 });
+      })();
       if (!horiz) {
         ctx.fillStyle = alpha(C.air, 0.07); ctx.fillRect(6, cy, w - 12, h - cy - 2);
         hline(ctx, 6, w - 6, cy, alpha(C.air, 0.9), [6, 4]);
@@ -1177,7 +1212,7 @@
         ctx.strokeStyle = db === 0 ? alpha(C.dim, 0.9) : C.grid; ctx.lineWidth = 1;
         ctx.setLineDash(db === 0 ? [4, 4] : []); ctx.stroke(); ctx.setLineDash([]);
       });
-      var fsec = horiz && dir === "omni" ? function () { return shape(0); } : shape;  // в горизонте бублик — круг
+      var fsec = horiz ? sh.fh : sh.f;
       ctx.beginPath();
       for (var j = 0; j <= 360; j++) {
         var aa = TAU * j / 360, rr = rad(10 * LOG10(Math.max(1e-6, fsec(aa))));
@@ -1188,8 +1223,7 @@
       ctx.fillStyle = alpha(C.tx, 0.22); ctx.fill();
       ctx.strokeStyle = C.tx; ctx.lineWidth = 2; ctx.stroke();
       // сама антенна: в вертикальном сечении штырь стоит, в горизонтальном виден сверху точкой
-      var P2 = function (x, y, z) { return horiz ? [cx + x, cy - y - z] : [cx + x, cy - z]; };
-      drawAnt(ctx, horiz && (dir === "omni") ? "iso" : type, P2, cx, cy);
+      drawAnt(ctx, type, pol, P2, cx, cy);
       // луч на приёмник
       var th2 = horiz ? 0 : (S.thTx || 0) * Math.PI / 180, ge2 = 10 * LOG10(Math.max(1e-6, fsec(th2)));
       var rx = cx + Rr * 1.02 * Math.cos(th2), ry = cy - Rr * 1.02 * Math.sin(th2);
@@ -1201,31 +1235,34 @@
       var B11 = "600 11px 'Segoe UI', sans-serif", up = ry < cy - 4, dn = ry > cy + 4;
       cPut("на приёмник: " + num(ge2, 1) + " dBi", rx, ry,
         [[0, up ? -8 : 16, rx > cx ? "right" : "left"], [0, up ? 16 : -8, rx > cx ? "right" : "left"],
-          [0, up ? -22 : 30, rx > cx ? "right" : "left"], [-Rr * 0.4, dn ? 18 : -10, "center"], [-Rr * 0.4, dn ? -10 : 18, "center"]], C.rx, B11);
+          [0, up ? -22 : 30, rx > cx ? "right" : "left"], [-Rr * 0.4, dn ? 18 : -10, "center"], [-Rr * 0.4, dn ? -10 : 18, "center"], [0, 44, "right"], [0, -36, "right"], [w - 8 - rx, h - 22 - ry, "right"]], C.rx, B11);
       if (!horiz) {
+        if (dir !== "iso") { cPut("вид сбоку: " + (pol === "h" ? "H" : "E") + "-плоскость", 10, 44, [[0, 0, "left"]], C.tx); }
         cPut("↑ вверх (зенит)", cx, 26 + 12, [[0, 0], [Rr * 0.5, 0]], C.dim);
         cPut("↓ вниз (земля)", cx, h - 6, [[0, 0], [Rr * 0.5, 0]], C.dim);
         cPut("горизонт", 8, cy - 5, [[0, 0, "left"], [0, 15, "left"]], C.air);
         cPut("горизонт →", w - 8, cy - 5, [[0, 0, "right"], [0, 15, "right"], [0, -14, "right"]], C.air);
       } else {
-        cPut("вид сверху: плоскость горизонта", cx, 38, [[0, 0]], C.dim);
+        cPut("вид сверху: плоскость горизонта" + (dir === "iso" ? "" : ", " + (pol === "h" ? "E" : "H") + "-плоскость"), cx, 38, [[0, 0]], C.dim);
       }
       if (dir === "yagi") {
-        cPut("вдоль оси антенны →", cx + 24, cy, [[0, 16, "left"], [0, -8, "left"], [0, 30, "left"], [0, -22, "left"]], C.fg);
-      } else if (dir === "omni" && !horiz) {
-        cPut("ось антенны", cx + 10, cy - 18, [[0, 0, "left"], [-20, 0, "right"], [0, 34, "left"]], C.fg);
+        cPut("вдоль оси антенны →", cx + 24, cy, [[0, 16, "left"], [0, -8, "left"], [0, 30, "left"], [0, -22, "left"], [0, 44, "left"], [0, -36, "left"], [w - 8 - cx - 24, 60 - cy, "right"]], C.fg);
+      } else if (dir === "omni" && (horiz === (pol === "h"))) {  // ось вибратора видна в этом сечении
+        cPut("ось антенны", cx + 10, cy - 18, [[0, 0, "left"], [-20, 0, "right"], [0, 34, "left"], [12, 22, "left"]], C.fg);
       }
       [0, 10, 20].forEach(function (db) {
         cPut((db > 0 ? "+" : "") + db + " dBi", cx - rad(db) * 0.707 - 3, cy - rad(db) * 0.707 - 2, [[0, 0, "right"], [0, 12, "right"]], C.dim,
           "10px 'Segoe UI', sans-serif");
       });
     }
-    text(ctx, ANT_TYPES[type].name + " · " + num(g, 2).replace(/0$/, "") + " dBi · КПД " + num(100 * antEff(g, type), 0) + " %", 10, 14, C.fg,
+    text(ctx, ANT_TYPES[type].name + " · " + num(g, 2).replace(/0$/, "") + " dBi · КПД " + num(100 * antEff(g, type), 0) + " % · " +
+      (S.txPol === "c" ? "круговая (рисуется как вертикальная)" : POL_NAME[pol]), 10, 14, C.fg,
       "left", "600 12px 'Segoe UI', sans-serif");
-    var bwt = bw[0] === null ? "ширина луча: во все стороны одинаково" :
-      "по −3 dB: вертикаль " + num(bw[0], 0) + "°, горизонталь " + (bw[1] === null ? "360°" : num(bw[1], 0) + "°");
+    var bwf = function (v) { return v === null ? "360°" : num(v, 0) + "°"; };
+    var bwt = dir === "iso" ? "ширина луча: во все стороны одинаково" :
+      "по −3 dB: сбоку (" + (pol === "h" ? "H" : "E") + ") " + bwf(bw[0]) + ", сверху (" + (pol === "h" ? "E" : "H") + ") " + bwf(bw[1]);
     ctx.font = "600 12px 'Segoe UI', sans-serif";
-    var tw1 = ctx.measureText(ANT_TYPES[type].name + " · 00,00 dBi · КПД 100 %").width;
+    var tw1 = ctx.measureText(ANT_TYPES[type].name + " · 00,00 dBi · КПД 100 % · горизонтальная").width;
     ctx.font = "600 11px 'Segoe UI', sans-serif";
     var twoLines = tw1 + ctx.measureText(bwt).width + 30 > w;
     text(ctx, bwt, twoLines ? 10 : w - 10, twoLines ? 30 : 14, C.tx, twoLines ? "left" : "right", "600 11px 'Segoe UI', sans-serif");
@@ -1239,27 +1276,32 @@
   function selfTestAnt() {
     var sel = document.getElementById("txAnt"), gs = document.getElementById("gTx");
     var keep = [sel.value, gs.value], errs = [], types = Object.keys(ANT_TYPES);
-    var sample = function (g, t) {
-      var sh = antShape(g, t);
+    var sample = function (g, t, pl) {
+      var sh = antShape(g, t, pl);
       return [0, 15, 30, 45, 60, 90, 120, 180].map(function (deg) { return 10 * LOG10(Math.max(1e-9, sh.f(deg * Math.PI / 180))); });
     };
+    var pl0 = S.txPol === "h" ? "h" : "v";
     types.forEach(function (b) {
-      var ref = sample(ANT_TYPES[b].def, b);
+      var ref = sample(ANT_TYPES[b].def, b, pl0);
       types.forEach(function (a) {
         sel.value = a; update(); sel.value = b; update();
-        var got = sample(S.gTx, S.txAnt);
+        var got = sample(S.gTx, S.txAnt, pl0);
         if (S.txAnt !== b || Math.abs(S.gTx - ANT_TYPES[b].def) > 1e-9 ||
           got.some(function (v, i) { return Math.abs(v - ref[i]) > 1e-6; })) { errs.push(a + "→" + b); }
       });
       [ANT_TYPES[b].lo, ANT_TYPES[b].def, ANT_TYPES[b].hi].forEach(function (g) {
-        var sh = antShape(g, b), acc = 0, N = 2000;
-        for (var i = 0; i < N; i++) {
-          var u = -Math.PI / 2 + Math.PI * (i + 0.5) / N;
-          if (sh.dir === "yagi") { var a2 = (u + Math.PI / 2); acc += sh.f(a2) * Math.sin(a2) * Math.PI / N; }
-          else { acc += sh.f(u) * Math.cos(u) * Math.PI / N; }
-        }
-        var avg = acc / 2, eff = antEff(g, b);
-        if (Math.abs(avg / eff - 1) > 0.01) { errs.push(b + " " + g + " dBi: среднее " + avg.toFixed(3) + " ≠ КПД " + eff.toFixed(3)); }
+        ["v", "h"].forEach(function (pl) {
+          var sh = antShape(g, b, pl), acc = 0, NE = 180, NA = 180;
+          for (var i = 0; i < NE; i++) {
+            var e = -Math.PI / 2 + Math.PI * (i + 0.5) / NE, ce = Math.cos(e), se = Math.sin(e);
+            for (var j = 0; j < NA; j++) {
+              var az = TAU * (j + 0.5) / NA;
+              acc += sh.f3(ce * Math.cos(az), ce * Math.sin(az), se) * ce;
+            }
+          }
+          var avg = acc * (Math.PI / NE) * (TAU / NA) / (4 * Math.PI), eff = antEff(g, b);
+          if (Math.abs(avg / eff - 1) > 0.01) { errs.push(b + " " + g + " dBi " + pl + ": среднее " + avg.toFixed(3) + " ≠ КПД " + eff.toFixed(3)); }
+        });
       });
     });
     sel.value = keep[0]; lastAnt = keep[0]; applyAntLimits(Number(keep[1])); update();
@@ -1285,6 +1327,15 @@
     cv.addEventListener("pointercancel", end);
     cv.addEventListener("dblclick", function () { PAT.yaw = -0.6; PAT.pitch = 0.38; });
     if (document.getElementById("patView")) { segBind("patView", function (v) { PAT.view = v; if (DEMOS.pattern) { DEMOS.pattern.dirty = true; } }); }
+    var pp = document.getElementById("patPol");
+    if (pp) {
+      pp.addEventListener("click", function (e) {
+        var b = e.target.closest("button");
+        if (!b) { return; }
+        document.getElementById("txPol").value = b.getAttribute("data-v");
+        update();
+      });
+    }
     var pt = document.getElementById("patType");
     if (pt) {
       pt.addEventListener("click", function (e) {

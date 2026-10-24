@@ -116,6 +116,8 @@
         <input type="range" id="txLen" min="0" max="100" step="1"></div>
       <div class="row"><label for="txAnt">Тип антенны передатчика</label>
         <select id="txAnt"><option value="iso">изотропная (0 dBi)</option><option value="dipole" selected>штырь / диполь (до 2,15 dBi)</option><option value="colinear">коллинеар (3–9 dBi)</option><option value="yagi">Яги / волновой канал (5–20 dBi)</option><option value="lpda">логопериодическая LPDA (5–8 dBi)</option></select></div>
+      <div class="row"><label for="txPol">Поляризация передатчика</label>
+        <select id="txPol"><option value="v" selected>вертикальная</option><option value="h">горизонтальная</option><option value="c">круговая</option></select></div>
       <div class="row"><label for="gTx">Усиление антенны передатчика (в главном лепестке)</label><output id="o-gTx"></output>
         <input type="range" id="gTx" min="-5" max="20" step="0.5"><span class="small dim" id="gTxLim" style="grid-column:1/-1"></span></div>
       <div class="row"><label for="thTx">Угол от главного лепестка до приёмника</label><output id="o-thTx"></output>
@@ -142,6 +144,10 @@
       <p class="small dim" style="margin:2px 0 0">Приёмная антенна тоже ничего не усиливает: P = S·A<sub>эфф</sub>,
       A<sub>эфф</sub> = Gλ²/4π. Усиление — это большая площадь сбора в своём направлении: сейчас
       <span data-live="aeff_eff"></span>.</p>
+      <div class="row"><label for="rxPol">Поляризация приёмной антенны</label>
+        <select id="rxPol"><option value="v" selected>вертикальная</option><option value="h">горизонтальная</option><option value="c">круговая</option></select></div>
+      <p class="small dim" style="margin:2px 0 0">Поляризации должны совпадать: скрещенные линейные (вертикальная против
+      горизонтальной) теряют 20 dB и больше, круговая против линейной — 3 dB (так у «Метеора»).</p>
       <div class="row check"><input type="checkbox" id="lnaOn"><label for="lnaOn">МШУ (LNA) у антенны</label></div>
       <div class="row"><label for="gLna">Усиление МШУ</label><output id="o-gLna"></output>
         <input type="range" id="gLna" min="0" max="30" step="0.5"></div>
@@ -491,6 +497,7 @@
     <div class="demo">
       <div class="ctrls" style="margin:0 0 8px">
         <span class="seg" id="patType"><button type="button" data-v="iso">Изотропная</button><button type="button" class="on" data-v="dipole">Штырь / диполь</button><button type="button" data-v="colinear">Коллинеар</button><button type="button" data-v="yagi">Яги (волновой канал)</button><button type="button" data-v="lpda">Логопериодическая (LPDA)</button></span>
+        <span class="seg" id="patPol"><button type="button" class="on" data-v="v">Вертикальная поляризация</button><button type="button" data-v="h">Горизонтальная</button></span>
         <span class="seg" id="patView"><button type="button" class="on" data-v="3d">3D</button><button type="button" data-v="v">Вертикальное сечение (вид сбоку)</button><button type="button" data-v="h">Горизонтальное сечение (вид сверху)</button></span>
       </div>
       <canvas id="cv-pattern" height="320" data-demo="pattern" aria-label="Диаграмма направленности передающей антенны"></canvas>
@@ -499,6 +506,11 @@
       антенна (0 dBi). Синий луч — направление на приёмник (ползунок угла). Ширина главного лепестка по −3 dB:
       <b id="patBw">—</b>.</p>
       <p class="cap" id="patNote"></p>
+      <p class="cap"><b>Поляризация</b> — куда смотрят вибраторы. Сечение вдоль вибраторов называют <b>E-плоскостью</b>,
+      поперёк — <b>H-плоскостью</b>; у Яги и LPDA лепесток в E-плоскости уже. При вертикальной поляризации вид сбоку —
+      E-плоскость, вид сверху — H; при горизонтальной наоборот (фигура поворачивается вместе с антенной, интеграл по
+      сфере не меняется). Антенна приёмника должна иметь ту же поляризацию: скрещенные — потери 20+ dB, круговая
+      против линейной — 3 dB.</p>
     </div>
   </div>
 </details>
