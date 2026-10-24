@@ -26,7 +26,7 @@
     <text x="70" y="102" font-size="11" fill="{{accent}}">0 дБм · 1 мВт</text>
     <text x="442" y="102" font-size="11" fill="{{accent}}">27 дБм · 0,5 Вт</text>
     <text x="566" y="102" font-size="11" fill="{{accent}}">27 дБм</text>
-    <text x="690" y="102" font-size="11" fill="{{accent}}">излучено 0,5 Вт</text>
+    <text x="690" y="102" font-size="11" fill="{{accent}}">излучено ≈ 0,33 Вт</text>
   </g>
   <g stroke="{{dim}}" stroke-width="1.5">
     <line x1="122" y1="60" x2="140" y2="60"/>

@@ -272,7 +272,7 @@
   function nodeVals(r) {
     return {
       src: [r.exc, "—"], pa: [r.pa, fmtDb(r.paGain)], txfeed: [r.txOut, S.txLen > 0 ? fmtLoss(r.txLoss, 2) : "нет кабеля"],
-      prad: [r.prad, r.antLoss > 0.005 ? "КПД " + num(100 / lin(r.antLoss), 0) + " % (" + fmtLoss(r.antLoss, 1) + ": укороченный штырь греется)" : "КПД 100 % (0 дБ)"], air: [r.air, fmtLoss(r.fspl + S.extra, 1) + ", G(θ) " + fmtDb(r.gTxEff) + "i"],
+      prad: [r.prad, r.antLoss > 0.005 ? "КПД " + num(100 / lin(r.antLoss), 0) + " % (" + fmtLoss(r.antLoss, 1) + ": потери в антенне — часть мощности её греет)" : "КПД 100 % (0 дБ)"], air: [r.air, fmtLoss(r.fspl + S.extra, 1) + ", G(θ) " + fmtDb(r.gTxEff) + "i"],
       rxant: [r.rxAnt, "G(θ) " + fmtDb(r.gRxEff) + "i"], lna: [r.lna, S.lnaOn ? fmtDb(r.lnaG) : "нет МШУ"],
       rxin: [r.rxIn, fmtLoss(r.rxLoss, 2)]
     };
