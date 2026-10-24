@@ -358,6 +358,22 @@ def test_interactive_navigation_cases(monkeypatch):
     w.go_forward()
     app.processEvents()
     assert w.web_shown()
+    # ссылка со схемы на её же страницу («Вернуться к руководству») — «Назад», «Назад» не уводят дальше по истории
+    w.open_page("index")
+    w.open_page("pipeline")
+    w.show_interactive(ip)
+    _js(app, page, "location.href = '../pipeline.html'")
+    assert _wait(app, lambda: not w.web_shown())
+    assert w.current_page() == "pipeline"
+    w.go_back()
+    app.processEvents()
+    assert w.web_shown()
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "pipeline" and w.b_fwd.isEnabled()
+    w.go_back()
+    app.processEvents()
+    assert w.current_page() == "index"
     # A → B → «Назад» на A → схема с A → «Назад» → «Вперёд» ведёт на схему, а не на B
     w.open_page("sdr")
     w.open_page("decibels")

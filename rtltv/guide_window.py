@@ -505,6 +505,7 @@ class GuideWindow(QWidget):
         self._web_page = None      # id страницы-описания схемы (pipeline) — для заголовка
         self._back_to_web = None   # страница, открытая ссылкой со схемы: «Назад» с неё — снова на схему
         self._web_next = None      # «Вперёд» со схемы — на страницу, с которой вернулись на неё «Назад»
+        self._web_link_added = False  # переход по ссылке со схемы добавил запись в историю текста
         self.pages = QStackedWidget()
         self.pages.addWidget(self.view)
 
@@ -659,7 +660,11 @@ class GuideWindow(QWidget):
 
     def open_from_web(self, page):
         """Ссылка со схемы на обычную страницу (словарь, «Децибелы»…): открыть её, «Назад» вернёт на схему."""
+        before = self.view.backwardHistoryCount()
         self.open_page(page)
+        # ссылка на ту же страницу (например, «Вернуться к руководству» на страницу-источник схемы) в историю
+        # не попадает — тогда при возврате на схему по истории назад шагать нельзя
+        self._web_link_added = self.view.backwardHistoryCount() > before
         self._back_to_web = self.current_page()
         self._web_next = page
         self._sync_nav()
@@ -686,7 +691,7 @@ class GuideWindow(QWidget):
             # текст — обратно на страницу, с которой открыта схема (иначе следующее «Назад» со схемы покажет
             # страницу из ссылки); _web_next остаётся: «Вперёд» со схемы — снова на неё
             nxt = self._web_next
-            if self.view.isBackwardAvailable():
+            if self._web_link_added and self.view.isBackwardAvailable():
                 self.view.backward()
             self._back_to_web, self._web_next = None, nxt
             self._return_to_web()
