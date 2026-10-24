@@ -46,6 +46,7 @@
         <button type="button" data-preset="fm">FM-вещание 10 кВт</button>
         <button type="button" data-preset="meteor">Спутник «Метеор»</button>
         <button type="button" data-preset="adsb">Самолёт ADS-B</button>
+        <button type="button" data-preset="lora">LoRa 0,1 Вт</button>
       </span>
       <button type="button" class="btn ghost" id="pauseAll" aria-pressed="false">Пауза анимаций</button>
     </div>
@@ -211,7 +212,7 @@
   <div class="cols" style="margin-top:8px">
     <div>
       <div class="row"><label for="rqMode">Вид связи (требуемое С/Ш)</label>
-        <select id="rqMode"><option value="nfm">NFM речь — ≈ 12 dB С/Ш в канале</option><option value="wfm">WFM моно — 20 dB</option><option value="dmr">DMR — 5–7 dB</option><option value="lrpt">LRPT QPSK — 5–8 dB</option><option value="adsb">ADS-B — 10 dB</option></select></div>
+        <select id="rqMode"><option value="lora7">LoRa SF7 — −7,5 dB</option><option value="lora12">LoRa SF12 — −20 dB</option><option value="nfm">NFM речь — ≈ 12 dB С/Ш в канале</option><option value="wfm">WFM моно — 20 dB</option><option value="dmr">DMR — 5–7 dB</option><option value="lrpt">LRPT QPSK — 5–8 dB</option><option value="adsb">ADS-B — 10 dB</option></select></div>
       <div class="row"><label for="tGain">Усиление тюнера (условно 0…49 dB)</label><output id="o-tGain"></output>
         <input type="range" id="tGain" min="0" max="49" step="1" value="30"></div>
       <div class="facts">
@@ -321,11 +322,12 @@
       <canvas id="cv-adc" height="240" data-demo="adc" aria-label="Дискретизация и квантование"></canvas>
       <div class="ctrls">
         <div class="row"><label for="adcFs">Частота дискретизации</label><output id="o-adcFs"></output>
-          <input type="range" id="adcFs" min="2" max="48" step="1" value="16"></div>
+          <input type="range" id="adcFs" min="2" max="96" step="1" value="16"></div>
         <div class="row"><label for="adcBits">Разрядность</label><output id="o-adcBits"></output>
           <input type="range" id="adcBits" min="0" max="11" step="1" value="2"></div>
       </div>
       <div class="ctrls">
+        <span class="seg" id="adcSrc"><button type="button" class="on" data-v="tones">Тоны 1 и 3 кГц</button><button type="button" data-v="music">Музыка (синтез)</button></span>
         <button type="button" class="btn" id="adcPlayO">▶ Оригинал</button>
         <button type="button" class="btn" id="adcPlayD">▶ Оцифрованный</button>
         <label class="small">Восстановление:
@@ -335,6 +337,12 @@
       с выбранной f<sub>д</sub> и квантования N бит, затем восстановлен удержанием отсчёта (ступеньки, как ЦАП без
       фильтра — слышен «звон» зеркальных частот) или линейно. При f<sub>д</sub> ниже 6 кГц тон 3 кГц превращается в
       другой (наложение спектров), при 1–4 битах слышен шум квантования.</p>
+      <p class="cap"><b>Музыка (синтез)</b> — свой фрагмент 4,8 с: аккорды пилой, бас, мелодия и хай-хэт (шум с частотами до
+      16 кГц), собранные прямо в браузере. Что слышно: при f<sub>д</sub> 44–96 кГц — как оригинал; при 16–22 кГц пропадает
+      «воздух» хай-хэта; при 8 кГц и ниже звучит как телефон, а верхние частоты не исчезают, а превращаются в чужие
+      «металлические» тоны — это наложение спектров (у настоящего АЦП перед ним стоит фильтр, здесь его нарочно нет).
+      При 8 битах появляется лёгкое шипение в тихих местах, при 3–4 битах звук становится грубым и «зернистым», при 1–2
+      битах остаётся только ритм. <span id="adcSrNote"></span></p>
       <p class="cap">Сигнал — смесь тонов 1 и 3 кГц. Точки — отсчёты, ступеньки — квантованный сигнал, внизу — коды
       первых отсчётов. Опустите f<sub>д</sub> ниже 6 кГц — появится наложение. С 8 бит и выше ступеньки уже не
       различить глазом — разница только в уровне шума квантования.</p>
@@ -369,7 +377,7 @@
     <div class="demo">
       <canvas id="cv-mod" height="280" data-demo="mod" aria-label="Модулированная несущая"></canvas>
       <div class="ctrls">
-        <span class="seg" id="modMode"><button type="button" class="on" data-v="am">AM</button><button type="button" data-v="fm">FM</button><button type="button" data-v="fsk">FSK</button><button type="button" data-v="qpsk">QPSK</button></span>
+        <span class="seg" id="modMode"><button type="button" class="on" data-v="am">AM</button><button type="button" data-v="fm">FM</button><button type="button" data-v="fsk">FSK</button><button type="button" data-v="qpsk">QPSK</button><button type="button" data-v="css">LoRa (CSS)</button></span>
         <div class="row mod-analog"><label for="modVol">Громкость звука</label><output id="o-modVol"></output>
           <input type="range" id="modVol" min="0" max="100" step="1" value="70"></div>
         <div class="row mod-analog"><label for="modFa">Частота звука</label><output id="o-modFa"></output>
@@ -425,6 +433,19 @@
           <tr><td>FM-вещание, крупный город</td><td class="n">10 кВт</td><td class="n">70</td><td class="n">707 В</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+  <div class="body">
+    <div class="demo">
+      <canvas id="cv-pasch" height="250" data-demo="pasch" aria-label="Схема усилителя мощности"></canvas>
+      <div class="ctrls"><span class="lbl small dim">Класс работы:</span>
+        <span class="seg" id="paCls"><button type="button" data-v="A">A</button><button type="button" class="on" data-v="AB">AB</button><button type="button" data-v="C">C</button><button type="button" data-v="E">E</button></span></div>
+      <p class="cap" id="paClsCap"></p>
+      <p class="cap">Упрощённый каскад УМ: малое возбуждение через согласующую L-цепь идёт на затвор транзистора, питание
+      подаётся через дроссель, на стоке — большие импульсы тока, форма которых зависит от класса. П-фильтр (C–L–C) —
+      фильтр нижних частот: он оставляет основную частоту и убирает гармоники, чтобы не мешать соседям. Часть мощности
+      питания уходит в тепло — красное свечение транзистора тем ярче, чем ниже КПД. Усиление УМ в dB = выход − вход
+      (берётся из расчёта уровней).</p>
     </div>
   </div>
 </details>
@@ -536,7 +557,7 @@
           <button type="button" class="on" data-v="dipole"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M20 2v11M20 15v11"/><path d="M15 26h10"/></svg><span class="n">Штырь / диполь</span><span class="d">«бублик»</span></button>
           <button type="button" data-v="colinear"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M20 1v7M20 10v7M20 19v8"/><path d="M17 8.5h6M17 17.5h6"/></svg><span class="n">Коллинеар</span><span class="d">сплющенный «бублик»</span></button>
           <button type="button" data-v="yagi"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 14h34"/><path d="M8 4v20M16 6v16M23 7v14M30 8v12"/></svg><span class="n">Яги</span><span class="d">(волновой канал)</span></button>
-          <button type="button" data-v="lpda"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 13h34M3 15h34"/><path d="M7 2v24M13 4v20M19 6v16M25 8v12M30 10v8M34 11.5v5"/></svg><span class="n">Логопериодическая</span><span class="d">(LPDA)</span></button>
+          <button type="button" data-v="lpda"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 13h34M3 15h34"/><path d="M7 2v24M13 4v20M19 6v16M25 8v12M30 10v8M34 11.5v5"/></svg><span class="n">Лого&shy;периоди&shy;ческая</span><span class="d">(LPDA)</span></button>
         </div>
         <div class="optrow"><span class="lbl">Поляризация:</span><span class="seg" id="patPol"><button type="button" class="on" data-v="v">Вертикальная</button><button type="button" data-v="h">Горизонтальная</button></span></div>
         <div class="optrow"><span class="lbl">Вид:</span><span class="seg seg2" id="patView"><button type="button" class="on" data-v="3d">3D<small>поворот мышью</small></button><button type="button" data-v="v">Вертикальное сечение<small>(вид сбоку)</small></button><button type="button" data-v="h">Горизонтальное сечение<small>(вид сверху)</small></button></span></div>
@@ -699,8 +720,17 @@
         точнее зависит от коэффициента шума и полосы.</li>
       </ul>
     </div>
-    <div class="demo"><canvas id="cv-filter" height="180" data-demo="filter" aria-label="Полосовой фильтр"></canvas>
-      <p class="cap">Пунктир — АЧХ полосового фильтра. Внутри полосы — нужные сигналы, снаружи — подавленные.</p></div>
+    <div class="demo"><canvas id="cv-filter" height="240" data-demo="filter" aria-label="Полосовой фильтр"></canvas>
+      <div class="ctrls">
+        <span class="seg" id="fltOn"><button type="button" class="on" data-v="on">Фильтр включён</button><button type="button" data-v="off">Без фильтра</button></span>
+        <button type="button" class="btn" id="fltPlayOff">▶ Звук без фильтра</button>
+        <button type="button" class="btn" id="fltPlayOn">▶ Звук с фильтром</button>
+      </div>
+      <p class="cap">Эфир полон сигналов: FM-вещание, ТВ, сотовая связь вспыхивают по всему диапазону. Полосовой фильтр
+      130–150 МГц (пунктир — его АЧХ) пропускает свою полосу и гасит остальное. Без фильтра суммарная мощность на входе
+      превышает предел АЦП: он перегружается, и в нужной полосе появляются «призраки» — продукты смешения сильных
+      станций (интермодуляция). Звук — <b>упрощённая модель</b>: без фильтра поверх нужного сигнала слышны каша от
+      сильных станций и «жужжание» сотовой связи, с фильтром — чистый сигнал.</p></div>
   </div>
 </details>
 
@@ -806,6 +836,14 @@
         <div class="fact"><div class="k">Сдвиг пола шума</div><div class="v" id="rbwShift"></div></div>
         <div class="fact"><div class="k">«Метеор» −100 dBm / 120 кГц</div><div class="v" id="rbwLrpt"></div></div>
       </div>
+    </div>
+    <div class="demo">
+      <canvas id="cv-rbwviz" height="390" data-demo="rbwviz" aria-label="Один и тот же эфир при разных RBW"></canvas>
+      <p class="cap">Один и тот же эфир при трёх RBW: две несущие −105 и −108 dBm в 8 кГц друг от друга и широкий сигнал
+      (как LRPT) полной мощностью −100 dBm в полосе 120 кГц. При RBW 30 кГц несущие сливаются в один горб, при 5 и 1 кГц
+      разделяются. Пол шума опускается на 10·lg(30/5) ≈ 7,8 dB и ещё на 10·lg(5/1) ≈ 7 dB. Широкий сигнал «размазан» по
+      бинам: в каждом видна только доля RBW/120 кГц его мощности, поэтому он «тонет» вместе с полом шума, а узкие несущие
+      остаются на своём уровне.</p>
     </div>
   </div>
 </details>

@@ -288,7 +288,7 @@ a.term:hover, a.term:focus-visible { color: var(--accent); }
 .antpick button.on { border-color: var(--tx); background: color-mix(in srgb, var(--tx) 14%, var(--panel)); }
 .antpick svg { width: 40px; height: 28px; fill: none; stroke: var(--tx); stroke-width: 2; stroke-linecap: round; }
 .antpick svg .fill { fill: var(--tx); }
-.antpick .n { font-size: .8rem; font-weight: 600; line-height: 1.15; text-align: center; hyphens: none; overflow-wrap: normal; }
+.antpick .n { font-size: .8rem; font-weight: 600; line-height: 1.15; text-align: center; hyphens: manual; overflow-wrap: normal; max-width: 100%; }
 .antpick .d { font-size: .74rem; color: var(--dim); line-height: 1.15; text-align: center; }
 .optrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .optrow .lbl { font-size: .86rem; color: var(--dim); min-width: 92px; }
