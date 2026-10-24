@@ -135,9 +135,13 @@ def legacy_items(root=None, with_service=None):
         (os.path.join(PICTURES, OLD_APP), os.path.join(root, PICS, PICS_TV)),   # снимки ТВ лежали в корне
         (os.path.join(MUSIC, OLD_APP), os.path.join(root, AUDIO)),
     ]
-    # прежняя папка данных (если пользователь уже раз менял её) — по тем же подпапкам
-    old_root = _app().get("data_dir_prev")
-    if old_root and os.path.abspath(old_root) != os.path.abspath(root):
+    # прежняя папка данных (если пользователь уже раз менял её) и «Документы\RtlTV» (папка по умолчанию
+    # версий 2.x — установщик предлагает вместо неё «Документы\SDR4NOOB») — по тем же подпапкам
+    seen = {os.path.normcase(os.path.abspath(root)), os.path.normcase(data_root())}   # в себя и из текущей — нет
+    for old_root in (_app().get("data_dir_prev"), OLD_DEFAULT_DATA):
+        if not old_root or os.path.normcase(os.path.abspath(old_root)) in seen:
+            continue
+        seen.add(os.path.normcase(os.path.abspath(old_root)))
         for sub, _ in layout() + [(SERVICE, "")]:
             pairs.append((os.path.join(old_root, sub), os.path.join(root, sub)))
     if with_service:
