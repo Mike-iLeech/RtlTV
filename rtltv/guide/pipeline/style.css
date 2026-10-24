@@ -227,7 +227,7 @@ details.blk > summary .s { color: var(--dim); font-size: .92rem; }
 details.blk > summary .lvl { margin-left: auto; font-family: var(--mono); font-size: .85rem; color: var(--c); }
 .body { padding: 0 16px 16px; }
 .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .cols { grid-template-columns: minmax(0, 1fr); } }
 .demo { background: var(--panel2); border-radius: 10px; padding: 10px; }
 .demo canvas { width: 100%; display: block; border-radius: 6px; background: var(--panel); }
 .demo .ctrls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 8px; }
@@ -298,3 +298,6 @@ a.term:hover, a.term:focus-visible { color: var(--accent); }
 @media (max-width: 560px) { .seg2 { display: grid; grid-template-columns: 1fr; width: 100%; } .seg2 button + button { border-left: 0; border-top: 1px solid var(--grid); } }
 
 [hidden] { display: none !important; }
+.demo { min-width: 0; }
+.demo select { max-width: 100%; }
+#adcCodes { overflow-wrap: anywhere; }

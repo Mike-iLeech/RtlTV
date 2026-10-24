@@ -927,7 +927,8 @@
     if (of) { of.textContent = "≈ " + num(150 * fa, 0) + " Гц (условно)"; }
     document.getElementById("modCap").textContent = {
       am: "Сверху звук, снизу несущая. Огибающая несущей (пунктир) повторяет форму звука: громче звук — больше размах " +
-        "огибающей. При 100 % несущая в самых тихих местах почти исчезает, больше — искажения.",
+        "огибающей. AM — это (1 + m·звук)·несущая: к звуку добавлена постоянная составляющая, поэтому несущая есть и в тишине. " +
+        "При 100 % несущая пропадает в отрицательных пиках громкого звука, больше — искажения.",
       fm: "Размах несущей постоянный. Мгновенное значение звука (напряжение в этот момент) сдвигает частоту: плюс — волны " +
         "гуще, минус — реже. Громкость задаёт, насколько далеко уходит частота (девиацию), частота звука — как быстро " +
         "частота несущей качается туда-сюда.",
@@ -1071,7 +1072,12 @@
       ctx.beginPath(); ctx.arc(modx, (yA + yC) / 2, 15, 0, TAU); ctx.stroke();
       line(ctx, [[modx - 10, (yA + yC) / 2 - 10], [modx + 10, (yA + yC) / 2 + 10]], C.fg, 1.6);
       line(ctx, [[modx - 10, (yA + yC) / 2 + 10], [modx + 10, (yA + yC) / 2 - 10]], C.fg, 1.6);
-      text(ctx, modMode === "qpsk" ? "I/Q-модулятор" : "смеситель (умножитель)", modx - 20, (yA + yC) / 2 + 26, C.dim, "right", F11);
+      text(ctx, modMode === "qpsk" ? "I/Q-модулятор" : "модулятор: (1 + m·звук) × несущая", modx - 20, (yA + yC) / 2 + 26, C.dim, "right", F11);
+      if (modMode !== "qpsk") {  // постоянная составляющая к звуку: без неё умножение дало бы DSB без несущей
+        ctx.beginPath(); ctx.arc(modx, yA + 22, 7, 0, TAU); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.4; ctx.stroke();
+        line(ctx, [[modx - 4, yA + 22], [modx + 4, yA + 22]], C.fg, 1.4); line(ctx, [[modx, yA + 18], [modx, yA + 26]], C.fg, 1.4);
+        text(ctx, "+ пост. составляющая", modx - 11, yA + 26, C.dim, "right", "10px 'Segoe UI', sans-serif");
+      }
       wire([[ax + 14, yA], [modx, yA], [modx, (yA + yC) / 2 - 15]], 10);
       wire([[gx + 14, yC], [modx, yC], [modx, (yA + yC) / 2 + 15]], 20);
       scope((ax + modx) / 2, yA, audio, C.tx, dig ? "биты" : "звук");
@@ -1105,56 +1111,87 @@
     line(ctx, [[antx, py0 - 30], [antx, py0 - 48]], C.fg, 2);
     text(ctx, "антенна", antx, py0 + 18, C.dim, "center", F11);
     text(ctx, fm ? "Частотная модуляция: звук управляет частотой генератора (VCO)" :
-      (modMode === "qpsk" ? "Фазовая модуляция: биты задают фазу несущей в I/Q-смесителе" : "Амплитудная модуляция: звук умножается на несущую в смесителе"),
+      (modMode === "qpsk" ? "Фазовая модуляция: биты задают фазу несущей в I/Q-смесителе" : "Амплитудная модуляция: (1 + m·звук) умножается на несущую"),
       10, 14, C.fg, "left", "600 12px 'Segoe UI', sans-serif");
   });
 
-  // звук модуляции: модулирующий сигнал, несущая со сдвигом в звуковой диапазон (условно 2 кГц) и результат демодуляции
-  function modPlay(kind) {
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC || !(modMode === "am" || modMode === "fm")) { return; }
-    if (!actx) { actx = new AC(); }
-    if (actx.state === "suspended") { actx.resume(); }
-    var sr = actx.sampleRate, n = Math.round(sr * 2), buf = actx.createBuffer(1, n, sr), x = buf.getChannelData(0);
-    var vol = modVol(), fa = 150 * modFa(), fc = 2000, dev = 700, ph = 0, phm = 0, msg = new Float32Array(n), sig = new Float32Array(n);
+  // звук модуляции: модулирующий сигнал, несущая со сдвигом в звуковой диапазон (условно 5 кГц) и результат демодуляции.
+  // modSynth — чистая функция (без AudioContext), её же проверяет самопроверка корреляции.
+  var MOD_FC = 5000, MOD_DEV = 700;
+  function biquadLP(x, sr, f0, q) {  // ФНЧ второго порядка (RBJ), прямая форма I
+    var w0 = TAU * f0 / sr, cw = Math.cos(w0), al = Math.sin(w0) / (2 * q), a0 = 1 + al;
+    var b0 = (1 - cw) / 2 / a0, b1 = (1 - cw) / a0, b2 = b0, a1 = -2 * cw / a0, a2 = (1 - al) / a0;
+    var y = new Float32Array(x.length), x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (var i = 0; i < x.length; i++) {
+      var v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
+  }
+  function lp6(x, sr, f0) {  // Баттерворт 6-го порядка = три звена с Q 0,518 / 0,707 / 1,932
+    return biquadLP(biquadLP(biquadLP(x, sr, f0, 0.5176), sr, f0, 0.7071), sr, f0, 1.9319);
+  }
+  function modSynth(kind, sr, vol, fa, mode) {
+    var n = Math.round(sr * 2), fc = MOD_FC, dev = MOD_DEV, ph = 0, phm = 0, msg = new Float32Array(n), sig = new Float32Array(n);
     for (var i = 0; i < n; i++) {
       var t = i / sr;
       phm += TAU * fa / sr;
-      var loud = modMode === "am" ? 0.6 + 0.4 * Math.sin(TAU * 0.7 * t) : 1, m = vol * loud * Math.sin(phm);
+      var loud = mode === "am" ? 0.6 + 0.4 * Math.sin(TAU * 0.7 * t) : 1, m = vol * loud * Math.sin(phm);
       msg[i] = m;
-      if (modMode === "am") { ph += TAU * fc / sr; sig[i] = 0.5 * (1 + m) * Math.cos(ph); }
-      else { ph += TAU * (fc + dev * m) / sr; sig[i] = Math.cos(ph); }
+      if (mode === "am") { ph += TAU * fc / sr; sig[i] = 0.5 * (1 + m) * Math.cos(ph); }  // AM: (1 + m·звук)·несущая
+      else { ph += TAU * (fc + dev * m) / sr; sig[i] = 0.5 * Math.cos(ph); }
     }
-    var outA = msg;
-    if (kind === "c") { outA = sig; }
-    if (kind === "d") {  // честная демодуляция: перенос в ноль (I/Q), скользящее среднее на период несущей, огибающая или фаза
-      var L = Math.round(sr / fc), I = new Float32Array(n), Q = new Float32Array(n), si = 0, sq = 0, dem = new Float32Array(n), pr = 0, pi = 0;
-      for (var k = 0; k < n; k++) {
-        var a = TAU * fc * k / sr;
-        I[k] = sig[k] * Math.cos(a); Q[k] = -sig[k] * Math.sin(a);
-        si += I[k]; sq += Q[k];
-        if (k >= L) { si -= I[k - L]; sq -= Q[k - L]; }
-        var zi = si / L, zq = sq / L;
-        if (modMode === "am") { dem[k] = 2 * Math.hypot(zi, zq); }
-        else { dem[k] = Math.atan2(zq * pr - zi * pi, zi * pr + zq * pi) * sr / (TAU * dev); }
-        pr = zi; pi = zq;
-      }
-      var mean = 0;
-      for (k = 0; k < n; k++) { mean += dem[k]; }
-      mean /= n;
-      for (k = 0; k < n; k++) { dem[k] -= modMode === "am" ? mean : 0; }
-      outA = dem;
+    if (kind === "m") { return { out: msg, msg: msg, delay: 0 }; }
+    if (kind === "c") { return { out: sig, msg: msg, delay: 0 }; }
+    // честная демодуляция: перенос в ноль (I/Q), ФНЧ Баттерворта 6-го порядка 2,5 кГц (зеркало на 2fc = 10 кГц
+    // подавлено больше чем на 40 dB), затем огибающая (AM) или скорость поворота фазы (FM)
+    var I = new Float32Array(n), Q = new Float32Array(n);
+    for (var k = 0; k < n; k++) { var a = TAU * fc * k / sr; I[k] = sig[k] * Math.cos(a); Q[k] = -sig[k] * Math.sin(a); }
+    I = lp6(I, sr, 2500); Q = lp6(Q, sr, 2500);
+    var dem = new Float32Array(n), pr = 0, pi = 0;
+    for (k = 0; k < n; k++) {
+      var zi = I[k], zq = Q[k];
+      if (mode === "am") { dem[k] = 4 * Math.hypot(zi, zq) - 1; }   // 2|z| = 0,5·(1 + m) → m
+      else { dem[k] = Math.atan2(zq * pr - zi * pi, zi * pr + zq * pi) * sr / (TAU * dev); }
+      pr = zi; pi = zq;
     }
-    var peak = 1e-6;
-    for (i = 0; i < n; i++) { peak = Math.max(peak, Math.abs(outA[i])); }
-    for (i = 0; i < n; i++) {
-      var env = Math.min(1, i / sr * 20, (2 - i / sr) * 20);
-      x[i] = outA[i] / peak * 0.18 * env;
+    dem = lp6(dem, sr, 3000);  // ФНЧ звука после дискриминатора
+    return { out: dem, msg: msg, delay: Math.round(sr * 0.0006) };
+  }
+  function modCorr(r, sr) {  // корреляция результата с исходным звуком после переходного процесса, с поиском задержки
+    var skip = Math.round(sr * 0.05), best = 0;
+    for (var lag = 0; lag < Math.round(sr * 0.003); lag++) {
+      var sxy = 0, sxx = 0, syy = 0;
+      for (var i = skip; i < r.out.length - lag; i++) { var a = r.msg[i], b = r.out[i + lag]; sxy += a * b; sxx += a * a; syy += b * b; }
+      best = Math.max(best, sxy / Math.sqrt(sxx * syy + 1e-30));
     }
+    return best;
+  }
+  var curSrc = null;
+  function playBuffer(fill, seconds) {  // один источник звука: новый щелчок останавливает предыдущий
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { return; }
+    if (!actx) { actx = new AC(); }
+    if (actx.state === "suspended") { actx.resume(); }
+    var sr = actx.sampleRate, n = Math.round(sr * seconds), buf = actx.createBuffer(1, n, sr);
+    fill(buf.getChannelData(0), sr, n);
+    if (curSrc) { try { curSrc.stop(); } catch (e) { /* уже остановлен */ } }
     var src = actx.createBufferSource();
     src.buffer = buf;
     src.connect(actx.destination);
     src.start();
+    curSrc = src;
+  }
+  function modPlay(kind) {
+    if (!(modMode === "am" || modMode === "fm")) { return; }
+    var vol = modVol(), fa = 150 * modFa(), mode = modMode;
+    playBuffer(function (x, sr, n) {
+      var r = modSynth(kind, sr, vol, fa, mode), skip = kind === "d" ? Math.round(sr * 0.03) : 0;
+      for (var i = 0; i < n; i++) {  // без нормировки по пику: громкость зависит от ползунка; переходный процесс пропущен
+        var j = Math.min(r.out.length - 1, i + skip), env = Math.min(1, i / sr * 20, (2 - i / sr) * 20);
+        x[i] = Math.max(-1, Math.min(1, r.out[j] * (kind === "c" ? 0.36 : 0.18))) * env;
+      }
+    }, 2);
   }
 
   /* ------------------------------------------------------------------ 4. диаграмма направленности */
@@ -2194,31 +2231,24 @@
   // звук: 2,5 с синтезированной «фразы» с шумом (аналог) или с потерей кадров (цифра)
   var actx = null;
   function play(kind) {
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) { return; }
-    if (!actx) { actx = new AC(); }
-    if (actx.state === "suspended") { actx.resume(); }
-    var sr = actx.sampleRate, n = Math.round(sr * 2.5), buf = actx.createBuffer(1, n, sr), x = buf.getChannelData(0);
-    var s = avdSnr(), nAmp = Math.pow(10, -s / 20), fer = 1 - qDigital(s);
-    var notes = [392, 440, 494, 523, 494, 440, 392, 330], ph = 0;
-    for (var i = 0; i < n; i++) {
-      var t = i / sr, k = Math.floor(t / (2.5 / notes.length)), f = notes[k % notes.length] * (1 + 0.004 * Math.sin(TAU * 5 * t));
-      ph += TAU * f / sr;
-      var env = Math.min(1, (t % (2.5 / notes.length)) * 30) * Math.min(1, ((2.5 / notes.length) - (t % (2.5 / notes.length))) * 30);
-      var v = env * (0.6 * Math.sin(ph) + 0.25 * Math.sin(2 * ph) + 0.1 * Math.sin(3 * ph));
-      if (kind === "a") {
-        v += nAmp * 1.2 * gauss();
-        if (s < 9 && Math.random() < (9 - s) / 4000) { v += 2; }
-      } else {
-        var fr = Math.floor(t / 0.02);
-        if (hash(fr * 7 + 5) < fer) { v = 0; }
+    playBuffer(function (x, sr, n) {
+      var s = avdSnr(), nAmp = Math.pow(10, -s / 20), fer = 1 - qDigital(s);
+      var notes = [392, 440, 494, 523, 494, 440, 392, 330], ph = 0;
+      for (var i = 0; i < n; i++) {
+        var t = i / sr, k = Math.floor(t / (2.5 / notes.length)), f = notes[k % notes.length] * (1 + 0.004 * Math.sin(TAU * 5 * t));
+        ph += TAU * f / sr;
+        var env = Math.min(1, (t % (2.5 / notes.length)) * 30) * Math.min(1, ((2.5 / notes.length) - (t % (2.5 / notes.length))) * 30);
+        var v = env * (0.6 * Math.sin(ph) + 0.25 * Math.sin(2 * ph) + 0.1 * Math.sin(3 * ph));
+        if (kind === "a") {
+          v += nAmp * 1.2 * gauss();
+          if (s < 9 && Math.random() < (9 - s) / 4000) { v += 2; }
+        } else {
+          var fr = Math.floor(t / 0.02);
+          if (hash(fr * 7 + 5) < fer) { v = 0; }
+        }
+        x[i] = Math.max(-1, Math.min(1, v * 0.22));
       }
-      x[i] = Math.max(-1, Math.min(1, v * 0.22));
-    }
-    var src = actx.createBufferSource();
-    src.buffer = buf;
-    src.connect(actx.destination);
-    src.start();
+    }, 2.5);
   }
 
   /* ------------------------------------------------------------------ 15. шифрование и законная расшифровка */
@@ -2417,25 +2447,18 @@
 
   // звук оцифровки: оригинал или после дискретизации и квантования (только по щелчку, громкость ограничена)
   function adcPlay(kind) {
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) { return; }
-    if (!actx) { actx = new AC(); }
-    if (actx.state === "suspended") { actx.resume(); }
-    var s = adcState(), sr = actx.sampleRate, n = Math.round(sr * 1.5), buf = actx.createBuffer(1, n, sr), x = buf.getChannelData(0);
-    var lin2 = (document.getElementById("adcRecon") || {}).value === "lin";
-    for (var i = 0; i < n; i++) {
-      var t = i / sr, v;
-      if (kind === "o") { v = adcSig(t); } else {
-        var u = t * s.fs, k = Math.floor(u), q0 = quant(adcSig(k / s.fs), s.L).v;
-        v = lin2 ? q0 + (quant(adcSig((k + 1) / s.fs), s.L).v - q0) * (u - k) : q0;
+    var st = adcState(), lin2 = (document.getElementById("adcRecon") || {}).value === "lin";
+    playBuffer(function (x, sr, n) {
+      for (var i = 0; i < n; i++) {
+        var t = i / sr, v;
+        if (kind === "o") { v = adcSig(t); } else {
+          var u = t * st.fs, k = Math.floor(u), q0 = quant(adcSig(k / st.fs), st.L).v;
+          v = lin2 ? q0 + (quant(adcSig((k + 1) / st.fs), st.L).v - q0) * (u - k) : q0;
+        }
+        var env = Math.min(1, t * 20, (1.5 - t) * 20);
+        x[i] = Math.max(-1, Math.min(1, v)) * 0.16 * env;
       }
-      var env = Math.min(1, t * 20, (1.5 - t) * 20);
-      x[i] = Math.max(-1, Math.min(1, v)) * 0.16 * env;
-    }
-    var src = actx.createBufferSource();
-    src.buffer = buf;
-    src.connect(actx.destination);
-    src.start();
+    }, 1.5);
   }
 
   /* ------------------------------------------------------------------ навигация по блокам */
@@ -2542,7 +2565,7 @@
     if (/[?&]open=all\b/.test(location.search)) { $$("details.blk").forEach(function (det) { det.open = true; }); }
     if (location.hash && /^#b-/.test(location.hash)) { openBlock(location.hash.slice(1), true); }
     requestAnimationFrame(frame);
-    window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss, antShape: antShape, antEff: antEff, antTypes: ANT_TYPES, selfTestAnt: selfTestAnt };  // для проверки
+    window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss, antShape: antShape, antEff: antEff, modSynth: modSynth, modCorr: modCorr, antTypes: ANT_TYPES, selfTestAnt: selfTestAnt };  // для проверки
   }
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); } else { init(); }
 })();
