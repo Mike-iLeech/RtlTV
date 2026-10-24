@@ -2,7 +2,7 @@
 import time
 
 import numpy as np
-from PySide6.QtCore import QByteArray, QDataStream, QIODevice, QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QByteArray, QDataStream, QEvent, QIODevice, QObject, QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QLinearGradient, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
@@ -105,6 +105,35 @@ def mhz_decimals(step_hz):
         if abs(round(v, d) - v) < 1e-9:
             return max(1, d)
     return 6
+
+
+class _AltSwallow(QObject):
+    """Съесть одно отпускание Alt после Alt+колеса: Windows-стиль Qt по отпусканию Alt активирует строку меню,
+    а колесо (в отличие от щелчка или другой клавиши) этот флаг не сбрасывает."""
+    _inst = None
+
+    def __init__(self):
+        super().__init__()
+        self.armed = False
+
+    @classmethod
+    def arm(cls):
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app is None:
+            return
+        if cls._inst is None:
+            cls._inst = _AltSwallow()
+            app.installEventFilter(cls._inst)   # установлен позже меню — вызывается раньше его фильтра
+        cls._inst.armed = True
+
+    def eventFilter(self, obj, ev):
+        if self.armed and ev.type() == QEvent.KeyRelease and ev.key() == Qt.Key_Alt:
+            self.armed = False
+            return True
+        if self.armed and ev.type() == QEvent.KeyPress and ev.key() != Qt.Key_Alt:
+            self.armed = False
+        return False
 
 
 class SpectrumView(QWidget):
@@ -307,6 +336,15 @@ class SpectrumView(QWidget):
         sy = min(max(self.wf_row0, 0.0), ih - sh)
         return QRectF(sx, sy, sw, sh)
 
+    def _wf_clamp(self):
+        """Записать обратно уже ограниченный краями центр лупы (иначе за краем копится «мёртвая зона»)."""
+        src = self._wf_src()
+        if src is None:
+            return
+        iw = self.wf_img.width()
+        self.wf_cx = (src.left() + src.width() / 2) / iw
+        self.wf_row0 = src.top()
+
     def wf_reset(self):
         self.wf_zx, self.wf_zy, self.wf_cx, self.wf_row0 = 1.0, 1.0, 0.5, 0.0
         self.update()
@@ -330,6 +368,7 @@ class SpectrumView(QWidget):
             self.wf_zx = float(min(max(self.wf_zx * k, 1.0), 32.0))
             sw = iw / self.wf_zx
             self.wf_cx = (px - fx * sw + sw / 2) / iw
+        self._wf_clamp()
         self.update()
 
     def _wf_pan(self, dx, dy):
@@ -340,6 +379,7 @@ class SpectrumView(QWidget):
         iw = self.wf_img.width()
         self.wf_cx -= dx * src.width() / wr.width() / iw
         self.wf_row0 -= dy * src.height() / wr.height()
+        self._wf_clamp()
         self.update()
 
     def _f_at(self, pos):
@@ -538,6 +578,8 @@ class SpectrumView(QWidget):
                 and self._wf_rect().contains(e.position()):
             # Alt+колесо — лупа водопада по горизонтали, Alt+Ctrl+колесо — по вертикали (время)
             self._wf_zoom(e.position(), d, vertical=bool(mods & Qt.ControlModifier))
+            e.accept()
+            _AltSwallow.arm()   # иначе отпускание Alt откроет строку меню окна (поведение Windows)
             return
         if mods & Qt.ControlModifier:
             self.ctrlWheelStep.emit(d)
@@ -983,7 +1025,22 @@ class SpectrumControls(QWidget):
             self._save_timer = QTimer(self)
             self._save_timer.setSingleShot(True)
             self._save_timer.timeout.connect(self._save_now)
+            from PySide6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app is not None:
+                app.aboutToQuit.connect(self.flush)
         self._save_timer.start(400)
+
+    def flush(self):
+        """Записать отложенные настройки сразу (закрытие окна, выход из программы)."""
+        t = getattr(self, "_save_timer", None)
+        if t is not None and t.isActive():
+            t.stop()
+            self._save_now()
+
+    def hideEvent(self, e):
+        self.flush()
+        super().hideEvent(e)
 
     def _save_now(self):
         app_s = self._settings.load("app", {})

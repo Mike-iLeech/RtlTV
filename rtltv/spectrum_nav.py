@@ -169,7 +169,7 @@ class _VSlider(QWidget):
         self.s.setToolTip(tip)
         self.title.setToolTip(tip)
         self.setToolTip(tip)
-        self.s.setMinimumHeight(28)
+        self.s.setMinimumHeight(48)
         v.addWidget(self.s, 1, Qt.AlignHCenter)
         self.val = QLabel()
         self.val.setAlignment(Qt.AlignHCenter)

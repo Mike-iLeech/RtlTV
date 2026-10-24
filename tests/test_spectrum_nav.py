@@ -153,3 +153,29 @@ def test_waterfall_lens(app):
     v.grab()
     v.wf_reset()
     assert not v.wf_zoomed()
+
+
+def test_controls_flush_on_hide(app):
+    from rtltv import settings
+    v = _view(app)
+    ctl = SpectrumControls([v], key="t_flush", extended=True)
+    ctl.show()
+    ctl.range.setValue(77)
+    assert ctl._save_timer.isActive()
+    ctl.hide()                                   # закрытие окна раньше 0,4 с — значение не теряется
+    assert not ctl._save_timer.isActive()
+    assert settings.load("app", {})["spectrum"]["t_flush"]["range"] == 77
+
+
+def test_lens_pan_clamped(app):
+    v = _view(app)
+    for _ in range(30):
+        v._apply(v.freqs, v.psd)
+    wr = v._wf_rect()
+    for _ in range(4):
+        v._wf_zoom(wr.center(), 1, vertical=False)
+    for _ in range(50):
+        v._wf_pan(-100, 0)                       # далеко за правый край
+    left = v._wf_src().left()
+    v._wf_pan(100, 0)
+    assert v._wf_src().left() < left             # обратно едет сразу, без «мёртвой зоны»
