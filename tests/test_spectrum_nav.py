@@ -179,3 +179,31 @@ def test_lens_pan_clamped(app):
     left = v._wf_src().left()
     v._wf_pan(100, 0)
     assert v._wf_src().left() < left             # обратно едет сразу, без «мёртвой зоны»
+
+
+def test_alt_wheel_does_not_activate_menu_repeatedly(app):
+    from PySide6.QtCore import QPoint
+    from PySide6.QtGui import QWheelEvent
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QMainWindow
+    win = QMainWindow()
+    win.menuBar().addMenu("Режим").addAction("x")
+    v = _view(app)
+    win.setCentralWidget(v)
+    win.resize(900, 600)
+    win.show()
+    for _ in range(30):
+        v._apply(v.freqs, v.psd)
+    win.activateWindow()
+    v.setFocus()
+    app.processEvents()
+    c = v._wf_rect().center()
+    for k in range(3):                                   # повтор жеста, мышь между попытками двигается
+        QTest.mouseMove(v, (c + QPointF(5 * k, 0)).toPoint())
+        QTest.keyPress(v, Qt.Key_Alt, Qt.AltModifier)
+        app.sendEvent(v, QWheelEvent(c, v.mapToGlobal(c), QPoint(0, 0), QPoint(0, 120), Qt.NoButton,
+                                     Qt.AltModifier, Qt.NoScrollPhase, False))
+        QTest.keyRelease(v, Qt.Key_Alt, Qt.NoModifier)
+        app.processEvents()
+        assert win.menuBar().activeAction() is None, k
+    win.close()

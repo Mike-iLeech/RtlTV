@@ -124,15 +124,19 @@ class _AltSwallow(QObject):
             return
         if cls._inst is None:
             cls._inst = _AltSwallow()
-            app.installEventFilter(cls._inst)   # установлен позже меню — вызывается раньше его фильтра
+        # строка меню ставит свой фильтр заново при каждом нажатии Alt, а Qt зовёт первым последний
+        # установленный — поэтому переустанавливаемся на каждом Alt+колесе, чтобы оказаться впереди
+        app.removeEventFilter(cls._inst)
+        app.installEventFilter(cls._inst)
         cls._inst.armed = True
 
     def eventFilter(self, obj, ev):
         if self.armed and ev.type() == QEvent.KeyRelease and ev.key() == Qt.Key_Alt:
             self.armed = False
             return True
-        if self.armed and ev.type() == QEvent.KeyPress and ev.key() != Qt.Key_Alt:
-            self.armed = False
+        if self.armed and ((ev.type() == QEvent.KeyPress and ev.key() != Qt.Key_Alt) or ev.type() in (
+                QEvent.ApplicationDeactivate, QEvent.WindowDeactivate, QEvent.MouseButtonPress)):
+            self.armed = False      # Alt+Tab, щелчок, другая клавиша — обычный Alt дальше работает как всегда
         return False
 
 
