@@ -64,7 +64,7 @@
       <button type="button" class="node" data-go="b-mod"><svg><use href="#i-mod"/></svg><span class="nm">Модулятор</span><span class="lv">AM/FM/цифра</span></button>
       <button type="button" class="node" data-go="b-pa"><svg><use href="#i-amp"/></svg><span class="nm">Усилитель</span><span class="lv" data-node="pa">—</span></button>
       <button type="button" class="node" data-go="b-txfeed"><svg><use href="#i-cable"/></svg><span class="nm">Фидер</span><span class="lv" data-node="txfeed">—</span></button>
-      <button type="button" class="node" data-go="b-txant"><svg><use href="#i-ant"/></svg><span class="nm">Антенна</span><span class="lv" data-node="eirp">—</span></button>
+      <button type="button" class="node" data-go="b-txant"><svg><use href="#i-ant"/></svg><span class="nm">Антенна</span><span class="lv" data-node="prad">—</span></button>
     </div>
   </div>
   <div class="stage air">
@@ -112,8 +112,13 @@
         </div>
       <div class="row"><label for="txLen">Длина кабеля</label><output id="o-txLen"></output>
         <input type="range" id="txLen" min="0" max="100" step="1"></div>
-      <div class="row"><label for="gTx">Усиление антенны передатчика</label><output id="o-gTx"></output>
+      <div class="row"><label for="gTx">Усиление антенны передатчика (в главном лепестке)</label><output id="o-gTx"></output>
         <input type="range" id="gTx" min="-5" max="20" step="0.5"></div>
+      <div class="row"><label for="thTx">Угол от главного лепестка до приёмника</label><output id="o-thTx"></output>
+        <input type="range" id="thTx" min="0" max="180" step="1" value="0"></div>
+      <p class="small dim" style="margin:2px 0 0">Усиление не добавляет мощности: излучается столько же
+      (<span data-live="prad_short"></span>), антенна лишь направляет её. В сторону приёмника —
+      <span data-live="gtx_eff"></span>.</p>
     </fieldset>
     <fieldset>
       <legend>Эфир</legend>
@@ -126,8 +131,13 @@
     </fieldset>
     <fieldset>
       <legend>Приём</legend>
-      <div class="row"><label for="gRx">Усиление приёмной антенны</label><output id="o-gRx"></output>
+      <div class="row"><label for="gRx">Усиление приёмной антенны (в главном лепестке)</label><output id="o-gRx"></output>
         <input type="range" id="gRx" min="-5" max="20" step="0.5"></div>
+      <div class="row"><label for="thRx">Угол прихода волны от главного лепестка</label><output id="o-thRx"></output>
+        <input type="range" id="thRx" min="0" max="180" step="1" value="0"></div>
+      <p class="small dim" style="margin:2px 0 0">Приёмная антенна тоже ничего не усиливает: P = S·A<sub>эфф</sub>,
+      A<sub>эфф</sub> = Gλ²/4π. Усиление — это большая площадь сбора в своём направлении: сейчас
+      <span data-live="aeff_eff"></span>.</p>
       <div class="row check"><input type="checkbox" id="lnaOn"><label for="lnaOn">МШУ (LNA) у антенны</label></div>
       <div class="row"><label for="gLna">Усиление МШУ</label><output id="o-gLna"></output>
         <input type="range" id="gLna" min="0" max="30" step="0.5"></div>
@@ -171,7 +181,7 @@
 <h3 id="rssi">Что покажет приёмник: RSSI, S-метр, дБFS и запас</h3>
 <div class="card" id="rssiBox">
   <div class="verdict">
-    <div class="kpi"><div class="k">RSSI сигнала</div><div class="v" data-live="rssi">—</div><div class="small dim" data-live="rssi_sub"></div></div>
+    <div class="kpi"><div class="k">RSSI: показание (сигнал + шум)</div><div class="v" data-live="rssi">—</div><div class="small dim" data-live="rssi_sub"></div></div>
     <div class="kpi"><div class="k">RSSI шума</div><div class="v" data-live="rssi_noise">—</div><div class="small dim" data-live="rssi_noise_sub"></div></div>
     <div class="kpi"><div class="k">S-метр</div><div class="v" data-live="smeter">—</div><div class="small dim" data-live="smeter_sub"></div></div>
     <div class="kpi" id="k-margin"><div class="k">Запас по связи</div><div class="v" data-live="margin">—</div><div class="small dim" data-live="margin_sub"></div></div>
@@ -180,21 +190,22 @@
   <div class="cols" style="margin-top:8px">
     <div>
       <div class="row"><label for="rqMode">Вид связи (требуемое С/Ш)</label>
-        <select id="rqMode"><option value="nfm">NFM речь — 12 дБ SINAD</option><option value="wfm">WFM моно — 20 дБ</option><option value="dmr">DMR — 5–7 дБ</option><option value="lrpt">LRPT QPSK — 5–8 дБ</option><option value="adsb">ADS-B — 10 дБ</option></select></div>
+        <select id="rqMode"><option value="nfm">NFM речь — ≈ 12 дБ С/Ш в канале</option><option value="wfm">WFM моно — 20 дБ</option><option value="dmr">DMR — 5–7 дБ</option><option value="lrpt">LRPT QPSK — 5–8 дБ</option><option value="adsb">ADS-B — 10 дБ</option></select></div>
       <div class="row"><label for="tGain">Усиление тюнера (условно 0…49 дБ)</label><output id="o-tGain"></output>
         <input type="range" id="tGain" min="0" max="49" step="1" value="30"></div>
       <div class="facts">
         <div class="fact"><div class="k">Сигнал на шкале SDR</div><div class="v" data-live="dbfs">—</div></div>
         <div class="fact"><div class="k">Шум на шкале SDR</div><div class="v" data-live="dbfs_noise">—</div></div>
         <div class="fact"><div class="k">Полная шкала АЦП</div><div class="v" data-live="dbfs_full">—</div></div>
+        <div class="fact"><div class="k">Шум квантования 8 бит в канале</div><div class="v" data-live="dbfs_q">—</div></div>
       </div>
       <p class="small" id="dbfs_state"></p>
     </div>
     <div class="small">
       <p><b>RSSI</b> (received signal strength indicator) — мощность в полосе канала на входе приёмника, то, что
       приёмник реально измеряет. Если канал уже сигнала (WFM в канале NFM), RSSI меньше полной мощности на входе.
-      Шум в той же полосе — «RSSI шума»; разница между ними — отношение сигнал/шум. Приёмник видит сумму, поэтому
-      слабый сигнал не опускает показания ниже шума.</p>
+      Шум в той же полосе — «RSSI шума»; разница между сигналом и шумом — отношение сигнал/шум. Приёмник измеряет
+      сумму сигнала и шума — её и показывает плитка, поэтому слабый сигнал не опускает показания ниже шума.</p>
       <p><b>S-метр</b> (шкала IARU): по 6 дБ на балл; S9 = −73 дБм (50 мкВ на 50 Ом) ниже 30 МГц и −93 дБм (5 мкВ)
       выше 30 МГц; сильнее S9 пишут «S9+20 дБ».</p>
       <p><b>дБFS</b> — уровень относительно полной шкалы АЦП, его и показывает программа SDR: дБFS ≈ дБм + усиление
@@ -203,7 +214,10 @@
       (в режиме «Радио» SDR4NOOB баллы S пока примерные: считаются по усилению тюнера с той же условной полной
       шкалой −10 дБм, поправка хранится в настройке <code>smeter_cal</code>). Здесь полная шкала −10 дБм при усилении 0 дБ взята <b>условно, у каждого
       приёмника своя</b>. Выше −1…0 дБFS — клиппинг.</p>
-      <p><b>Запас</b> = RSSI − (шум в полосе + требуемое С/Ш): больше 10 дБ — надёжно, 3–10 дБ — на грани, меньше 3 дБ
+      <p>Шум квантования посчитан для 8-битного АЦП с f<sub>д</sub> = 2,4 МГц (как у RTL-SDR):
+      −(6,02·N + 1,76) − 10·lg(f<sub>д</sub>/2 / B). Шум антенны должен быть выше него, иначе слабые сигналы
+      теряются в шуме АЦП.</p>
+      <p><b>Запас</b> = RSSI сигнала − (шум в полосе + требуемое С/Ш): больше 10 дБ — надёжно, 3–10 дБ — на грани, меньше 3 дБ
       — связь будет рваться.</p>
     </div>
   </div>
@@ -265,7 +279,7 @@
         <tbody>
           <tr data-bits="8"><td class="n">8</td><td class="n">256</td><td class="n">≈ 50 дБ</td><td>RTL-SDR, HackRF</td></tr>
           <tr data-bits="12"><td class="n">12</td><td class="n">4 096</td><td class="n">≈ 74 дБ</td><td>Airspy R2/Mini, LimeSDR, PlutoSDR</td></tr>
-          <tr data-bits="14"><td class="n">14</td><td class="n">16 384</td><td class="n">≈ 86 дБ</td><td>SDRplay RSP1A/RSPdx</td></tr>
+          <tr data-bits="14"><td class="n">14</td><td class="n">16 384</td><td class="n">≈ 86 дБ</td><td>SDRplay RSP1A/RSPdx (14 бит при дискретизации до ~6 МГц, выше — 12/10/8 бит)</td></tr>
           <tr data-bits="16"><td class="n">16</td><td class="n">65 536</td><td class="n">≈ 98 дБ</td><td>профессиональные SDR и КВ-приёмники, CD</td></tr>
           <tr data-bits="24"><td class="n">24</td><td class="n">16,8 млн</td><td class="n">≈ 146 дБ</td><td>звуковые карты, SDR через звуковой тракт</td></tr>
           <tr data-bits="32"><td class="n">32</td><td class="n">4,3 млрд</td><td class="n">≈ 194 дБ</td><td>формат чисел в программе, не АЦП</td></tr>
@@ -381,18 +395,31 @@
 </details>
 
 <details class="blk tx" id="b-txant">
-  <summary><span class="t">Передающая антенна</span><span class="s">усиление в дБi и ЭИИМ</span><span class="lvl" data-live="eirp_short"></span></summary>
+  <summary><span class="t">Передающая антенна</span><span class="s">направленность, усиление в дБi и ЭИИМ</span><span class="lvl" data-live="eirp_short"></span></summary>
   <div class="body cols">
     <div>
       <p>Антенна превращает ток в кабеле в электромагнитную волну. Сама она мощность не добавляет:
       <b>усиление антенны</b> (дБi) показывает, во сколько раз она сильнее излучает в главном направлении,
       чем воображаемая изотропная антенна, светящая во все стороны одинаково. Энергия, отнятая у «ненужных»
       направлений, уходит в «нужное».</p>
-      <p><b>ЭИИМ</b> (эквивалентная изотропно излучаемая мощность, EIRP) — мощность, которую пришлось бы
-      подать на изотропную антенну, чтобы в главном направлении получилось то же поле:</p>
-      <p class="formula">ЭИИМ (дБм) = P<sub>перед</sub> − потери фидера + G<sub>ант</sub></p>
+      <p>Сравните фонарик с рефлектором и голую лампочку той же мощности. Лампочка светит во все стороны
+      одинаково; фонарик собирает тот же свет в узкий луч — в луче ярко, сбоку темно. Ватт от рефлектора не
+      прибавилось. Так и антенна: <b>полная излучаемая мощность</b> не зависит от усиления, она равна мощности
+      на входе антенны, умноженной на КПД:</p>
+      <p class="formula">P<sub>изл</sub> = P<sub>перед</sub> − потери фидера − потери в антенне</p>
+      <p>Здесь потери в самой антенне приняты равными 0 дБ (КПД 100 %); у короткого штыря рации они бывают
+      3–6 дБ. Если сложить излучение по всей сфере, получится всегда одно и то же: среднее по сфере усиление
+      равно КПД, ∮ G(θ, φ) dΩ = 4π·η. Поднять лепесток в одном направлении можно только за счёт других.</p>
+      <p><b>ЭИИМ</b> (эквивалентная изотропно излучаемая мощность, EIRP) — <b>эквивалентная</b> мощность в
+      направлении главного лепестка: сколько пришлось бы подать на изотропную антенну, чтобы в этом направлении
+      получилось то же поле. Это не дополнительная энергия: антенна перераспределяет ту же мощность по
+      направлениям. Для расчёта линии берётся усиление <b>в сторону приёмника</b> G(θ) — оно меньше, если
+      приёмник не в лепестке.</p>
+      <p class="formula">ЭИИМ(θ) = P<sub>изл</sub> + G(θ)</p>
       <div class="facts">
-        <div class="fact"><div class="k">ЭИИМ</div><div class="v" data-live="eirp_full"></div></div>
+        <div class="fact"><div class="k">Полная излучаемая мощность</div><div class="v" data-live="prad_full"></div></div>
+        <div class="fact"><div class="k">Усиление в сторону приёмника</div><div class="v" data-live="gtx_eff"></div></div>
+        <div class="fact"><div class="k">ЭИИМ в сторону приёмника (эквивалент)</div><div class="v" data-live="eirp_full"></div></div>
         <div class="fact"><div class="k">ЭИМ (от диполя)</div><div class="v" data-live="erp"></div></div>
         <div class="fact"><div class="k">Длина волны</div><div class="v" data-live="lambda"></div></div>
       </div>
@@ -405,7 +432,8 @@
     <div class="demo">
       <canvas id="cv-pattern" height="260" data-demo="pattern" aria-label="Диаграмма направленности"></canvas>
       <p class="cap">Диаграмма направленности при текущем усилении антенны (ползунок в расчёте). Пунктир —
-      изотропная антенна той же мощности.</p>
+      изотропная антенна той же мощности (0 дБi). Луч — направление на приёмник (ползунок угла), до 6 дБi
+      антенна считается всенаправленной (диполь, коллинеар: угол — это угол места), больше — направленной (Яги).</p>
     </div>
   </div>
 </details>
@@ -589,7 +617,7 @@
         <tr><td>RTL-SDR (RTL2832U)</td><td class="n">8 бит, 28,8 МГц</td><td class="n">50 дБ</td><td class="n">до 2,4–3,2 МГц</td></tr>
         <tr><td>HackRF One</td><td class="n">8 бит</td><td class="n">50 дБ</td><td class="n">до 20 МГц</td></tr>
         <tr><td>Airspy R2</td><td class="n">12 бит</td><td class="n">74 дБ</td><td class="n">10 МГц</td></tr>
-        <tr><td>SDRplay RSP1A/RSPdx</td><td class="n">14 бит</td><td class="n">86 дБ</td><td class="n">до 10 МГц</td></tr>
+        <tr><td>SDRplay RSP1A/RSPdx</td><td class="n">14 бит до ~6 МГц, выше 12/10/8</td><td class="n">86 дБ</td><td class="n">до 10 МГц</td></tr>
         <tr><td>Профессиональные SDR</td><td class="n">16 бит</td><td class="n">98 дБ</td><td class="n">десятки МГц</td></tr>
         <tr><td>Звуковая карта (КВ через ПЧ/звук)</td><td class="n">16–24 бит</td><td class="n">98–146 дБ (реально 110–125)</td><td class="n">48–192 кГц</td></tr>
       </tbody>
@@ -850,6 +878,7 @@
     +3 дБ — вдвое по мощности, +6 дБ — вдвое по напряжению, +10 дБ — в 10 раз по мощности.</li>
     <li>Длина волны: <span class="mono">λ(м) = 300 / f(МГц)</span>.</li>
     <li>Потери в свободном пространстве: <span class="mono">FSPL = 20·lg d(км) + 20·lg f(МГц) + 32,44</span>.</li>
+    <li>Излучаемая мощность: <span class="mono">P<sub>изл</sub> = P<sub>перед</sub> − потери фидера − потери в антенне</span>; ЭИИМ — эквивалент в направлении на приёмник: <span class="mono">ЭИИМ(θ) = P<sub>изл</sub> + G(θ)</span>.</li>
     <li>Поле: <span class="mono">E(В/м) = √(30·ЭИИМ(Вт)) / d(м)</span>; ЭДС полуволнового диполя <span class="mono">U = E·λ/π</span>.</li>
     <li>Шум в полосе B: <span class="mono">N(дБм) = −174 + КШ + 10·lg B(Гц)</span>.</li>
     <li>Котельников–Найквист: <span class="mono">f<sub>д</sub> &gt; 2·F<sub>max</sub></span>; С/Ш квантования ≈ <span class="mono">6,02·N + 1,76 дБ</span>.</li>

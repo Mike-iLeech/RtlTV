@@ -94,19 +94,19 @@
       note: "Вещательный передатчик 10 кВт, 50 м кабеля на мачту, антенная решётка 6 дБi (ЭИИМ около 23 кВт). " +
         "Приём за 50 км на диполь и 10 м RG-6: сигнал сильный, МШУ не нужен." },
     meteor: { pTx: 37, txType: "LMR-400", txLen: 1, gTx: 0, dist: 800, freq: 137.9, extra: 3, gRx: 2, lnaOn: true,
-      gLna: 20, rxType: "RG-58", rxLen: 10, bw: 120000, sigBw: 120000, rq: "lrpt", tGain: 30, nfRx: 4.5, nfLna: 0.8, conn: 2,
+      gLna: 20, rxType: "RG-58", rxLen: 10, bw: 120000, sigBw: 120000, rq: "lrpt", tGain: 40, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "«Метеор-М»: около 5 Вт на 137,9 МГц, 800 км — пролёт прямо над головой; 3 дБ — потери линейной антенны " +
         "на круговой поляризации. Получается около −100 дБм у антенны; на угле места 10° (≈ 2400 км) — ещё на " +
         "9,5 дБ меньше, у самого горизонта (≈ 3300 км) — на 12 дБ. На спектре SDR при RBW около 1–2 кГц сигнал шириной 120 кГц выглядит ещё на ~20 дБ ниже — " +
         "около −120 дБм в бине." },
     adsb: { pTx: 54, txType: "RG-58", txLen: 3, gTx: 0, dist: 100, freq: 1090, extra: 0, gRx: 3, lnaOn: false,
-      gLna: 20, rxType: "RG-58", rxLen: 3, bw: 2000000, sigBw: 2000000, rq: "adsb", tGain: 40, nfRx: 4.5, nfLna: 0.8, conn: 2,
+      gLna: 20, rxType: "RG-58", rxLen: 3, bw: 2000000, sigBw: 2000000, rq: "adsb", tGain: 49, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "Ответчик самолёта: импульсы 250 Вт на 1090 МГц. За 100 км на коллинеарную антенну 3 дБi; на 1 ГГц " +
         "тонкий RG-58 уже заметно теряет — попробуйте 20 м кабеля без МШУ и с ним." }
   };
 
   var IDS = ["pTx", "txType", "txLen", "gTx", "dist", "freq", "extra", "gRx", "lnaOn", "gLna", "rxType", "rxLen",
-    "bw", "nfRx", "nfLna", "conn"];
+    "bw", "nfRx", "nfLna", "conn", "thTx", "thRx"];
 
   function setControls(p) {
     IDS.forEach(function (k) {
@@ -118,6 +118,7 @@
     });
     S.note = p.note || "";
     S.sigBw = p.sigBw || 12500;
+    ["thTx", "thRx"].forEach(function (k) { var el = document.getElementById(k); if (el) { el.value = p[k] || 0; } });
     var rq = document.getElementById("rqMode"), tg = document.getElementById("tGain");
     if (rq && p.rq) { rq.value = p.rq; }
     if (tg && p.tGain !== undefined) { tg.value = p.tGain; }
@@ -125,7 +126,7 @@
 
   /* RSSI, S-метр, dBFS и запас по связи */
   var REQ = {  // требуемое С/Ш (дБ) для вида модуляции
-    nfm: [12, "NFM речь: ≈ 12 дБ SINAD"], wfm: [20, "WFM моно без шипения: ≈ 20 дБ"],
+    nfm: [12, "NFM речь: ≈ 12 дБ С/Ш в канале (с запасом выше порога FM; 12 дБ SINAD после демодулятора — уже при 5–8 дБ)"], wfm: [20, "WFM моно без шипения: ≈ 20 дБ"],
     dmr: [6, "DMR: ≈ 5–7 дБ"], lrpt: [6.5, "LRPT QPSK: ≈ 5–8 дБ"], adsb: [10, "ADS-B: ≈ 10 дБ"]
   };
   var FS_DBM = -10;  // условно: полная шкала АЦП на входе при усилении тюнера 0 дБ
@@ -145,8 +146,10 @@
     var nrssi = r.noiseAnt + r.lnaG - r.rxLoss;                     // шум в полосе канала на входе приёмника
     var snr = rssi - nrssi, margin = snr - req[0];
     var s9 = S.freq < 30 ? -73 : -93;
-    setLive("rssi", fmtDbm(rssi));
-    setLive("rssi_sub", fmtV(dbmV(rssi)) + (cut > 0.05 ? " · канал уже сигнала: −" + num(cut, 1) + " дБ" : " · весь сигнал в канале"));
+    var meas = 10 * LOG10(lin(rssi) + lin(nrssi));                    // приёмник меряет сумму сигнала и шума
+    setLive("rssi", fmtDbm(meas));
+    setLive("rssi_sub", "сам сигнал " + fmtDbm(rssi) + " · " + fmtV(dbmV(rssi)) +
+      (cut > 0.05 ? " · канал уже сигнала: −" + num(cut, 1) + " дБ" : " · весь сигнал в канале"));
     setLive("rssi_noise", fmtDbm(nrssi));
     setLive("rssi_noise_sub", "шум в " + fmtBw(S.bw) + "; разница = С/Ш " + num(snr, 1) + " дБ");
     setLive("smeter", sUnits(rssi));
@@ -158,13 +161,17 @@
     if (mk) { mk.className = "kpi " + (margin >= 10 ? "good" : margin >= 3 ? "warn" : "bad"); }
     document.getElementById("o-tGain").textContent = num(tg, 0) + " дБ";
     var fsIn = FS_DBM - tg, dfs = rssi - fsIn, nfs = nrssi - fsIn;
+    // шум квантования 8-битного АЦП (как у RTL-SDR, f_д = 2,4 МГц) в полосе канала
+    var qn = -(6.02 * 8 + 1.76) - 10 * LOG10(1.2e6 / S.bw);
+    setLive("dbfs_q", num(qn, 1) + " дБFS");
     setLive("dbfs", num(dfs, 1) + " дБFS");
     setLive("dbfs_noise", num(nfs, 1) + " дБFS");
     setLive("dbfs_full", "≈ " + fmtDbm(fsIn, 0) + " на входе");
     var st = dfs > -1 ? ["bad", "клиппинг: сигнал упёрся в полную шкалу АЦП — уменьшите усиление"] :
       dfs > -10 ? ["warn", "на грани: запас до полной шкалы меньше 10 дБ"] :
-        nfs < -80 && dfs < -50 ? ["warn", "усиление мало: шум ниже младших разрядов АЦП, слабые сигналы теряются"] :
-          ["good", "нормально: есть запас до перегрузки, шум выше младших разрядов"];
+        nfs < qn ? ["warn", "шум антенны ниже шума квантования АЦП в полосе канала: слабые сигналы теряются, " +
+          "прибавьте усиление (сильным станциям это не мешает)"] :
+          ["good", "нормально: есть запас до перегрузки, шум антенны выше шума квантования"];
     var stEl = document.getElementById("dbfs_state");
     if (stEl) { stEl.textContent = st[1]; stEl.style.color = C[st[0]]; }
     // мини-шкала S-метра
@@ -195,6 +202,7 @@
   function readControls() {
     IDS.forEach(function (k) {
       var el = document.getElementById(k);
+      if (!el) { S[k] = 0; return; }
       if (k === "dist" || k === "freq") { S[k] = Math.pow(10, Number(el.value)); }
       else if (el.type === "checkbox") { S[k] = el.checked; }
       else if (el.tagName === "SELECT" && k !== "bw") { S[k] = el.value; }
@@ -219,10 +227,14 @@
     r.paGain = r.pa - r.exc;
     r.txLoss = s.txLen > 0 ? cableLoss(s.txType, f, s.txLen) + conn : 0;
     r.txOut = r.pa - r.txLoss;
-    r.eirp = r.txOut + s.gTx;
+    r.antLoss = 0;                                    // потери в самой антенне (КПД 100 %)
+    r.prad = r.txOut - r.antLoss;                     // полная излучаемая мощность — от усиления не зависит
+    r.gTxEff = antGainAt(s.gTx, s.thTx || 0);         // усиление в сторону приёмника по диаграмме
+    r.gRxEff = antGainAt(s.gRx, s.thRx || 0);
+    r.eirp = r.prad + r.gTxEff;                       // эквивалент в направлении на приёмник, не энергия
     r.fspl = 20 * LOG10(s.dist) + 20 * LOG10(f) + 32.44;
     r.air = r.eirp - r.fspl - s.extra;
-    r.rxAnt = r.air + s.gRx;
+    r.rxAnt = r.air + r.gRxEff;
     r.lnaG = s.lnaOn ? s.gLna : 0;
     r.lna = r.rxAnt + r.lnaG;
     r.rxLoss = cableLoss(s.rxType, f, s.rxLen) + conn;
@@ -241,7 +253,7 @@
     r.lambda = 300 / f;
     r.leff = r.lambda / Math.PI;
     r.uoc = r.efield * r.leff;
-    r.aeff = lin(s.gRx) * r.lambda * r.lambda / (4 * Math.PI);
+    r.aeff = lin(r.gRxEff) * r.lambda * r.lambda / (4 * Math.PI);
     r.delay = s.dist / 299792.458;
     return r;
   }
@@ -251,7 +263,7 @@
     { k: "src", name: "Возбудитель (источник)", short: "Источник", st: "tx" },
     { k: "pa", name: "После усилителя мощности", short: "Усилитель", st: "tx" },
     { k: "txfeed", name: "После фидера передатчика", short: "Фидер", st: "tx" },
-    { k: "eirp", name: "ЭИИМ (с усилением антенны)", short: "ЭИИМ", st: "tx" },
+    { k: "prad", name: "Излучено антенной (полная мощность)", short: "Излучено", st: "tx" },
     { k: "air", name: "У приёмной антенны (изотропной)", short: "Эфир", st: "air" },
     { k: "rxant", name: "На выходе приёмной антенны", short: "Антенна", st: "rx" },
     { k: "lna", name: "После МШУ", short: "МШУ", st: "rx" },
@@ -260,8 +272,8 @@
   function nodeVals(r) {
     return {
       src: [r.exc, "—"], pa: [r.pa, fmtDb(r.paGain)], txfeed: [r.txOut, S.txLen > 0 ? fmtLoss(r.txLoss, 2) : "нет кабеля"],
-      eirp: [r.eirp, fmtDb(S.gTx) + "i"], air: [r.air, fmtLoss(r.fspl + S.extra, 1)],
-      rxant: [r.rxAnt, fmtDb(S.gRx) + "i"], lna: [r.lna, S.lnaOn ? fmtDb(r.lnaG) : "нет МШУ"],
+      prad: [r.prad, "КПД 100 % (0 дБ)"], air: [r.air, fmtLoss(r.fspl + S.extra, 1) + ", G(θ) " + fmtDb(r.gTxEff) + "i"],
+      rxant: [r.rxAnt, "G(θ) " + fmtDb(r.gRxEff) + "i"], lna: [r.lna, S.lnaOn ? fmtDb(r.lnaG) : "нет МШУ"],
       rxin: [r.rxIn, fmtLoss(r.rxLoss, 2)]
     };
   }
@@ -279,10 +291,12 @@
     o("pTx", fmtW(dbmW(S.pTx)) + " · " + fmtDbm(S.pTx, 1));
     o("txLen", S.txLen > 0 ? fmtLen(S.txLen) + " · " + fmtLoss(r.txLoss, 2) : "нет кабеля");
     o("gTx", num(S.gTx, 1) + " дБi");
+    o("thTx", num(S.thTx, 0) + "° → G = " + num(r.gTxEff, 1) + " дБi");
     o("dist", fmtKm(S.dist));
     o("freq", fmtMHz(S.freq) + " · λ = " + fmtLen(r.lambda));
     o("extra", fmtLoss(S.extra, 0));
     o("gRx", num(S.gRx, 1) + " дБi");
+    o("thRx", num(S.thRx, 0) + "° → G = " + num(r.gRxEff, 1) + " дБi");
     o("gLna", "+" + num(S.gLna, 1) + " дБ" + (S.lnaOn ? "" : " (выкл.)"));
     o("rxLen", (S.rxLen > 0 ? fmtLen(S.rxLen) : "только разъёмы") + " · " + fmtLoss(r.rxLoss, 2));
     o("nfRx", num(S.nfRx, 1) + " дБ");
@@ -306,8 +320,13 @@
     setLive("txloss", fmtLoss(r.txLoss, 2) + " (" + num(100 * (1 - 1 / lin(r.txLoss)), 0) + " % мощности)");
     setLive("txloss_short", fmtLoss(r.txLoss, 1));
     setLive("txfeed_full", levelText(r.txOut));
+    setLive("prad_full", levelText(r.prad));
+    setLive("prad_short", fmtW(dbmW(r.prad)));
+    setLive("gtx_eff", num(r.gTxEff, 1) + " дБi (угол " + num(S.thTx, 0) + "°)");
     setLive("eirp_full", fmtW(r.eirpW) + " · " + fmtDbm(r.eirp));
-    setLive("eirp_short", "ЭИИМ " + fmtW(r.eirpW));
+    setLive("eirp_short", "излучено " + fmtW(dbmW(r.prad)));
+    setLive("aeff_eff", num(r.gRxEff, 1) + " дБi в сторону волны → A = " +
+      (r.aeff >= 0.01 ? num(r.aeff, sig(r.aeff)) + " м²" : num(r.aeff * 1e4, sig(r.aeff * 1e4)) + " см²"));
     setLive("erp", fmtW(dbmW(r.eirp - 2.15)));
     setLive("lambda", fmtLen(r.lambda));
     setLive("dist", fmtKm(S.dist));
@@ -357,6 +376,12 @@
       var v = nv[n.k], d = v[0];
       html += '<tr class="st ' + n.st + '"><td>' + n.name + "</td><td class=\"n\">" + v[1] + '</td><td class="n">' +
         num(d, 1) + '</td><td class="n">' + fmtW(dbmW(d)) + '</td><td class="n">' + fmtV(dbmV(d)) + "</td></tr>";
+      if (n.k === "prad") {
+        html += '<tr class="st tx"><td><i>ЭИИМ в сторону приёмника — эквивалент, не энергия</i><br><span class="small dim">' +
+          "столько пришлось бы подать на изотропную антенну</span></td><td class=\"n\">G(θ) " + fmtDb(r.gTxEff) +
+          'i</td><td class="n"><i>' + num(r.eirp, 1) + '</i></td><td class="n"><i>' + fmtW(r.eirpW) +
+          '</i></td><td class="n dim">—</td></tr>';
+      }
     });
     html += '<tr><td>Шум в канале ' + fmtBw(S.bw) + ' (к выходу антенны)</td><td class="n">КШ ' +
       num(r.nfSys, 1) + ' дБ</td><td class="n">' + num(r.noiseAnt, 1) + '</td><td class="n">' + fmtW(dbmW(r.noiseAnt)) +
@@ -381,7 +406,7 @@
     var W = 860, H = 340, L = 56, Rm = 18, T = 26, B = 64;
     var vals = NODES.map(function (n) { return nv[n.k][0]; });
     var noiseRx = [r.noiseAnt, r.noiseAnt + r.lnaG, r.noiseAnt + r.lnaG - r.rxLoss];
-    var all = vals.concat(noiseRx);
+    var all = vals.concat(noiseRx, [r.eirp]);
     var mx = Math.ceil((Math.max.apply(null, all) + 8) / 20) * 20, mn = Math.floor((Math.min.apply(null, all) - 8) / 20) * 20;
     var step = (mx - mn) > 160 ? 40 : 20;
     var x = function (i) { return L + (W - L - Rm) * (i + 0.5) / NODES.length; };
@@ -425,9 +450,17 @@
         stroke: C[NODES[i].st], "stroke-width": 3, "stroke-linecap": "round",
         opacity: (NODES[i].k === "lna" && !S.lnaOn) ? 0.5 : 1 }));
     }
+    // ЭИИМ — не ступенька мощности, а эквивалент в направлении лепестка: отдельный пунктирный маркер
+    var xe = x(3) + 22, ye = y(r.eirp);
+    svg.appendChild(svgEl("line", { x1: x(3), y1: y(vals[3]), x2: xe, y2: ye, stroke: C.tx, "stroke-width": 1.5,
+      "stroke-dasharray": "4 4", opacity: 0.8 }));
+    svg.appendChild(svgEl("circle", { cx: xe, cy: ye, r: 5, fill: "none", stroke: C.tx, "stroke-width": 2,
+      "stroke-dasharray": "3 2" }));
+    svg.appendChild(svgEl("text", { x: xe + 8, y: ye + (r.eirp >= vals[3] ? -6 : 14), "font-size": 11, fill: C.tx },
+      "ЭИИМ " + num(r.eirp, 0) + " (экв.)"));
     NODES.forEach(function (n, j) {
       var cx = x(j), cy = y(vals[j]);
-      var a = svgEl("a", { href: "#" + ({ src: "b-src", pa: "b-pa", txfeed: "b-txfeed", eirp: "b-txant", air: "b-air",
+      var a = svgEl("a", { href: "#" + ({ src: "b-src", pa: "b-pa", txfeed: "b-txfeed", prad: "b-txant", air: "b-air",
         rxant: "b-rxant", lna: "b-lna", rxin: "b-rxfeed" })[n.k] });
       a.appendChild(svgEl("circle", { cx: cx, cy: cy, r: 6, fill: C.panel, stroke: C[n.st], "stroke-width": 3 }));
       svg.appendChild(a);
@@ -645,7 +678,7 @@
   var ADC_EX = {
     1: "1-битный АЦП (дельта-сигма до фильтра)", 2: "грубая учебная оцифровка", 3: "грубая учебная оцифровка",
     4: "старые игровые приставки", 5: "грубая учебная оцифровка", 6: "грубая учебная оцифровка",
-    8: "RTL-SDR, HackRF", 12: "Airspy R2/Mini, LimeSDR, PlutoSDR", 14: "SDRplay RSP1A/RSPdx",
+    8: "RTL-SDR, HackRF", 12: "Airspy R2/Mini, LimeSDR, PlutoSDR", 14: "SDRplay RSP1A/RSPdx (14 бит до ~6 МГц, выше 12/10/8)",
     16: "профессиональные SDR, CD-звук", 24: "звуковые карты (реально ≈ 18–21 бит ENOB)",
     32: "формат хранения в программе (int32/float32), не АЦП в радио"
   };
@@ -829,8 +862,28 @@
     for (var it = 0; it < 40; it++) { var mm = (lo + hi) / 2; if (D(mm) < G) { lo = mm; } else { hi = mm; } }
     return (lo + hi) / 2;
   }
+  var OMNI_M = {};
+  function antShape(g) {
+    // форма диаграммы в линейных единицах: до 6 дБi — всенаправленная (угол = угол места), больше — Яги
+    var G = lin(g);
+    if (g <= 6) {
+      var key = g.toFixed(2);
+      if (OMNI_M[key] === undefined) { OMNI_M[key] = omniM(G); }
+      var m = OMNI_M[key], peak = Math.max(G, 1.5) * (G < 1.5 ? G / 1.5 : 1);
+      return { dir: "omni", f: function (a) {
+        var e = Math.asin(Math.sin(a));
+        return Math.max(peak * Math.pow(Math.abs(Math.cos(e)), m), peak * 1e-3);  // провал вдоль оси
+      } };
+    }
+    var n = Math.max(0, G - 1);
+    return { dir: "yagi", f: function (a) {
+      var side = G * Math.pow(10, -(15 + 5 * Math.abs(Math.sin(a))) / 10);  // задний лепесток −15 дБ, боковые −20 дБ
+      return Math.max(G * Math.pow((1 + Math.cos(a)) / 2, n), side);
+    } };
+  }
+  function antGainAt(g, deg) { return 10 * LOG10(Math.max(1e-6, antShape(g).f(deg * Math.PI / 180))); }
   demo("pattern", false, function (d) {
-    var ctx = d.ctx, w = d.w, h = d.h, g = S.gTx, G = lin(g);
+    var ctx = d.ctx, w = d.w, h = d.h, g = S.gTx;
     var cx = w / 2, cy = h / 2 + 6, Rr = Math.min(w * 0.42, h * 0.4);
     var floor = -30, top = 20;
     var rad = function (db) { return Math.max(0, (db - floor) / (top - floor)) * Rr; };
@@ -844,15 +897,7 @@
       }
     });
     hline(ctx, cx - Rr, cx + Rr, cy, C.grid);
-    var dir = g > 6 ? "yagi" : "omni";
-    var shape;
-    if (dir === "omni") {
-      var m = omniM(G), eff = G < 1.5 ? G / 1.5 : 1;
-      shape = function (a) { var e = Math.asin(Math.sin(a)); return eff * Math.max(G, 1.5) * Math.pow(Math.abs(Math.cos(e)), m); };
-    } else {
-      var n = Math.max(0, G - 1);
-      shape = function (a) { return Math.max(G * Math.pow((1 + Math.cos(a)) / 2, n), G * 1e-3); };
-    }
+    var sh = antShape(g), dir = sh.dir, shape = sh.f;
     ctx.beginPath();
     for (var i = 0; i <= 360; i++) {
       var a = TAU * i / 360, r = rad(10 * LOG10(Math.max(1e-6, shape(a))));
@@ -865,6 +910,14 @@
     // антенна в центре
     line(ctx, [[cx, cy - 12], [cx, cy + 12]], C.fg, 3);
     text(ctx, "вид сбоку · " + num(g, 1) + " дБi · " + (dir === "omni" ? "всенаправленная" : "направленная (Яги)"), 10, 16, C.fg);
+    // луч на приёмник
+    var th = (S.thTx || 0) * Math.PI / 180, ge = 10 * LOG10(Math.max(1e-6, shape(th)));
+    var rx = cx + Rr * 1.02 * Math.cos(th), ry = cy - Rr * 1.02 * Math.sin(th);
+    line(ctx, [[cx, cy], [rx, ry]], C.rx, 2, [6, 4]);
+    var rg = rad(ge);
+    ctx.beginPath(); ctx.arc(cx + rg * Math.cos(th), cy - rg * Math.sin(th), 5, 0, TAU); ctx.fillStyle = C.rx; ctx.fill();
+    text(ctx, "на приёмник: " + num(ge, 1) + " дБi", Math.min(w - 8, Math.max(8, rx)), Math.max(30, Math.min(h - 6, ry + (ry < cy ? -6 : 14))),
+      C.rx, rx > cx ? "right" : "left", "600 11px 'Segoe UI', sans-serif");
     text(ctx, "к горизонту →", w - 8, cy + 13, C.dim, "right", "11px 'Segoe UI', sans-serif");
   });
 
@@ -882,13 +935,13 @@
     line(ctx, [[x0, h - 14], [xr, h - 14]], C.grid, 1);
     text(ctx, fmtKm(S.dist) + " · " + fmtMHz(S.freq), (x0 + xr) / 2, h - 20, C.fg, "center");
     text(ctx, "−" + num(R.fspl, 1) + " дБ", xr - 8, cy - 22, C.air, "right", "600 13px 'Segoe UI', sans-serif");
-    text(ctx, "ЭИИМ " + fmtW(R.eirpW), x0 + 10, 16, C.tx);
+    text(ctx, "излучено " + fmtW(dbmW(R.prad)) + " · ЭИИМ к приёмнику " + fmtW(R.eirpW) + " (экв.)", x0 + 10, 16, C.tx);
     text(ctx, "у антенны " + fmtW(dbmW(R.air)), xr, 16, C.rx, "right");
   });
   demo("airchart", false, function (d) {
     var ctx = d.ctx, w = d.w, h = d.h, L0 = 46, R0 = w - 12, T0 = 12, B0 = h - 30;
     var lx0 = -1, lx1 = 4.6;
-    var lev = function (km) { return R.eirp - (20 * LOG10(km) + 20 * LOG10(S.freq) + 32.44) - S.extra + S.gRx; };
+    var lev = function (km) { return R.eirp - (20 * LOG10(km) + 20 * LOG10(S.freq) + 32.44) - S.extra + R.gRxEff; };
     var y0 = lev(Math.pow(10, lx0)), y1 = lev(Math.pow(10, lx1));
     var mx = Math.ceil(Math.max(y0, R.noiseAnt) / 20) * 20 + 10, mn = Math.floor(Math.min(y1, R.noiseAnt) / 20) * 20 - 10;
     var X = function (lk) { return L0 + (R0 - L0) * (lk - lx0) / (lx1 - lx0); };
@@ -1559,7 +1612,11 @@
     if (!box || !window.TextEncoder) { return; }
     var msg = document.getElementById("cMsg").value || " ", k1 = document.getElementById("cKey").value,
       k2 = document.getElementById("cKeyRx").value, iv = document.getElementById("cIv").value;
-    var plain = new TextEncoder().encode(msg).slice(0, 64), seq = ++CR.seq;
+    var te = new TextEncoder(), used = "", cutMsg = false;
+    Array.from(msg).forEach(function (ch) {
+      if (cutMsg || te.encode(used + ch).length > 64) { cutMsg = true; } else { used += ch; }
+    });
+    var plain = te.encode(used), seq = ++CR.seq;
     Promise.all([streamOf(k1, iv, plain.length), streamOf(k2, iv, plain.length), streamOf(k1 + "?", iv, plain.length)])
       .then(function (ks) {
         if (seq !== CR.seq) { return; }
@@ -1570,12 +1627,17 @@
             (txt !== undefined ? "<div class=\"txt\">" + txt.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</div>" : "") + "</div></div>";
         };
         box.innerHTML =
-          row("plain", "1. Открытые данные", "голосовой кадр или текст", plain, msg) +
+          row("plain", "1. Открытые данные", "голосовой кадр или текст, " + plain.length + " байт" +
+            (cutMsg ? " (обрезано до 64)" : ""), plain, used) +
           row("ks", "2. Гамма передатчика", "ключ + IV/счётчик → генератор", ks[0]) +
           row("air", "3. В эфире: данные XOR гамма", "выглядит как случайные биты", air, asText(air)) +
           row(same ? "ok" : "bad", "4. Свой приёмник", same ? "тот же ключ → та же гамма → XOR" : "ключ не совпал!", rx, asText(rx)) +
           row("bad", "5. Чужой приёмник", "неверный ключ → другая гамма → мусор", eve, asText(eve));
-      }).catch(function () { CR.mode = "edu"; cryptUpdate(); });
+      }).catch(function () {
+        CR.mode = "edu";
+        $$("#cryptModeSeg button").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-v") === "edu"); });
+        cryptUpdate();
+      });
     var note = document.getElementById("cryptMode");
     if (note) {
       note.textContent = CR.mode === "aes" && subtleOk() ? "AES-256-CTR через WebCrypto браузера: ключ = SHA-256(пароль), гамма = AES(ключ, счётчик)." :
