@@ -84,6 +84,26 @@ Type: filesandordirs; Name: "{app}\_internal"
 var
   DataPage: TInputDirWizardPage;
   UpdPage: TInputOptionWizardPage;
+  PrevUpd: String;   { прежнее значение update_check (daily/weekly/never) }
+
+function DirHasFiles(const Dir: String): Boolean;
+var
+  F: TFindRec;
+begin
+  Result := False;
+  if FindFirst(AddBackslash(Dir) + '*', F) then
+  try
+    repeat
+      if (F.Name <> '.') and (F.Name <> '..') then
+      begin
+        Result := True;
+        exit;
+      end;
+    until not FindNext(F);
+  finally
+    FindClose(F);
+  end;
+end;
 
 { Значение строкового ключа "key": "…" из app.json (без полного разбора JSON; null и отсутствие → '') }
 function JsonStr(const Json, Key: String): String;
@@ -163,7 +183,7 @@ begin
   if Data = '' then
   begin
     { прежняя версия (RtlTV) по умолчанию писала в «Документы\RtlTV» — если там уже что-то есть, остаёмся там }
-    if DirExists(ExpandConstant('{userdocs}\RtlTV')) and not DirExists(ExpandConstant('{userdocs}\SDR4NOOB')) then
+    if DirHasFiles(ExpandConstant('{userdocs}\RtlTV')) and not DirExists(ExpandConstant('{userdocs}\SDR4NOOB')) then
       Data := ExpandConstant('{userdocs}\RtlTV')
     else
       Data := ExpandConstant('{userdocs}\SDR4NOOB');
@@ -171,6 +191,7 @@ begin
   if ExpandConstant('{param:DATADIR|}') <> '' then
     Data := ExpandConstant('{param:DATADIR|}');
   Upd := JsonStr(Json, 'update_check');
+  PrevUpd := Upd;
 
   DataPage := CreateInputDirPage(wpSelectDir,
     'Папка для ваших файлов',
@@ -210,7 +231,9 @@ function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoType
 var
   U: String;
 begin
-  if UpdPage.Values[0] then U := 'проверять раз в день' else U := 'не проверять';
+  if not UpdPage.Values[0] then U := 'не проверять'
+  else if PrevUpd = 'weekly' then U := 'проверять раз в неделю'
+  else U := 'проверять раз в день';
   Result := MemoDirInfo + NewLine + NewLine +
     'Папка для ваших файлов:' + NewLine + Space + DataPage.Values[0] + NewLine + NewLine +
     'Обновления:' + NewLine + Space + U;
@@ -227,7 +250,12 @@ end;
 
 function GetUpdates(Param: String): String;
 begin
-  if UpdPage.Values[0] then Result := 'daily' else Result := 'never';
+  if not UpdPage.Values[0] then
+    Result := 'never'
+  else if PrevUpd = 'weekly' then
+    Result := 'weekly'      { «раз в неделю» из «Настроек» не превращаем в «раз в день» }
+  else
+    Result := 'daily';
 end;
 
 function LaunchAfterSilent(): Boolean;

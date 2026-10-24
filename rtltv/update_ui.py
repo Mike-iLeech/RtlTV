@@ -88,7 +88,9 @@ class UpdateDialog(QDialog):
         notes.setOpenExternalLinks(True)
         notes.setMarkdown(info.get("notes") or "Описание изменений не указано.")
         v.addWidget(notes, 1)
-        hint = QLabel("Будут заменены только файлы программы. Настройки, записи, снимки и журналы останутся на месте."
+        hint = QLabel("Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "
+                      "вручную (может понадобиться запуск от имени администратора)." if self.kind == "manual" else
+                      "Будут заменены только файлы программы. Настройки, записи, снимки и журналы останутся на месте."
                       if updater.frozen() else
                       "Программа запущена из исходников — обновите их (git pull) или скачайте сборку со страницы релиза.")
         hint.setObjectName("dim")
@@ -105,7 +107,7 @@ class UpdateDialog(QDialog):
         row.addWidget(b_page)
         row.addStretch(1)
         row.addWidget(b_later)
-        if updater.frozen() and a.get("url"):
+        if updater.frozen() and self.kind != "manual" and a.get("url"):
             b_go = QPushButton("Обновить сейчас")
             b_go.setDefault(True)
             b_go.clicked.connect(self._update)

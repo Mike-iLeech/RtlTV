@@ -237,8 +237,9 @@ def test_update_kind(monkeypatch, tmp_path):
     assert updater.update_kind({"asset": {"url": "z"}}) == "asset"   # в релизе нет установщика
 
 
-def test_configure_writes_settings(tmp_path):
+def test_configure_writes_settings(tmp_path, monkeypatch):
     from rtltv import __main__ as m, paths, settings
+    monkeypatch.setattr(paths, "DEFAULT_DATA", str(tmp_path / "Документы" / "SDR4NOOB"))
     data = tmp_path / "Мои записи"
     assert m.configure(str(data), "never") == 0
     s = settings.load("app", {})
@@ -268,3 +269,29 @@ def test_migrate_merges_and_retries(tmp_path, monkeypatch):
     assert (new / "adsb_history.json").read_text() == "old"
     assert (old / "updates").is_dir() and not (new / "updates").exists()
     assert (new / paths.MIGRATED_MARK).exists()
+
+
+def test_update_kind_manual_without_write_access(monkeypatch, tmp_path):
+    monkeypatch.setattr(updater, "app_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(updater, "writable", lambda d: False)
+    (tmp_path / "unins000.exe").write_bytes(b"x")
+    assert updater.update_kind({"asset": {"url": "z"}, "setup": {"url": "s"}}) == "manual"
+
+
+def test_cleanup_legacy_exe_only_in_frozen(monkeypatch, tmp_path):
+    monkeypatch.setattr(updater, "app_dir", lambda: None)
+    assert updater.cleanup_legacy_exe() is False                  # из исходников — ничего не трогаем
+    monkeypatch.setattr(updater, "app_dir", lambda: str(tmp_path))
+    assert updater.cleanup_legacy_exe() is False                  # RtlTV.exe нет — нечего убирать
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="PowerShell")
+def test_relink_script_removes_old_exe(tmp_path):
+    old = tmp_path / "RtlTV.exe"
+    old.write_bytes(b"x")
+    ps1 = tmp_path / "relink.ps1"
+    ps1.write_text(updater._RELINK_PS1, encoding="utf-8-sig")
+    r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(ps1),
+                        "-Old", str(old), "-New", str(tmp_path / "SDR4NOOB.exe")], capture_output=True, timeout=120)
+    assert r.returncode == 0, r.stderr
+    assert not old.exists()

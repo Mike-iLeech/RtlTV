@@ -102,9 +102,72 @@ def installed():
     return bool(d) and os.path.isfile(os.path.join(d, "unins000.exe"))
 
 
+def writable(d):
+    """Можно ли писать в папку (программы) — без этого ни архив, ни тихий установщик не обновят файлы."""
+    test = os.path.join(d, ".sdr4noob_write_test")
+    try:
+        with open(test, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(test)
+        return True
+    except OSError:
+        return False
+
+
 def update_kind(info):
-    """Чем обновлять: "setup" (поставлено установщиком и он есть в релизе) или "asset" (архив zip)."""
+    """Чем обновлять: "setup" (поставлено установщиком и он есть в релизе), "asset" (архив zip) или
+    "manual" (в папку программы нельзя писать — например, её поставили в Program Files от администратора)."""
+    d = app_dir()
+    if d and not writable(d):
+        return "manual"
     return "setup" if installed() and (info.get("setup") or {}).get("url") else "asset"
+
+
+_RELINK_PS1 = r"""
+param([string]$Old, [string]$New)
+$sh = New-Object -ComObject WScript.Shell
+$dirs = @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'),
+          [Environment]::GetFolderPath('StartMenu'))
+foreach ($d in $dirs) {
+  if (-not $d -or -not (Test-Path -LiteralPath $d)) { continue }
+  Get-ChildItem -LiteralPath $d -Filter *.lnk -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+    try {
+      $l = $sh.CreateShortcut($_.FullName)
+      if ($l.TargetPath -and ($l.TargetPath -ieq $Old)) {
+        $l.TargetPath = $New
+        $l.WorkingDirectory = Split-Path -Parent $New
+        $l.IconLocation = $New + ',0'
+        $l.Save()
+      }
+    } catch {}
+  }
+}
+Remove-Item -LiteralPath $Old -Force -ErrorAction SilentlyContinue
+"""
+
+
+def cleanup_legacy_exe():
+    """Один раз после обновления с 3.0 обновлятором той версии: рядом мог остаться RtlTV.exe от 3.0 (код 3.0
+    вшит в exe), а ярлыки эпохи RtlTV ведут на него и запускали бы старую версию. Перенаправляем такие ярлыки
+    (рабочий стол, «Пуск») на SDR4NOOB.exe и удаляем RtlTV.exe. Работает только в собранной версии."""
+    d = app_dir()
+    if not d or os.path.basename(sys.executable).lower() == "rtltv.exe":
+        return False
+    old = os.path.join(d, "RtlTV.exe")
+    if not os.path.isfile(old):
+        return False
+    try:
+        u = os.path.join(paths.LOCAL, "updates")
+        os.makedirs(u, exist_ok=True)
+        ps1 = os.path.join(u, "relink_shortcuts.ps1")
+        with open(ps1, "w", encoding="utf-8-sig") as f:
+            f.write(_RELINK_PS1)
+        subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1,
+                          "-Old", old, "-New", sys.executable],
+                         creationflags=0x08000000 | 0x00000008, close_fds=True)
+        return True
+    except OSError:
+        return False
 
 
 # ---------------------------------------------------------------- расписание проверок

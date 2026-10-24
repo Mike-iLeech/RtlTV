@@ -46,6 +46,8 @@ def main():
     a = ap.parse_args()
     from . import diag
     diag.setup()
+    from . import updater
+    updater.cleanup_legacy_exe()   # RtlTV.exe от 3.0 и ярлыки на него — после обновления с 3.0
     app = QApplication(sys.argv)
     app.setApplicationName("SDR4NOOB")
     from .branding import app_icon
