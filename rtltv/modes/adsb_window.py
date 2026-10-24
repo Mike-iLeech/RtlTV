@@ -88,13 +88,13 @@ HIST_COLS = ["ICAO", "Позывной", "Первый", "Последний", "
              "Координаты", "Макс. дальн., км"]
 LOG_DIR = paths.logs(paths.LOGS_ADSB)
 COLS = ["ICAO", "Позывной", "Страна", "Высота", "Скор., км/ч", "Курс", "Вертик.", "Сквок", "Дальн., км",
-        "Сообщ.", "Сигн., дБ", "Приём"]
+        "Сообщ.", "Сигн., dB", "Приём"]
 COL_TIPS = ["Адрес ICAO (24 бита)", "Позывной рейса", "Страна регистрации (по блоку ICAO-адреса)",
             "Барометрическая высота", "Путевая скорость (или IAS/TAS)",
             "Путевой угол или курс", "Вертикальная скорость", "Код ответчика Mode A", "Дальность от приёмника",
-            "Принято сообщений", "Уровень сигнала, дБ полной шкалы", "Когда было последнее сообщение"]
+            "Принято сообщений", "Уровень сигнала, dB полной шкалы", "Когда было последнее сообщение"]
 CSV_HEAD = ["время", "ICAO", "DF", "позывной", "высота_фут", "скорость_уз", "курс", "вертик_фут_мин", "сквок",
-            "широта", "долгота", "дальность_км", "сигнал_дБ", "кадр"]
+            "широта", "долгота", "дальность_км", "сигнал_dB", "кадр"]
 
 
 def alt_color(alt_ft, on_ground=False):
@@ -738,10 +738,10 @@ class AdsbWindow(ModeWindow):
         lay.addWidget(self.rx_info)
         row = QHBoxLayout()
         row.addWidget(QLabel("Уровень кадров:"))
-        self.lvl = LevelMeter(-45, 0, "дБFS")
+        self.lvl = LevelMeter(-45, 0, "dBFS")
         self.lvl.setMinimumWidth(120)
-        self.lvl.setToolTip("90-й процентиль уровня принятых кадров, дБ от полной шкалы АЦП. "
-                            "Норма: от −30 до −3 дБFS.")
+        self.lvl.setToolTip("90-й процентиль уровня принятых кадров, dB от полной шкалы АЦП. "
+                            "Норма: от −30 до −3 dBFS.")
         row.addWidget(self.lvl, 1)
         self.lvl_state = QLabel("—")
         self.lvl_state.setMinimumWidth(90)
@@ -764,7 +764,7 @@ class AdsbWindow(ModeWindow):
         self.gain_combo.clear()
         self.gain_combo.addItem("АРУ тюнера", None)
         for gv in sorted(self.gains, reverse=True):
-            self.gain_combo.addItem(f"{gv / 10:.1f} дБ" + ("  (максимум)" if gv == max(self.gains) else ""), gv)
+            self.gain_combo.addItem(f"{gv / 10:.1f} dB" + ("  (максимум)" if gv == max(self.gains) else ""), gv)
         if cur is None:
             i = 0
         else:
@@ -1173,7 +1173,7 @@ class AdsbWindow(ModeWindow):
         crs = "—" if trk is None else f"{arrow(trk)}{trk:.0f}°"
         text = f"{name:<8}  {alt:>9}  {crs:>5}"
         if a["signal"] is not None:
-            text += f"  {a['signal']:.0f} дБ"
+            text += f"  {a['signal']:.0f} dB"
         if a["suspect"] and a["raw_lat"] is not None and self.lat.value() is not None:
             d = adsb.distance_km(self.lat.value(), self.lon.value(), a["raw_lat"], a["raw_lon"])
             text += f"  ?{d:.0f} км"
@@ -1385,7 +1385,7 @@ class AdsbWindow(ModeWindow):
             rows.append(("От приёмника", f"{d:.1f} км, азимут {b:.0f}°"))
         rows.append(("Сообщений", f"{a['msgs']} (DF {', '.join(str(x) for x in a['df_seen'])})"))
         if a["signal"] is not None:
-            rows.append(("Сигнал", f"{a['signal']:.1f} дБ полной шкалы"))
+            rows.append(("Сигнал", f"{a['signal']:.1f} dB полной шкалы"))
         age = now - a["last"]
         rows.append(("Слышен", f"{(a['last'] - a['first']) / 60:.1f} мин, последний приём {ago_text(age)}"
                      + (" — давно не слышен" if age > adsb.STALE_S else "")))
@@ -1435,19 +1435,19 @@ class AdsbWindow(ModeWindow):
     def _update_level(self, p, rate):
         st = p.level_stats()
         g = self.gain_combo.currentData()
-        gain = "АРУ тюнера" if g is None else f"{num(g / 10)} дБ"
+        gain = "АРУ тюнера" if g is None else f"{num(g / 10)} dB"
         demo = isinstance(self.src, adsb.DemoSource)
         fr = st["frames_p90"]
         self.rx_info.setText(
             f"Приём: <b>1090,000 МГц</b> · {num(p.demod.fs / 1e6)} MS/s · усиление <b>{gain}</b>"
             + (" + АРУ RTL2832" if self.cb_rtl_agc.isChecked() else "") + f" · ppm {self.ppm.value()}"
             + (" · демо" if demo else "")
-            + f"<br>АЦП: пик {num(st['peak_db'])} дБFS, отсечки {num(st['clip'] * 100, 2)} % · шум "
-            f"{num(st['noise_db'], 0)} дБFS · кадры {'—' if fr is None else num(fr, 0) + ' дБFS'}"
+            + f"<br>АЦП: пик {num(st['peak_db'])} dBFS, отсечки {num(st['clip'] * 100, 2)} % · шум "
+            f"{num(st['noise_db'], 0)} dBFS · кадры {'—' if fr is None else num(fr, 0) + ' dBFS'}"
             + ("" if st["frames_max"] is None else f" (макс {num(st['frames_max'], 0)})")
             + f" · {rate:.0f} сообщ./с")
         state = st["state"]
-        self.lvl.set_value(fr if fr is not None else -45, "нет кадров" if fr is None else f"{num(fr, 0)} дБFS")
+        self.lvl.set_value(fr if fr is not None else -45, "нет кадров" if fr is None else f"{num(fr, 0)} dBFS")
         self.lvl_state.setText(state)
         self.lvl_state.setStyleSheet(f"color: {LEVEL_COLORS[state]}; font-weight: bold;")
         if state == "перегрузка":
@@ -1456,8 +1456,8 @@ class AdsbWindow(ModeWindow):
                 tips.append("выключите «АРУ RTL2832»")
             if g is None:
                 tips.append("замените «АРУ тюнера» ручным усилением")
-            tips.append("снизьте усиление (например до 30–40 дБ)" if g is None or g > 300 else
-                        "снизьте усиление ещё на 5–10 дБ")
+            tips.append("снизьте усиление (например до 30–40 dB)" if g is None or g > 300 else
+                        "снизьте усиление ещё на 5–10 dB")
             self.lvl_hint.setText("Перегрузка: " + ", ".join(tips) + ". Сильные кадры искажаются и "
                                   "теряются, дальние борта пропадают.")
         elif state == "мало":

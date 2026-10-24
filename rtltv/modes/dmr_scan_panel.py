@@ -317,7 +317,7 @@ class DmrScanPanel(QWidget):
             if r["ids"]:
                 tip.append("Последние ID: " + "; ".join(r["ids"]))
             if r["hits"]:
-                tip.append(f"Слышен {r['hits']} раз, уровень {r['level_db']:.0f} дБ над шумом")
+                tip.append(f"Слышен {r['hits']} раз, уровень {r['level_db']:.0f} dB над шумом")
             cells = [_mhz(r["freq"]), text, _ago(r["last"]) if r["hits"] else "—"]
             for c, val in enumerate(cells):
                 it = self.table.item(i, c)

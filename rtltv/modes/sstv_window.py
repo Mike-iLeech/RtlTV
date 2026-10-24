@@ -91,7 +91,7 @@ class SstvWindow(ModeWindow):
         self.folder = paths.pictures(paths.PICS_SSTV)
         self._build()
         self.engine.spectrum.connect(self._on_spectrum)
-        self.engine.level.connect(lambda db, a, _s: self.lvl.set_value(db, f"{db:.0f} дБ"))
+        self.engine.level.connect(lambda db, a, _s: self.lvl.set_value(db, f"{db:.0f} dB"))
         self.engine.error.connect(lambda m: self.statusBar().showMessage("Ошибка: " + m, 8000))
         self.sstvEvents.connect(self._on_events)
         self.timer = QTimer(self)
@@ -163,7 +163,7 @@ class SstvWindow(ModeWindow):
         self.vol.valueChanged.connect(lambda v: setattr(self.engine.audio, "volume", v / 100))
         self.engine.audio.volume = self.s["volume"] / 100
         f.addRow("Прослушка:", self.vol)
-        self.lvl = LevelMeter(-110, -10, "дБ")
+        self.lvl = LevelMeter(-110, -10, "dB")
         f.addRow("Сигнал:", self.lvl)
         sv.addWidget(g)
 
@@ -251,7 +251,7 @@ class SstvWindow(ModeWindow):
 
     def _gain(self):
         t = self._gain_tenths()
-        self.gain_lbl.setText(f"{t / 10:.1f} дБ")
+        self.gain_lbl.setText(f"{t / 10:.1f} dB")
         self.engine.cmd("gain", t)
 
     def _preset(self, i):

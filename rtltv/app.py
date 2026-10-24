@@ -36,7 +36,7 @@ DEFAULTS = {
 DIGITAL_NOTE = ("Картинку DVB-T2 донгл не покажет: мультиплекс занимает 7,8 МГц, а RTL-SDR "
                 "отдаёт не больше ~3 МГц полосы. Поэтому здесь работает измеритель: канал собирается из "
                 "нескольких перестроек, считаются уровень и C/N, по циклическому префиксу определяются "
-                "режим FFT и защитный интервал. Удобно наводить антенну: C/N выше 15–18 дБ хватит телевизору.")
+                "режим FFT и защитный интервал. Удобно наводить антенну: C/N выше 15–18 dB хватит телевизору.")
 
 
 def load_settings():
@@ -91,7 +91,7 @@ class MainWindow(ModeWindow):
         mg = QGridLayout()
         self.d_status = QLabel("—")
         self.d_status.setStyleSheet("font-size: 16pt; font-weight: bold;")
-        self.d_cn = LevelMeter(0, 30, "дБ")
+        self.d_cn = LevelMeter(0, 30, "dB")
         self.d_cn.setMinimumHeight(34)
         self.d_level = QLabel("—")
         self.d_flat = QLabel("—")
@@ -321,7 +321,7 @@ class MainWindow(ModeWindow):
         f.addRow("Полоса (дискр.):", self.rate)
         lay.addLayout(f)
         lay.addWidget(self.cb_bias)
-        self.meter = LevelMeter(0, 40, "дБ")
+        self.meter = LevelMeter(0, 40, "dB")
         lay.addWidget(QLabel("Сигнал/шум:"))
         lay.addWidget(self.meter)
         self.sync_label = QLabel("—")
@@ -374,7 +374,7 @@ class MainWindow(ModeWindow):
         self.vol.setValue(self.s["volume"])
         self.vol.valueChanged.connect(lambda v: setattr(self.engine.audio, "volume", v / 100))
         self.engine.audio.volume = self.s["volume"] / 100
-        self.alevel = LevelMeter(-40, 0, "дБ")
+        self.alevel = LevelMeter(-40, 0, "dB")
         f.addRow("Громкость:", self.vol)
         f.addRow("Уровень:", self.alevel)
         return g
@@ -499,10 +499,10 @@ class MainWindow(ModeWindow):
         self.last_frame_info = fr
         self.fps_n += 1
         snr = fr["snr_db"]
-        self.meter.set_value(max(snr, 0), f"{snr:.1f} дБ")
+        self.meter.set_value(max(snr, 0), f"{snr:.1f} dB")
         ok_h = fr["hlock"] > 0.5
         self.sync_label.setText(f"Синхр.: строки {'✓' if ok_h else '✗'}  кадры {'✓' if fr['vlock'] else '✗'}"
-                                f"  ·  несущая {fr['level_db']:.1f} дБFS")
+                                f"  ·  несущая {fr['level_db']:.1f} dBFS")
         self.video.overlay = "" if ok_h else "нет синхронизации"
 
     def _on_spectrum(self, d):
@@ -521,10 +521,10 @@ class MainWindow(ModeWindow):
             text, col = "Мультиплекса нет / слабый сигнал", "#e8a33a"
         self.d_status.setText(text)
         self.d_status.setStyleSheet(f"font-size: 16pt; font-weight: bold; color: {col};")
-        self.d_cn.set_value(max(r["cn_db"], 0), f"{r['cn_db']:.1f} дБ")
-        self.meter.set_value(max(r["cn_db"], 0), f"C/N {r['cn_db']:.1f} дБ")
-        self.d_level.setText(f"{r['level_db']:.1f} дБFS")
-        self.d_flat.setText(f"{r['flatness_db']:.1f} дБ")
+        self.d_cn.set_value(max(r["cn_db"], 0), f"{r['cn_db']:.1f} dB")
+        self.meter.set_value(max(r["cn_db"], 0), f"C/N {r['cn_db']:.1f} dB")
+        self.d_level.setText(f"{r['level_db']:.1f} dBFS")
+        self.d_flat.setText(f"{r['flatness_db']:.1f} dB")
         o = r.get("ofdm")
         if o and o.get("found"):
             self.d_ofdm.setText(f"DVB-T2 {o['mode']}, GI {o.get('guard') or '?'}  (пик ×{o.get('peak', 0):.0f})")
@@ -532,7 +532,7 @@ class MainWindow(ModeWindow):
         elif o:
             self.d_ofdm.setText("не определён (мало сигнала)")
             self.d_off.setText("—")
-        self.sync_label.setText(f"Уровень {r['level_db']:.1f} дБFS · C/N {r['cn_db']:.1f} дБ")
+        self.sync_label.setText(f"Уровень {r['level_db']:.1f} dBFS · C/N {r['cn_db']:.1f} dB")
         self.fps_n += 1
 
     # ================= режимы, частота =================
@@ -699,7 +699,7 @@ class MainWindow(ModeWindow):
             self.engine.set_gain(None)
         else:
             t = self._gain_tenths()
-            self.gain_label.setText(f"{t / 10:.1f} дБ")
+            self.gain_label.setText(f"{t / 10:.1f} dB")
             self.engine.set_gain(t)
 
     def _rate_changed(self):
@@ -769,9 +769,9 @@ class MainWindow(ModeWindow):
         for r in found:
             ch = r["ch"]
             if r["kind"] == "analog":
-                text = f"📺 {ch.name}  {ch.video / 1e6:.2f} МГц  · несущая +{r['value']:.0f} дБ"
+                text = f"📺 {ch.name}  {ch.video / 1e6:.2f} МГц  · несущая +{r['value']:.0f} dB"
             else:
-                text = f"📡 {ch.name}  {ch.center / 1e6:.1f} МГц  · +{r['value']:.1f} дБ над шумом"
+                text = f"📡 {ch.name}  {ch.center / 1e6:.1f} МГц  · +{r['value']:.1f} dB над шумом"
             it = QListWidgetItem(text)
             it.setData(Qt.UserRole, (r["kind"], ch.video if r["kind"] == "analog" else ch.center))
             self.scan_list.addItem(it)

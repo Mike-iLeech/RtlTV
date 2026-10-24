@@ -270,7 +270,7 @@ class FrontEnd:
         self._dc = None
         self._st = None
         self.blanked = 0.0        # доля вырезанных отсчётов в последнем блоке
-        self.iq_err = (0.0, 0.0)  # дисбаланс: усиление, дБ; фаза, градусы
+        self.iq_err = (0.0, 0.0)  # дисбаланс: усиление, dB; фаза, градусы
 
     def process(self, iq, fs):
         x = iq
@@ -409,7 +409,7 @@ class RadioDemod:
             self.mono_lp = Fir(signal.firwin(97, 15000, fs=cr))
             self.diff_lp = Fir(signal.firwin(97, 15000, fs=cr))
             # частотный дискриминатор (разность фаз соседних отсчётов) ослабляет 38 кГц в sinc(38k/cr) раз —
-            # без поправки разделение каналов не выше ~34 дБ
+            # без поправки разделение каналов не выше ~34 dB
             k = math.pi * 2 * PILOT / cr
             self.diff_gain = 2.0 * k / math.sin(k)
             self.pilot_nco = Nco(PILOT, cr)
@@ -523,7 +523,7 @@ class RadioDemod:
         return self._nr[0].process(out) * 1.2
 
     def _squelch(self, out, pw):
-        """Шумодав по уровню канала кусками по 10 мс: гистерезис 2 дБ, открытие/закрытие плавное (5 мс)."""
+        """Шумодав по уровню канала кусками по 10 мс: гистерезис 2 dB, открытие/закрытие плавное (5 мс)."""
         if self.squelch_db <= -199:
             self.sq_open = True
             self._sq_g = 1.0
@@ -616,7 +616,7 @@ class RadioDemod:
 
 
 def spectrum_db(iq, nfft=4096, dbfs=False):
-    """Спектр мощности блока, дБ. dbfs=True — шкала дБFS: незатухающий тон полной шкалы = 0 дБ
+    """Спектр мощности блока, dB. dbfs=True — шкала dBFS: незатухающий тон полной шкалы = 0 dB
     при любом размере БПФ (как в SDR#); иначе — прежняя шкала (для режимов, где границы уже настроены)."""
     n = (iq.size // nfft) * nfft
     if n == 0:
@@ -632,7 +632,7 @@ def spectrum_db(iq, nfft=4096, dbfs=False):
 
 
 def s_units(dbm, freq):
-    """Баллы S по уровню, дБм: S9 = −73 дБм ниже 30 МГц и −93 дБм выше, 6 дБ на балл."""
+    """Баллы S по уровню, dBm: S9 = −73 dBm ниже 30 МГц и −93 dBm выше, 6 dB на балл."""
     s9 = -73.0 if freq < 30e6 else -93.0
     s = 9 + (dbm - s9) / 6.0
     if s <= 9:
