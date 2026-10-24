@@ -18,6 +18,7 @@ from ..audio import AudioOut
 from ..help_radio import HELP_HTML, MODE_HELP, MODE_HINT, TIPS
 from ..modebase import ModeWindow
 from ..radio import MODES, RADIO_RATES, SSB_LOW, FrontEnd, RadioDemod, s_units, spectrum_db
+from ..spectrum_nav import BandOverview, SpectrumSideBar
 from ..widgets import FreqDisplay, LevelMeter, SpectrumControls, SpectrumView
 from .radio_panels import FreqManager, Section
 
@@ -48,7 +49,8 @@ DEFAULTS = {"vfo": 101.2e6, "center": 101.0e6, "mode": "WFM", "bw": {}, "rate": 
             "freqs": None, "agc_on": True, "agc_hang": False, "agc_thr": -100, "agc_decay": 400, "agc_slope": 0,
             "if_gain": 40, "nr": False, "nr_strength": 16, "ahp": 0, "alp": 0, "cw_tone": 700,
             "nb": False, "nb_thr": 8, "dc": True, "iqcorr": False, "snap": True, "lock": False, "zoom": 0,
-            "panels": {}, "rds": True, "smeter_cal": 0, "iq_fmt": "wav", "files": []}
+            "panels": {}, "rds": True, "smeter_cal": 0, "iq_fmt": "wav", "files": [],
+            "overview": True, "sidebar": True}
 
 STEPS = [(1, "1 Гц"), (10, "10 Гц"), (100, "100 Гц"), (500, "500 Гц"), (1000, "1 кГц"), (5000, "5 кГц"),
          (6250, "6,25 кГц"), (8330, "8,33 кГц"), (9000, "9 кГц"), (10000, "10 кГц"), (12500, "12,5 кГц"),
@@ -513,9 +515,41 @@ class RadioWindow(ModeWindow):
         scroll.setMinimumWidth(340)
         scroll.setMaximumWidth(410)
 
+        # спектр: сверху обзор всего диапазона, справа вертикальные ручки (как в SDR#)
+        self.overview = BandOverview()
+        self.overview.jumpRequested.connect(self._overview_jump)
+        self._jump_f = None
+        self._jump_timer = QTimer(self)
+        self._jump_timer.setSingleShot(True)
+        self._jump_timer.timeout.connect(self._apply_jump)
+        fmt_db = lambda v: f"{v:+d} дБ" if v else "0 дБ"   # noqa: E731
+        self.sidebar = SpectrumSideBar([
+            ("Зум", self.zoom, lambda v: f"×{2 ** (v / 10):.1f}" if v < 34 else f"×{2 ** (v / 10):.0f}",
+             "Масштаб (Zoom)\n" + TIPS["zoom"]),
+            ("Контр.", self.spec_ctl.wf_con, lambda v: f"{v}%",
+             "Контраст водопада (Contrast)\n" + self.spec_ctl.wf_con.toolTip()),
+            ("Диап.", self.spec_ctl.range, lambda v: f"{v} дБ" if v else "авто",
+             "Диапазон шкалы спектра (Range)\n" + self.spec_ctl.range.toolTip()),
+            ("Смещ.", self.spec_ctl.wf_off, fmt_db,
+             "Смещение — яркость водопада (Offset)\n" + self.spec_ctl.wf_off.toolTip()),
+        ])
+        spec_box = QWidget()
+        sb_l = QVBoxLayout(spec_box)
+        sb_l.setContentsMargins(0, 0, 0, 0)
+        sb_l.setSpacing(2)
+        sb_l.addWidget(self.overview)
+        row_spec = QHBoxLayout()
+        row_spec.setContentsMargins(0, 0, 0, 0)
+        row_spec.setSpacing(0)
+        row_spec.addWidget(self.spec, 1)
+        row_spec.addWidget(self.sidebar)
+        sb_l.addLayout(row_spec, 1)
+        self.overview.setVisible(bool(self.s["overview"]))
+        self.sidebar.setVisible(bool(self.s["sidebar"]))
+
         split = QSplitter(Qt.Horizontal)
         split.addWidget(scroll)
-        split.addWidget(self.spec)
+        split.addWidget(spec_box)
         split.setStretchFactor(1, 1)
         split.setCollapsible(0, True)
         central = QWidget()
@@ -882,6 +916,21 @@ class RadioWindow(ModeWindow):
         self.spec_ctl = SpectrumControls([self.spec], lambda n: setattr(self.engine, "nfft", n), key="radio",
                                          nfft_default=8192, extended=True)
         gl.addWidget(self.spec_ctl)
+        row = QHBoxLayout()
+        self.cb_overview = QCheckBox("Обзор всего диапазона")
+        self.cb_overview.setChecked(bool(self.s["overview"]))
+        self.cb_overview.setToolTip("Полоса над спектром: весь диапазон приёмника 0,5–1766 МГц, классы волн "
+                                    "(километровые … дециметровые) и кто где работает. Щелчок — перейти на частоту.")
+        self.cb_overview.toggled.connect(lambda on: self._toggle_box("overview", self.overview, on))
+        self.cb_sidebar = QCheckBox("Ручки справа")
+        self.cb_sidebar.setChecked(bool(self.s["sidebar"]))
+        self.cb_sidebar.setToolTip("Вертикальные ручки справа от спектра, как в SDR#: масштаб, контраст, "
+                                   "диапазон шкалы, смещение (копии регуляторов этой панели)")
+        self.cb_sidebar.toggled.connect(lambda on: self._toggle_box("sidebar", self.sidebar, on))
+        row.addWidget(self.cb_overview)
+        row.addWidget(self.cb_sidebar)
+        row.addStretch(1)
+        gl.addLayout(row)
         self._zoom_changed(self.zoom.value())
 
     # ================= приём =================
@@ -1148,13 +1197,13 @@ class RadioWindow(ModeWindow):
         c0 = self.engine.center
         if force:
             # сигнал не на постоянной составляющей: центр чуть ниже VFO
-            c = max(vfo - 0.15 * fs, 0.5e6 + fs / 2)
+            c = min(max(vfo - 0.15 * fs, 0.5e6 + fs / 2), 1766e6 - fs / 2)
         elif abs(vfo - c0) > margin:
             # плавно: подвинуть полосу ровно настолько, чтобы VFO остался у края, без прыжка на страницу
             over = (vfo - c0) - margin if vfo > c0 else (vfo - c0) + margin
             c = max(c0 + over, 0.5e6 + fs / 2)
             if abs(vfo - c) > fs / 2:          # большой скачок (закладка, ввод частоты) — как раньше
-                c = max(vfo - 0.15 * fs, 0.5e6 + fs / 2)
+                c = min(max(vfo - 0.15 * fs, 0.5e6 + fs / 2), 1766e6 - fs / 2)
         else:
             return
         self.engine.set_center(c)
@@ -1185,6 +1234,43 @@ class RadioWindow(ModeWindow):
             self.s["vfo"] = self.fdisp.value
         self.engine.configure(offset=self.fdisp.value - c)
         self._markers()
+
+    def _toggle_box(self, key, w, on):
+        self.s[key] = bool(on)
+        if getattr(self, key, None) is not None:
+            w.setVisible(bool(on))
+
+    def _overview_jump(self, f):
+        """Щелчок/перетаскивание по обзорной полосе: переход на частоту (не чаще 20 раз в секунду)."""
+        if self._locked():
+            return
+        self._jump_f = f
+        if not self._jump_timer.isActive():
+            self._jump_timer.start(50)
+
+    def _apply_jump(self):
+        f, self._jump_f = self._jump_f, None
+        if f is None:
+            return
+        if self.engine.fixed_center:
+            c, fs = self.engine.center, self.engine.fs
+            if abs(f - c) > fs / 2:      # файл IQ: за пределы записанной полосы не уйти
+                self.sb.setText("Идёт файл IQ: перейти можно только внутри записанной полосы "
+                                f"{(c - fs / 2) / 1e6:.3f}–{(c + fs / 2) / 1e6:.3f} МГц")
+                return
+            self._set_vfo(f)
+            return
+        self._set_vfo(self._snap(f))
+
+    def _overview_sync(self):
+        ov = getattr(self, "overview", None)
+        if ov is None:
+            return
+        c, fs = self.engine.center, self.engine.fs
+        half = fs / 2 / max(self.spec.zoom, 1.0)
+        zc = self.fdisp.value if self.spec.zoom > 1.0 else c
+        zc = min(max(zc, c - fs / 2 + half), c + fs / 2 - half)
+        ov.set_view(zc - half, zc + half, self.fdisp.value)
 
     def _bw_wheel(self, d):
         if not self.bw.isEnabled():
@@ -1224,6 +1310,7 @@ class RadioWindow(ModeWindow):
         self.spec.zoom_center = vfo
         self.center_lbl.setText(f"Центр приёмника: {self.engine.center / 1e6:.4f} МГц"
                                 + (" (файл)" if self.engine.fixed_center else ""))
+        self._overview_sync()
         self.spec.update()
 
     def _accent(self):
@@ -1422,7 +1509,7 @@ class RadioWindow(ModeWindow):
         d.exec()
 
     def apply_theme(self, t):
-        for w in (self.spec, self.fdisp, self.lvl):
+        for w in (self.spec, self.fdisp, self.lvl, self.overview):
             w.set_theme(t)
         self._markers()
 

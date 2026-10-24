@@ -6,6 +6,7 @@ from PySide6.QtCore import QByteArray, QDataStream, QIODevice, QPointF, QRectF, 
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QLinearGradient, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
+from . import bandplan
 from .themes import gradient_lut
 
 
@@ -122,6 +123,7 @@ class SpectrumView(QWidget):
     zoomWheel = Signal(int)         # Shift+колесо (масштаб); без подписчиков — как обычное колесо
     bandEdgeDragged = Signal(int, float)   # край полосы демодулятора: 0 — левый, 1 — правый; частота
     bandDragged = Signal(float)     # полосу демодулятора тянут мышью: сдвиг VFO, Гц
+    splitChanged = Signal(float)    # границу «спектр | водопад» перетащили мышью: новая доля высоты
 
     def __init__(self, waterfall=True):
         super().__init__()
@@ -160,6 +162,8 @@ class SpectrumView(QWidget):
         self.wf_speed = 1.0         # строк водопада на кадр спектра (0,5 — каждый второй кадр)
         self._wf_acc = 0.0
         self.split = 0.55           # доля высоты под спектр (при включённом водопаде)
+        self.range_db = 0.0         # высота шкалы спектра, дБ (0 — подбирать автоматически)
+        self.show_alloc = False     # подписывать сверху, кто занимает видимый диапазон (bandplan)
         self._drag_kind = None
         # данные только запоминаются, а перерисовка идёт таймером: не копится очередь и нет «отставания»
         self._timer = QTimer(self)
@@ -250,10 +254,13 @@ class SpectrumView(QWidget):
         self.psd = psd
         if self.auto_range:
             lo, hi = float(np.percentile(self.avg, 3)) - 6, float(self.avg.max()) + 6
+            if self.range_db > 0:
+                hi = lo + self.range_db
             self.lo = 0.9 * self.lo + 0.1 * lo
-            self.hi = 0.9 * self.hi + 0.1 * max(hi, lo + 30)
+            self.hi = 0.9 * self.hi + 0.1 * (hi if self.range_db > 0 else max(hi, lo + 30))
         else:
-            self.lo, self.hi = self.man_lo, max(self.man_hi, self.man_lo + 5)
+            hi = self.man_lo + self.range_db if self.range_db > 0 else self.man_hi
+            self.lo, self.hi = self.man_lo, max(hi, self.man_lo + 5)
         if self.waterfall and self.waterfall_on:
             self._wf_acc += self.wf_speed
             while self._wf_acc >= 1.0:
@@ -330,6 +337,13 @@ class SpectrumView(QWidget):
         f0, f1 = self.freqs[0], self.freqs[-1]
         return f0 + (x - r.left()) / r.width() * (f1 - f0)
 
+    def _split_hit(self, pos):
+        """Курсор на полосе подписей частот между спектром и водопадом — её можно тянуть."""
+        if not (self.waterfall and self.waterfall_on):
+            return False
+        r = self._plot_rect()
+        return r.bottom() + 2 <= pos.y() <= r.bottom() + 21
+
     def _band_hit(self, pos):
         """Что под курсором: ("edge", 0|1) — край полосы, ("band", None) — внутри неё, None — ничего."""
         if self.freqs is None or not self.bands:
@@ -351,18 +365,29 @@ class SpectrumView(QWidget):
         # щелчок — настроиться; перетаскивание (если кто-то слушает panRequested) — плавно сдвинуть полосу
         self._press = e.position()
         self._dragged = False
-        self._drag_kind = self._band_hit(e.position()) if e.button() == Qt.LeftButton else None
+        self._drag_kind = None
+        if e.button() == Qt.LeftButton:
+            self._drag_kind = ("split", None) if self._split_hit(e.position()) else self._band_hit(e.position())
 
     def mouseMoveEvent(self, e):
         self.hover = e.position()
         press = getattr(self, "_press", None)
-        if press is None and (self.band_drag_enabled or self.band_drag_enabled):
-            hit = self._band_hit(e.position())
-            self.setCursor(Qt.SizeHorCursor if hit and hit[0] == "edge" else
+        if press is None:
+            hit = self._band_hit(e.position()) if self.band_drag_enabled else None
+            self.setCursor(Qt.SplitVCursor if self._split_hit(e.position()) else
+                           Qt.SizeHorCursor if hit and hit[0] == "edge" else
                            Qt.OpenHandCursor if hit else Qt.ArrowCursor)
+        kind = getattr(self, "_drag_kind", None)
+        if press is not None and kind and kind[0] == "split" and e.buttons() & Qt.LeftButton:
+            # граница спектр | водопад: полоса подписей идёт за курсором
+            new = (e.position().y() + 8) / max(self.height(), 1)   # r.bottom()+10 = 6 + h·split − 24 + 10
+            lo_frac = max(0.15, (24 + 60) / max(self.height(), 1))   # спектру не меньше ~60 px
+            self.split = float(min(max(new, lo_frac), 0.9))
+            self._dragged = True
+            self.update()
+            return
         if press is not None and e.buttons() & Qt.LeftButton and self.freqs is not None:
             dx = e.position().x() - press.x()
-            kind = getattr(self, "_drag_kind", None)
             if kind is not None and (abs(dx) > 2 or self._dragged):
                 r = self._plot_rect()
                 self._dragged = True
@@ -383,8 +408,13 @@ class SpectrumView(QWidget):
 
     def mouseReleaseEvent(self, e):
         press = getattr(self, "_press", None)
+        kind = getattr(self, "_drag_kind", None)
         self._press = None
         self._drag_kind = None
+        if kind and kind[0] == "split":
+            if self._dragged:
+                self.splitChanged.emit(self.split)
+            return
         if press is None or self._dragged or self.freqs is None:
             return
         r = self._plot_rect()
@@ -477,18 +507,57 @@ class SpectrumView(QWidget):
                 p.setPen(QPen(QColor(col), 1.5, Qt.DashLine))
                 p.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom()))
                 p.setPen(QColor(col))
-                p.drawText(QRectF(x + 3, r.top() + 2, 120, 14), Qt.AlignLeft, label)
+                ly = r.top() + 2 + (2 * 13 if self.show_alloc else 0)   # ниже плашек «кто занимает»
+                p.drawText(QRectF(x + 3, ly, 120, 14), Qt.AlignLeft, label)
         if self.hover is not None and r.contains(self.hover):
             fh = self._f(self.hover.x(), r)
             p.setPen(QPen(QColor(c["fg"]), 1, Qt.DotLine))
             p.drawLine(QPointF(self.hover.x(), r.top()), QPointF(self.hover.x(), r.bottom()))
             hz_px = (f1 - f0) / max(r.width(), 1)
             hd = int(min(6, max(3, np.ceil(-np.log10(max(hz_px, 1e-3) / 1e6)))))
-            p.drawText(QRectF(self.hover.x() + 4, r.bottom() - 18, 160, 16), Qt.AlignLeft,
-                       f"{fh / 1e6:.{hd}f} МГц")
+            txt = f"{fh / 1e6:.{hd}f} МГц".replace(".", ",") + (f" · λ {bandplan.fmt_wavelength(fh)}" if fh > 0 else "")
+            tx = self.hover.x() + 4 if self.hover.x() + 200 < r.right() else self.hover.x() - 204
+            p.drawText(QRectF(tx, r.bottom() - 18, 200, 16),
+                       Qt.AlignLeft if tx > self.hover.x() else Qt.AlignRight, txt)
+        if self.show_alloc:
+            self._draw_alloc(p, r, f0, f1)
+        if self.waterfall and self.waterfall_on:
+            # «ручка» границы спектр | водопад — три точки справа от подписей
+            gc = QColor(c["fg"])
+            gc.setAlpha(120)
+            p.setPen(Qt.NoPen)
+            p.setBrush(gc)
+            gy = r.bottom() + 16
+            for k in range(3):
+                p.drawEllipse(QPointF(r.right() - 14 + 5 * k, gy), 1.4, 1.4)
+            p.setBrush(Qt.NoBrush)
         if self.waterfall and self.waterfall_on and self.wf_img is not None:
             top = r.bottom() + 20
             p.drawImage(QRectF(r.left(), top, r.width(), self.height() - top - 2), self.wf_img)
+
+    def _draw_alloc(self, p, r, f0, f1):
+        """Тонкие плашки сверху спектра: кто занимает видимую часть диапазона."""
+        items = bandplan.visible(f0, f1)
+        if not items:
+            return
+        fm = p.fontMetrics()
+        lh = 13
+        for lane, (a0, a1, short, desc, kind) in bandplan.lanes(items):
+            if lane > 1:
+                continue
+            x0 = max(self._x(a0, r), r.left())
+            x1 = min(self._x(a1, r), r.right())
+            if x1 - x0 < 2:
+                continue
+            col = QColor(bandplan.KINDS[kind][0])
+            col.setAlpha(150)
+            y = r.top() + 1 + lane * lh
+            p.fillRect(QRectF(x0, y, x1 - x0, lh - 1), col)
+            for text in (desc, short):
+                if fm.horizontalAdvance(text) + 6 < x1 - x0:
+                    p.setPen(QColor("#101010"))
+                    p.drawText(QRectF(x0 + 3, y, x1 - x0 - 6, lh - 1), Qt.AlignVCenter | Qt.AlignLeft, text)
+                    break
 
 
 class FreqDisplay(QWidget):
@@ -640,7 +709,7 @@ class SpectrumControls(QWidget):
         app_s = settings.load("app", {})
         st = (app_s.get("spectrum") or {}).get(key, {})
         self.st = {"fps": 15, "nfft": nfft_default, "smooth": 50, "peak": True, "waterfall": True,
-                   "auto": True, "lo": -70, "hi": 0, "wf_off": 0, "wf_con": 100, "wf_speed": 1.0, "split": 55}
+                   "auto": True, "lo": -70, "hi": 0, "wf_off": 0, "wf_con": 100, "wf_speed": 1.0, "split": 55, "range": 0, "alloc": True}
         self.st.update(st)
         f = QFormLayout(self)
         f.setContentsMargins(0, 0, 0, 0)
@@ -689,7 +758,21 @@ class SpectrumControls(QWidget):
         f.addRow(row2)
         sliders = [self.smooth, self.lo, self.hi]
         combos = [self.fps, self.nfft]
+        checks = [self.cb_peak, self.cb_wf, self.cb_auto]
         if extended:
+            self.range = QSlider(Qt.Horizontal)
+            self.range.setRange(0, 150)   # 0 — авто; 1…9 трактуются как 10 дБ
+            self.range.setValue(int(self.st["range"]))
+            self.range.setToolTip("Высота шкалы спектра в дБ (как Range в SDR#): меньше — сигналы выше и заметнее, "
+                                  "больше — помещаются и слабые, и сильные. Крайнее левое положение — автоматически.")
+            f.addRow("Диапазон шкалы:", self.range)
+            sliders.append(self.range)
+            self.cb_alloc = QCheckBox("Подписи «кто занимает диапазон»")
+            self.cb_alloc.setChecked(bool(self.st["alloc"]))
+            self.cb_alloc.setToolTip("Цветные плашки сверху спектра: вещание, авиация, любители, сотовая связь… "
+                                     "Наведите на обзорную полосу — увидите подробности и длину волны.")
+            f.addRow(self.cb_alloc)
+            checks.append(self.cb_alloc)
             self.wf_off = QSlider(Qt.Horizontal)
             self.wf_off.setRange(-40, 40)
             self.wf_off.setValue(int(self.st["wf_off"]))
@@ -710,7 +793,7 @@ class SpectrumControls(QWidget):
                                      "быстро — лучше видны короткие посылки.")
             f.addRow("Скорость водопада:", self.wf_speed)
             self.split = QSlider(Qt.Horizontal)
-            self.split.setRange(20, 85)
+            self.split.setRange(15, 90)
             self.split.setValue(int(self.st["split"]))
             self.split.setToolTip("Какую часть высоты занимает спектр (остальное — водопад)")
             f.addRow("Высота спектра:", self.split)
@@ -720,21 +803,34 @@ class SpectrumControls(QWidget):
             w.currentIndexChanged.connect(self._changed)
         for w in sliders:
             w.valueChanged.connect(self._changed)
-        for w in (self.cb_peak, self.cb_wf, self.cb_auto):
+        for w in checks:
             w.toggled.connect(self._changed)
+        for v in self.views:
+            v.splitChanged.connect(self._split_dragged)
         self._apply()
 
     def add_view(self, v):
         self.views.append(v)
+        v.splitChanged.connect(self._split_dragged)
         self._apply()
+
+    def _split_dragged(self, frac):
+        """Границу «спектр | водопад» перетащили мышью — запомнить, как если бы двигали ползунок."""
+        if self.extended:
+            self.split.setValue(int(round(frac * 100)))   # вызовет _changed → сохранение
+        else:
+            self._changed()
 
     def _changed(self, *_):
         self.st.update(fps=self.fps.currentData(), nfft=self.nfft.currentData(), smooth=self.smooth.value(),
                        peak=self.cb_peak.isChecked(), waterfall=self.cb_wf.isChecked(),
                        auto=self.cb_auto.isChecked(), lo=self.lo.value(), hi=self.hi.value())
+        if not self.extended and self.views:
+            self.st["split"] = int(round(self.views[0].split * 100))
         if self.extended:
             self.st.update(wf_off=self.wf_off.value(), wf_con=self.wf_con.value(),
-                           wf_speed=self.wf_speed.currentData(), split=self.split.value())
+                           wf_speed=self.wf_speed.currentData(), split=self.split.value(),
+                           range=self.range.value(), alloc=self.cb_alloc.isChecked())
         app_s = self._settings.load("app", {})
         sp = app_s.get("spectrum") or {}
         sp[self.key] = self.st
@@ -745,7 +841,7 @@ class SpectrumControls(QWidget):
     def _apply(self):
         st = self.st
         self.lo.setEnabled(not st["auto"])
-        self.hi.setEnabled(not st["auto"])
+        self.hi.setEnabled(not st["auto"] and not (self.extended and st.get("range", 0)))
         for v in self.views:
             v.set_fps(st["fps"])
             v.smooth = st["smooth"] / 100.0
@@ -754,14 +850,16 @@ class SpectrumControls(QWidget):
                 v.waterfall_on = bool(st["waterfall"])
                 v.wf = None
             v.auto_range = bool(st["auto"])
+            if abs(v.split - st["split"] / 100.0) > 0.006:
+                v.split = st["split"] / 100.0   # история водопада сохраняется (_push_wf подгонит высоту)
             v.man_lo, v.man_hi = float(st["lo"]), float(st["hi"])
             if self.extended:
                 v.wf_offset = float(st["wf_off"])
                 v.wf_contrast = float(st["wf_con"]) / 100.0
                 v.wf_speed = float(st["wf_speed"])
-                if abs(v.split - st["split"] / 100.0) > 1e-6:
-                    v.split = st["split"] / 100.0
-                    v.wf = None
+                v.range_db = float(max(10, st["range"])) if st["range"] else 0.0
+                v.show_alloc = bool(st["alloc"])
+
             v.update()
         if self.nfft_setter is not None:
             self.nfft_setter(int(st["nfft"]))
