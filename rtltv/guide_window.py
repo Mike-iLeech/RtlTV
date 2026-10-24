@@ -285,7 +285,9 @@ def make_web_view(owner):
             return None
 
     view = QtWebEngineWidgets.QWebEngineView()
-    profile = QWebEngineProfile(view)  # без имени — off-the-record
+    # профиль без имени — off-the-record; он должен пережить страницу (иначе падение при выходе), поэтому его
+    # владелец — окно справки, а страница принадлежит view, который удаляется раньше (closeEvent окна)
+    profile = QWebEngineProfile(owner)
     page = GuideWebPage(profile, view)
     WA = QtWebEngineCore.QWebEngineSettings.WebAttribute
     page.settings().setAttribute(WA.LocalContentCanAccessRemoteUrls, False)
@@ -583,6 +585,8 @@ class GuideWindow(QWidget):
             self.web = make_web_view(self)
             if self.web is None:
                 return open_in_browser(path)
+            from PySide6.QtWidgets import QApplication
+            QApplication.instance().aboutToQuit.connect(self.release_web)  # браузер — раньше профиля
             self.web.page().setBackgroundColor(QColor(self.theme["bg"]))
             self.web.setZoomFactor(float(self.st.get("zoom", 11)) / 11)
             self.pages.addWidget(self.web)
@@ -658,6 +662,18 @@ class GuideWindow(QWidget):
     def hideEvent(self, e):
         super().hideEvent(e)
         self._set_web_active(False)
+
+    def release_web(self):
+        """Удалить встроенный браузер раньше его профиля (QtWebEngine падает, если профиль уходит первым)."""
+        if self.web is not None:
+            web, self.web = self.web, None
+            if self.pages.currentWidget() is web:
+                self.pages.setCurrentWidget(self.view)
+            self.pages.removeWidget(web)
+            import shiboken6
+            page = web.page()
+            shiboken6.delete(page)   # сразу, не deleteLater: при выходе из приложения цикла событий уже нет
+            shiboken6.delete(web)
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -824,7 +840,7 @@ def selftest_interactive(timeout=40.0):
     ok = box == [True]
     (log.info if ok else log.error)("самопроверка справки: схема %s", "работает" if ok else "не загрузилась")
     w.close()
-    w.deleteLater()
+    w.release_web()
     return 0 if ok else 1
 
 

@@ -313,6 +313,22 @@ def test_interactive_page_embedded(monkeypatch):
     assert abs(w.web.zoomFactor() - 13 / 11) < 1e-6
     assert opened == []
     w.close()
+    w.release_web()
+    assert w.web is None and not w.web_shown()
+
+
+def test_selftest_guide_exits_cleanly():
+    """SDR4NOOB --selftest-guide (шаг CI для собранного EXE): схема оживает, процесс выходит с кодом 0 — без
+    падения при выходе (профиль QtWebEngine должен пережить страницу)."""
+    if gw.web_engine() is None:
+        import pytest
+        pytest.skip("нет QtWebEngine")
+    import subprocess
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env = dict(os.environ, QT_QPA_PLATFORM="offscreen")
+    r = subprocess.run([sys.executable, "-m", "rtltv", "--selftest-guide"], cwd=root, env=env, timeout=120,
+                       capture_output=True)
+    assert r.returncode == 0, (r.returncode, r.stderr[-2000:])
 
 
 def test_web_nav_rules():
