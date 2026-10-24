@@ -823,7 +823,9 @@
     return v * 2;  // почти полная шкала: так честнее видны ступеньки квантования
   }
   var ADC_SRC = "tones";
-  function adcSig(t) { return ADC_SRC === "music" ? adcMusic(t + 1.03) : adcTones(t); }  // для картинки — окно в 1-й секунде
+  // для картинки: у музыки — окно 5 мс через 28 мс после удара хай-хэта (видны и низы, и «шум» верхов)
+  function adcSig(t) { return ADC_SRC === "music" ? adcMusic(t + 1.228) : adcTones(t); }
+  function adcSpan() { return ADC_SRC === "music" ? 0.005 : 0.002; }
   function adcSrcAt(t) { return ADC_SRC === "music" ? adcMusic(t) : adcTones(t); }        // для звука
   // ползунок разрядности — номер в этом списке
   var ADC_BITS = [1, 2, 3, 4, 5, 6, 8, 12, 14, 16, 24, 32];
@@ -848,9 +850,12 @@
     var s = adcState();
     document.getElementById("o-adcFs").textContent = num(s.fs / 1000, 0) + " кГц";
     document.getElementById("o-adcBits").textContent = s.bits + " бит · ДД ≈ " + num(6.02 * s.bits + 1.76, 0) + " dB";
-    var nyq = s.fs / 2;
-    document.getElementById("adcNyq").textContent = num(nyq / 1000, 1) + " кГц" + (nyq <= 3000 ? " — тон 3 кГц искажён!" : "");
-    document.getElementById("adcNyq").style.color = nyq <= 3000 ? C.bad : "";
+    var nyq = s.fs / 2, mus = ADC_SRC === "music", bad = mus ? nyq < 16000 : nyq <= 3000;
+    document.getElementById("adcNyq").textContent = num(nyq / 1000, 1) + " кГц" +
+      (bad ? (mus ? " — верхи музыки (до 16 кГц) отразятся вниз!" : " — тон 3 кГц искажён!") : "");
+    document.getElementById("adcNyq").style.color = bad ? C.bad : "";
+    $$("#b-adc [data-src]").forEach(function (el) { el.hidden = el.getAttribute("data-src") !== ADC_SRC; });
+    adcSrNote(actx ? actx.sampleRate : 0, s.fs);
     document.getElementById("adcLev").textContent = num(s.L, 0);
     document.getElementById("adcSnr").textContent = "≈ " + num(6.02 * s.bits + 1.76, 1) + " dB";
     document.getElementById("adcRate").textContent = num(s.fs * s.bits / 1000, 0) + " кбит/с";
@@ -871,7 +876,7 @@
   }
   demo("adc", false, function (d) {
     var ctx = d.ctx, w = d.w, h = d.h, s = adcState();
-    var L0 = 12, R0 = w - 10, T0 = 14, B0 = h - 24, span = 0.002;  // 2 мс
+    var L0 = 12, R0 = w - 10, T0 = 14, B0 = h - 24, span = adcSpan();  // 2 мс (тоны) или 5 мс (музыка)
     var X = function (t) { return L0 + (R0 - L0) * t / span; };
     var Y = function (v) { return (T0 + B0) / 2 - (B0 - T0) / 2 * v / 1.05; };
     // сетка уровней квантования: если шаг меньше 4 px, рисуем каждый k-й уровень (k — степень двойки)
@@ -901,7 +906,8 @@
       pts.push([x0, Y(v)], [x1, Y(v)]);
     }
     line(ctx, pts, C.accent, 2);
-    for (n = 0; n <= ns; n++) {
+    var stems = (R0 - L0) / ns >= 3;  // при густых отсчётах (96 кГц на 5 мс) рисуем только ступеньки
+    for (n = 0; n <= ns && stems; n++) {
       var xx = X(n / s.fs);
       line(ctx, [[xx, Y(0)], [xx, Y(adcSig(n / s.fs))]], alpha(C.accent, 0.45), 1);
       ctx.beginPath();
@@ -912,7 +918,7 @@
     text(ctx, "аналог", L0, h - 8, C.dim);
     text(ctx, "▬ квантованный", L0 + 56, h - 8, C.accent);
     text(ctx, "‒ ‒ что восстановит приёмник", L0 + 160, h - 8, C.tx);
-    text(ctx, "2 мс", R0, h - 8, C.dim, "right");
+    text(ctx, num(span * 1000, 0) + " мс", R0, h - 8, C.dim, "right");
     text(ctx, gridTxt, L0 + 2, T0 - 2, C.dim, "left", "11px 'Segoe UI', sans-serif");
     // лупа: один отсчёт крупно — видно уровни квантования и ошибку округления (при 6 бит и больше)
     if (s.bits >= 6) {
@@ -2718,16 +2724,23 @@
   }
   function hideTip() { if (tipEl) { tipEl.hidden = true; } tipFor = null; }
 
+  // подпись о частоте звуковой карты: браузер играет на 44,1/48 кГц, а оцифровка может идти на 96 кГц
+  function adcSrNote(sr, fs) {
+    var note = document.getElementById("adcSrNote");
+    if (!note) { return; }
+    var k = function (v) { return num(v / 1000, 1).replace(/,0$/, ""); };
+    var cap = sr || 48000;
+    note.textContent = (sr ? "Звуковая карта сейчас работает на " + k(sr) + " кГц" :
+      "Звуковая карта обычно работает на 44,1 или 48 кГц") +
+      ": отсчёты с fд " + k(fs) + " кГц при воспроизведении пересчитываются в её частоту" +
+      (fs > cap ? ". Всё, что выше " + k(cap / 2) + " кГц, услышать нельзя: fд 96 кГц даёт запас по полосе, а не разницу на слух." : ".");
+  }
   // звук оцифровки: оригинал или после дискретизации и квантования (только по щелчку, громкость ограничена)
   function adcPlay(kind) {
     var st = adcState(), lin2 = (document.getElementById("adcRecon") || {}).value === "lin";
     var dur = ADC_SRC === "music" ? MUS.len : 1.5;
     playBuffer(function (x, sr, n) {
-      var note = document.getElementById("adcSrNote");
-      if (note) {
-        note.textContent = "Звуковая карта работает на " + num(sr / 1000, 1).replace(/,0$/, "") + " кГц" +
-          (st.fs > sr ? ": запись с f_д " + num(st.fs / 1000, 0) + " кГц при воспроизведении пересчитана в частоту звуковой карты." : ".");
-      }
+      adcSrNote(sr, st.fs);
       var q = null;
       if (kind !== "o") {  // оцифровка: отсчёты на частоте f_д, квантование N бит
         var ns = Math.ceil(dur * st.fs) + 2;
