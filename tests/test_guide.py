@@ -60,6 +60,8 @@ def test_images_exist_and_render():
         for img in SRC.findall(src):
             path = os.path.join(gw.guide_dir(), img)
             assert os.path.exists(path), f"{pid}: {img}"
+            if not img.endswith(".svg"):      # растровые (логотип в оглавлении) — только наличие
+                continue
             with open(path, encoding="utf-8") as f:
                 data = f.read()
             assert "{{" in data  # цвета берутся из темы

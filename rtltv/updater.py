@@ -23,9 +23,8 @@ import time
 import urllib.request
 import zipfile
 
-from . import __version__, paths, settings
+from . import REPO, __version__, paths, settings
 
-from . import REPO  # noqa: E402
 
 EXE_NAMES = ("SDR4NOOB.exe", "RtlTV.exe")   # основное имя и копия для совместимости с 2.x
 API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -215,7 +214,7 @@ param([int]$ProcId, [string]$New, [string]$App, [string]$Log, [string]$Start = '
 $ErrorActionPreference = 'Stop'
 function L($m) { try { Add-Content -LiteralPath $Log -Value ((Get-Date -Format s) + ' ' + $m) -Encoding UTF8 } catch {} }
 $int = Join-Path $App '_internal'; $intOld = Join-Path $App '_internal.old'
-$exes = @(Get-ChildItem -LiteralPath $New -File -Filter '*.exe' | ForEach-Object { $_.Name })
+$exes = @()
 $movedInt = $false; $moved = New-Object System.Collections.ArrayList
 function Rollback {
   L "откат к прежней версии"
@@ -238,6 +237,7 @@ try {
     exit 2
   }
   Start-Sleep -Milliseconds 700
+  $exes = @(Get-ChildItem -LiteralPath $New -File -Filter '*.exe' | ForEach-Object { $_.Name })
   if ($exes.Count -eq 0) { throw "в обновлении нет exe" }
   if (Test-Path -LiteralPath $intOld) { Remove-Item -LiteralPath $intOld -Recurse -Force }
   foreach ($n in $exes) {

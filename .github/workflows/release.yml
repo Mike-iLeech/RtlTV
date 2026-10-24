@@ -65,7 +65,9 @@ jobs:
             --hidden-import PySide6.QtSvg `
             --exclude-module tkinter `
             run.py
-          # копия под прежним именем: обновлятор версий 2.x ищет RtlTV.exe и запускает его после обновления
+          # копия под прежним именем: обновлятор версий 2.x ищет RtlTV.exe и запускает его после обновления.
+          # ВЫПУСКАТЬ ВСЕГДА: установщик заменяет только exe из архива — без копии у пользователей остался бы
+          # старый RtlTV.exe (со старым кодом внутри) рядом с новым _internal, и старые ярлыки сломались бы.
           Copy-Item dist/SDR4NOOB/SDR4NOOB.exe dist/SDR4NOOB/RtlTV.exe
           Copy-Item LICENSE, THIRD_PARTY.md, README.md, CHANGELOG.md dist/SDR4NOOB/
           $ver = python -c "import rtltv; print(rtltv.__version__)"

@@ -726,7 +726,7 @@ class MainWindow(ModeWindow):
             return
         folder = paths.pictures(paths.PICS_TV)
         os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, time.strftime("rtltv_%Y%m%d_%H%M%S.png"))
+        path = os.path.join(folder, time.strftime("SDR4NOOB_%Y%m%d_%H%M%S.png"))
         h, w, _ = self.last_rgb.shape
         img = QImage(np.ascontiguousarray(self.last_rgb).data, w, h, 3 * w, QImage.Format_RGB888)
         img.scaled(int(h * 4 / 3), h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).save(path)
