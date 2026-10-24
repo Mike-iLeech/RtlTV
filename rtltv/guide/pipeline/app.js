@@ -318,7 +318,7 @@
     // подписи ползунков
     var o = function (id, t) { var el = document.getElementById("o-" + id); if (el) { el.textContent = t; } };
     o("exc", fmtDbm(S.exc || 0, 1) + " = " + fmtW(dbmW(S.exc || 0)) + " ≈ " + fmtV(dbmV(S.exc || 0)));
-    o("pTx", fmtW(dbmW(S.pTx)) + " · " + fmtDbm(S.pTx, 1) + " · УМ +" + num(S.pTx - (S.exc || 0), 1) + " dB");
+    o("pTx", fmtW(dbmW(S.pTx)) + " · " + fmtDbm(S.pTx, 1) + " · УМ " + fmtDb(S.pTx - (S.exc || 0), 1));
     o("txLen", S.txLen > 0 ? fmtLen(S.txLen) + " · " + fmtLoss(r.txLoss, 2) : "нет кабеля");
     o("gTx", num(S.gTx, 1) + " dBi");
     o("thTx", num(S.thTx, 0) + "° → G = " + num(r.gTxEff, 1) + " dBi");
@@ -2078,7 +2078,7 @@
   // где он сам раскрывается (href ведёт на этот блок). Работает и для перерисованных частей (MutationObserver).
   var TERMS = window.PIPELINE_TERMS || [], TERM_BY = {}, TERM_RE = null, termObs = null, tipEl = null, tipFor = null;
   var SKIP_SEL = "a, button, select, option, label, input, textarea, output, script, style, svg, canvas, summary, code, " +
-    ".formula, .mono, td.n, .fact .v, .kpi .v, .lv, .term, #termTip, [data-noterm]";
+    ".formula, .mono, td.n, .fact .v, .kpi .v, .lv, .term, #termTip, #cryptRows, [data-noterm]";
   function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&"); }
   function initTerms() {
     var words = [];

@@ -719,7 +719,12 @@ class RadioWindow(ModeWindow):
         bb.accepted.connect(d.accept)
         bb.rejected.connect(d.reject)
         lay.addRow(bb)
-        if d.exec() == QDialog.Accepted and self._last_dbm_raw is not None:
+        if d.exec() == QDialog.Accepted:
+            if self._last_dbm_raw is None:      # пока диалог был открыт, включили АРУ или остановили приём
+                QMessageBox.warning(self, "Калибровка S-метра",
+                                    "Уровень сейчас не измеряется (включена АРУ тюнера или приём остановлен) — "
+                                    "поправка не изменена.")
+                return
             self.scal.setValue(round(known.value() - self._last_dbm_raw, 1))
 
     def _grp_radio(self, body):
