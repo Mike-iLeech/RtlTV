@@ -1509,7 +1509,7 @@ class RadioWindow(ModeWindow):
         d.exec()
 
     def apply_theme(self, t):
-        for w in (self.spec, self.fdisp, self.lvl, self.overview):
+        for w in (self.spec, self.fdisp, self.lvl, self.overview, self.sidebar):
             w.set_theme(t)
         self._markers()
 

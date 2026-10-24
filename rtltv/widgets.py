@@ -164,6 +164,9 @@ class SpectrumView(QWidget):
         self.split = 0.55           # доля высоты под спектр (при включённом водопаде)
         self.range_db = 0.0         # высота шкалы спектра, дБ (0 — подбирать автоматически)
         self.show_alloc = False     # подписывать сверху, кто занимает видимый диапазон (bandplan)
+        # лупа водопада: масштаб по горизонтали/вертикали и центр (доля ширины; строк истории от верха)
+        self.wf_zx, self.wf_zy = 1.0, 1.0
+        self.wf_cx, self.wf_row0 = 0.5, 0.0
         self._drag_kind = None
         # данные только запоминаются, а перерисовка идёт таймером: не копится очередь и нет «отставания»
         self._timer = QTimer(self)
@@ -252,15 +255,7 @@ class SpectrumView(QWidget):
             self.peak = np.maximum(self.peak - 0.3, psd)
         self.freqs = freqs
         self.psd = psd
-        if self.auto_range:
-            lo, hi = float(np.percentile(self.avg, 3)) - 6, float(self.avg.max()) + 6
-            if self.range_db > 0:
-                hi = lo + self.range_db
-            self.lo = 0.9 * self.lo + 0.1 * lo
-            self.hi = 0.9 * self.hi + 0.1 * (hi if self.range_db > 0 else max(hi, lo + 30))
-        else:
-            hi = self.man_lo + self.range_db if self.range_db > 0 else self.man_hi
-            self.lo, self.hi = self.man_lo, max(hi, self.man_lo + 5)
+        self._update_range(smooth=True)
         if self.waterfall and self.waterfall_on:
             self._wf_acc += self.wf_speed
             while self._wf_acc >= 1.0:
@@ -268,6 +263,95 @@ class SpectrumView(QWidget):
                 self._push_wf()
         self._disp = None
         self.update()
+
+    def _update_range(self, smooth=True):
+        """Границы шкалы дБ. В авто сглаживается только уровень шума (иначе шкала «плывёт» за ползунком);
+        высота шкалы «Диапазон» и ручные границы применяются сразу."""
+        if self.auto_range and self.avg is not None:
+            lo = float(np.percentile(self.avg, 3)) - 6
+            top = float(self.avg.max()) + 6
+            self.lo = 0.9 * self.lo + 0.1 * lo if smooth else lo
+            if self.range_db > 0:
+                self.hi = self.lo + self.range_db
+            else:
+                t = max(top, lo + 30)
+                self.hi = 0.9 * self.hi + 0.1 * t if smooth else t
+                self.hi = max(self.hi, self.lo + 5)
+        elif not self.auto_range:
+            hi = self.man_lo + self.range_db if self.range_db > 0 else self.man_hi
+            self.lo, self.hi = self.man_lo, max(hi, self.man_lo + 5)
+
+    def refresh_range(self):
+        """Сразу применить новые настройки шкалы (вызывается при движении ползунков, не ждёт кадра)."""
+        self._update_range(smooth=False)
+        self._disp = None
+        self.update()
+
+    # ---------------------------------------------------------------- лупа водопада
+    def _wf_rect(self):
+        r = self._plot_rect()
+        top = r.bottom() + 20
+        return QRectF(r.left(), top, r.width(), max(1.0, self.height() - top - 2))
+
+    def wf_zoomed(self):
+        return self.wf_zx > 1.001 or self.wf_zy > 1.001
+
+    def _wf_src(self):
+        """Прямоугольник-источник в картинке водопада (в её пикселях) с учётом лупы."""
+        if self.wf_img is None:
+            return None
+        iw, ih = self.wf_img.width(), self.wf_img.height()
+        sw = iw / self.wf_zx
+        sx = min(max(self.wf_cx * iw - sw / 2, 0.0), iw - sw)
+        sh = ih / self.wf_zy
+        sy = min(max(self.wf_row0, 0.0), ih - sh)
+        return QRectF(sx, sy, sw, sh)
+
+    def wf_reset(self):
+        self.wf_zx, self.wf_zy, self.wf_cx, self.wf_row0 = 1.0, 1.0, 0.5, 0.0
+        self.update()
+
+    def _wf_zoom(self, pos, d, vertical):
+        """Лупа вокруг курсора: точка под курсором остаётся на месте."""
+        src = self._wf_src()
+        wr = self._wf_rect()
+        if src is None or not wr.contains(pos):
+            return
+        fx = (pos.x() - wr.left()) / wr.width()
+        fy = (pos.y() - wr.top()) / wr.height()
+        k = 1.25 if d > 0 else 1 / 1.25
+        iw, ih = self.wf_img.width(), self.wf_img.height()
+        if vertical:
+            py = src.top() + fy * src.height()
+            self.wf_zy = float(min(max(self.wf_zy * k, 1.0), 16.0))
+            self.wf_row0 = py - fy * ih / self.wf_zy
+        else:
+            px = src.left() + fx * src.width()
+            self.wf_zx = float(min(max(self.wf_zx * k, 1.0), 32.0))
+            sw = iw / self.wf_zx
+            self.wf_cx = (px - fx * sw + sw / 2) / iw
+        self.update()
+
+    def _wf_pan(self, dx, dy):
+        src = self._wf_src()
+        wr = self._wf_rect()
+        if src is None:
+            return
+        iw = self.wf_img.width()
+        self.wf_cx -= dx * src.width() / wr.width() / iw
+        self.wf_row0 -= dy * src.height() / wr.height()
+        self.update()
+
+    def _f_at(self, pos):
+        """Частота под курсором: в водопаде с лупой — с учётом её масштаба."""
+        r = self._plot_rect()
+        src = self._wf_src() if self.wf_zoomed() else None
+        wr = self._wf_rect()
+        if src is not None and wr.contains(pos) and self.freqs is not None:
+            iw = self.wf_img.width()
+            frac = (src.left() + (pos.x() - wr.left()) / wr.width() * src.width()) / iw
+            return self.freqs[0] + frac * (self.freqs[-1] - self.freqs[0])
+        return self._f(pos.x(), r)
 
     def _draw_fill(self, p, r, ys):
         """Полупрозрачная градиентная заливка под линией спектра: маска «ниже линии» × градиент (uint32)."""
@@ -366,6 +450,12 @@ class SpectrumView(QWidget):
         self._press = e.position()
         self._dragged = False
         self._drag_kind = None
+        in_wf = self.waterfall and self.waterfall_on and self._wf_rect().contains(e.position())
+        if in_wf and self.wf_zoomed() and (e.button() == Qt.MiddleButton or
+                                            (e.button() == Qt.LeftButton and e.modifiers() & Qt.AltModifier)):
+            self._drag_kind = ("wfpan", None)
+            self.setCursor(Qt.ClosedHandCursor)
+            return
         if e.button() == Qt.LeftButton:
             self._drag_kind = ("split", None) if self._split_hit(e.position()) else self._band_hit(e.position())
 
@@ -378,6 +468,11 @@ class SpectrumView(QWidget):
                            Qt.SizeHorCursor if hit and hit[0] == "edge" else
                            Qt.OpenHandCursor if hit else Qt.ArrowCursor)
         kind = getattr(self, "_drag_kind", None)
+        if press is not None and kind and kind[0] == "wfpan":
+            self._wf_pan(e.position().x() - press.x(), e.position().y() - press.y())
+            self._press = e.position()
+            self._dragged = True
+            return
         if press is not None and kind and kind[0] == "split" and e.buttons() & Qt.LeftButton:
             # граница спектр | водопад: полоса подписей идёт за курсором
             new = (e.position().y() + 8) / max(self.height(), 1)   # r.bottom()+10 = 6 + h·split − 24 + 10
@@ -411,15 +506,22 @@ class SpectrumView(QWidget):
         kind = getattr(self, "_drag_kind", None)
         self._press = None
         self._drag_kind = None
+        if kind and kind[0] == "wfpan":
+            self.setCursor(Qt.ArrowCursor)
+            return
         if kind and kind[0] == "split":
             if self._dragged:
                 self.splitChanged.emit(self.split)
             return
-        if press is None or self._dragged or self.freqs is None:
+        if press is None or self._dragged or self.freqs is None or e.button() != Qt.LeftButton:
             return
         r = self._plot_rect()
         if r.left() <= e.position().x() <= r.right():
-            self.tuneRequested.emit(self._f(e.position().x(), r))
+            self.tuneRequested.emit(self._f_at(e.position()))
+
+    def mouseDoubleClickEvent(self, e):
+        if self.wf_zoomed() and self._wf_rect().contains(e.position()):
+            self.wf_reset()     # двойной щелчок по водопаду — снять лупу
 
     def leaveEvent(self, _e):
         self.hover = None
@@ -431,7 +533,13 @@ class SpectrumView(QWidget):
         if dy == 0:
             return
         d = 1 if dy > 0 else -1
-        if e.modifiers() & Qt.ControlModifier:
+        mods = e.modifiers()
+        if mods & Qt.AltModifier and self.waterfall and self.waterfall_on \
+                and self._wf_rect().contains(e.position()):
+            # Alt+колесо — лупа водопада по горизонтали, Alt+Ctrl+колесо — по вертикали (время)
+            self._wf_zoom(e.position(), d, vertical=bool(mods & Qt.ControlModifier))
+            return
+        if mods & Qt.ControlModifier:
             self.ctrlWheelStep.emit(d)
         elif e.modifiers() & Qt.ShiftModifier and self.zoom_enabled:
             self.zoomWheel.emit(d)
@@ -532,8 +640,45 @@ class SpectrumView(QWidget):
                 p.drawEllipse(QPointF(r.right() - 14 + 5 * k, gy), 1.4, 1.4)
             p.setBrush(Qt.NoBrush)
         if self.waterfall and self.waterfall_on and self.wf_img is not None:
-            top = r.bottom() + 20
-            p.drawImage(QRectF(r.left(), top, r.width(), self.height() - top - 2), self.wf_img)
+            wr = self._wf_rect()
+            if self.wf_zoomed():
+                p.drawImage(wr, self.wf_img, self._wf_src())
+                self._draw_wf_lens(p, wr)
+            else:
+                p.drawImage(wr, self.wf_img)
+            if self.hover is not None and wr.contains(self.hover) and self.freqs is not None:
+                fh = self._f_at(self.hover)
+                p.setPen(QPen(QColor(c["fg"]), 1, Qt.DotLine))
+                p.drawLine(QPointF(self.hover.x(), wr.top()), QPointF(self.hover.x(), wr.bottom()))
+                p.setPen(QColor(c["fg"]))
+                txt = f"{fh / 1e6:.4f} МГц".replace(".", ",")
+                tx = self.hover.x() + 4 if self.hover.x() + 130 < wr.right() else self.hover.x() - 134
+                p.drawText(QRectF(tx, wr.top() + 2, 130, 16),
+                           Qt.AlignLeft if tx > self.hover.x() else Qt.AlignRight, txt)
+
+    def _draw_wf_lens(self, p, wr):
+        """Подпись лупы и мини-карта: какая часть водопада сейчас увеличена."""
+        c = self.colors
+        src = self._wf_src()
+        iw, ih = self.wf_img.width(), self.wf_img.height()
+        txt = f"Лупа ×{self.wf_zx:.1f} по частоте · ×{self.wf_zy:.1f} по времени — двойной щелчок: сброс"
+        txt = txt.replace(".", ",")
+        bg = QColor(c["bg"])
+        bg.setAlpha(190)
+        fm = p.fontMetrics()
+        w = fm.horizontalAdvance(txt) + 12
+        p.fillRect(QRectF(wr.left() + 4, wr.bottom() - 20, w, 17), bg)
+        p.setPen(QColor(c["fg"]))
+        p.drawText(QRectF(wr.left() + 10, wr.bottom() - 20, w, 17), Qt.AlignVCenter | Qt.AlignLeft, txt)
+        mw, mh = 90.0, 46.0
+        mr = QRectF(wr.right() - mw - 6, wr.bottom() - mh - 6, mw, mh)
+        p.fillRect(mr, bg)
+        p.setPen(QPen(QColor(c["grid"]), 1))
+        p.drawRect(mr)
+        acc = QColor(c["line"])
+        p.setPen(QPen(acc, 1.5))
+        p.drawRect(QRectF(mr.left() + src.left() / iw * mw, mr.top() + src.top() / ih * mh,
+                          max(2.0, src.width() / iw * mw), max(2.0, src.height() / ih * mh)))
 
     def _draw_alloc(self, p, r, f0, f1):
         """Тонкие плашки сверху спектра: кто занимает видимую часть диапазона."""
@@ -831,12 +976,21 @@ class SpectrumControls(QWidget):
             self.st.update(wf_off=self.wf_off.value(), wf_con=self.wf_con.value(),
                            wf_speed=self.wf_speed.currentData(), split=self.split.value(),
                            range=self.range.value(), alloc=self.cb_alloc.isChecked())
+        self._apply()
+        # запись на диск — не на каждый шаг ползунка, а через 0,4 с после последнего изменения
+        if not hasattr(self, "_save_timer"):
+            from PySide6.QtCore import QTimer
+            self._save_timer = QTimer(self)
+            self._save_timer.setSingleShot(True)
+            self._save_timer.timeout.connect(self._save_now)
+        self._save_timer.start(400)
+
+    def _save_now(self):
         app_s = self._settings.load("app", {})
         sp = app_s.get("spectrum") or {}
         sp[self.key] = self.st
         app_s["spectrum"] = sp
         self._settings.save("app", app_s)
-        self._apply()
 
     def _apply(self):
         st = self.st
@@ -859,7 +1013,6 @@ class SpectrumControls(QWidget):
                 v.wf_speed = float(st["wf_speed"])
                 v.range_db = float(max(10, st["range"])) if st["range"] else 0.0
                 v.show_alloc = bool(st["alloc"])
-
-            v.update()
+            v.refresh_range()   # шкала меняется сразу, не дожидаясь следующего кадра спектра
         if self.nfft_setter is not None:
             self.nfft_setter(int(st["nfft"]))

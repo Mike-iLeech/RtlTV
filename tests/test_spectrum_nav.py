@@ -118,3 +118,38 @@ def test_sidebar_mirrors_sliders(app, tmp_path, monkeypatch):
     assert v.range_db == 50 and ctl.st["range"] == 50
     v.splitChanged.emit(0.4)                                    # перетащили границу — ползунок «Высота» следом
     assert ctl.split.value() == 40 and ctl.st["split"] == 40
+
+
+def test_range_applies_immediately(app):
+    v = _view(app)
+    v.auto_range = True
+    v.range_db = 0
+    v._apply(v.freqs, v.psd)
+    v.range_db = 40
+    v.refresh_range()                       # без нового кадра спектра
+    assert v.hi - v.lo == pytest.approx(40)
+    lo_before = v.lo
+    v.range_db = 90
+    v.refresh_range()
+    assert v.hi - v.lo == pytest.approx(90) and v.lo == pytest.approx(lo_before, abs=3)
+
+
+def test_waterfall_lens(app):
+    v = _view(app)
+    for _ in range(40):
+        v._apply(v.freqs, v.psd)
+    wr = v._wf_rect()
+    pos = QPointF(wr.left() + wr.width() * 0.25, wr.top() + 10)
+    f_before = v._f_at(pos)
+    for _ in range(5):
+        v._wf_zoom(pos, 1, vertical=False)
+    v._wf_zoom(pos, 1, vertical=True)
+    assert v.wf_zoomed() and v.wf_zx > 2 and v.wf_zy > 1
+    assert v._f_at(pos) == pytest.approx(f_before, rel=1e-4)      # точка под курсором на месте
+    src = v._wf_src()
+    assert src.left() >= 0 and src.right() <= v.wf_img.width() + 1e-6
+    v._wf_pan(40, 0)
+    assert v._wf_src().left() <= src.left()
+    v.grab()
+    v.wf_reset()
+    assert not v.wf_zoomed()
