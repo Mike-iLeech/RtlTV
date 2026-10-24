@@ -473,7 +473,7 @@ def test_radio_window_offscreen():
         return False
 
     try:
-        assert pump(10, lambda: w.rds_ps.text().strip() == "RTLTV FM"), w.rds_ps.text()
+        assert pump(10, lambda: w.rds_ps.text().strip() == "SDR4NOOB"), w.rds_ps.text()
         assert "Тестовый эфир" in w.rds_rt.text() and w.stereo_lbl.text() == "СТЕРЕО"
         # перетаскивание края полосы меняет ширину, полосы — частоту
         w._edge_drag(1, w.fdisp.value + 60000)

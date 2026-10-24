@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Приёмники SDR — RtlTV</title>
+<title>Приёмники SDR — SDR4NOOB</title>
 <meta name="description" content="SDR (Software Defined Radio, программно-определяемое радио) — приёмник, в котором железо только переносит кусок эфира на низкую частоту и оцифровывает его, а всё остальное — фильтры, демодуляция, деко">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/sdr.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/sdr.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
+<meta property="og:title" content="Приёмники SDR — SDR4NOOB">
+<meta property="og:description" content="SDR (Software Defined Radio, программно-определяемое радио) — приёмник, в котором железо только переносит кусок эфира на низкую частоту и оцифровывает его, а всё остальное — фильтры, демодуляция, деко">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
 <script src="../assets/site.js" defer></script>
@@ -16,23 +20,23 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html" aria-current="page" class="cur">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
@@ -75,7 +79,7 @@
 <li>Края полосы (по ~10 % с каждой стороны) заваливаются фильтром — сигналы там слабее.</li>
 <li>RTL2832U допускает 0,225–0,3 и 0,9–3,2 МГц. Устойчиво — <b>до 2,4 МГц</b>; 2,88–3,2 МГц на многих
 компьютерах теряют отсчёты (щелчки в звуке, обрывы декодеров).</li>
-<li>В RtlTV полоса выбирается полем <b>«Полоса»</b> (Радио, ТВ) или <b>«Дискретизация»</b> (Спутники, ADS-B).
+<li>В SDR4NOOB полоса выбирается полем <b>«Полоса»</b> (Радио, ТВ) или <b>«Дискретизация»</b> (Спутники, ADS-B).
 Шире — больше видно, но больше нагрузка на процессор и больше шансов, что в полосу попадёт мешающая станция.</li>
 </ul>
 
@@ -98,7 +102,7 @@
 <tr><td>E4000</td><td>≈52–2200 МГц с провалом ≈1100–1250 МГц</td><td>Старый, нулевая ПЧ (сильный пик в центре), больше не выпускается.</td></tr>
 <tr><td>FC0012 / FC0013 / FC2580</td><td>22–948 / 22–1100 / 146–308 и 438–924 МГц</td><td>Первые дешёвые ТВ-донглы, слабые.</td></tr>
 </table></div>
-<p>Тип тюнера RtlTV показывает после запуска приёма — в строке состояния окна (в «Самолётах» — под карточкой «Приёмник 1090 МГц»).</p>
+<p>Тип тюнера SDR4NOOB показывает после запуска приёма — в строке состояния окна (в «Самолётах» — под карточкой «Приёмник 1090 МГц»).</p>
 
 <h2 id="compare">Сравнение приёмников<a class="anchor" href="#compare" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
@@ -115,7 +119,7 @@
 <tr><td>LimeSDR (USB)</td><td>0,1–3800 МГц</td><td>до 61 МГц</td><td>12 бит</td><td>да (2×2)</td><td>от $300</td></tr>
 <tr><td>ADALM-Pluto (PlutoSDR)</td><td>325–3800 МГц (с доработкой 70–6000)</td><td>до 20 МГц</td><td>12 бит</td><td>да (1×1)</td><td>≈ $220</td></tr>
 </table></div>
-<p class="dim">* Ориентир на 2026 г. без доставки и пошлин; в России цены выше. Основной приёмник RtlTV — донглы на
+<p class="dim">* Ориентир на 2026 г. без доставки и пошлин; в России цены выше. Основной приёмник SDR4NOOB — донглы на
 RTL2832U (первые три строки). Через меню <b>«Режим → Устройства…»</b> можно подключить и другие: HackRF One и
 Airspy R2/Mini (нужна их DLL), а также сетевой <b>rtl_tcp</b> (в том числе rsp_tcp для SDRplay).</p>
 <p><b>Совет новичку:</b> RTL-SDR Blog V4 — лучший выбор для начала. Переходить на 12–14-битный приёмник стоит,
@@ -146,15 +150,15 @@ Airspy R2/Mini (нужна их DLL), а также сетевой <b>rtl_tcp</b
 </ol>
 <div class="callout warn">Не выбирайте в Zadig другие устройства (клавиатуру, мышь, звуковую карту) — они перестанут работать.
 В другом USB-порту Windows может считать донгл новым устройством — тогда повторите замену.</div>
-<p>RtlTV содержит свою сборку librtlsdr (с поддержкой V4), ставить SDR# или системные драйверы не нужно.</p>
+<p>SDR4NOOB содержит свою сборку librtlsdr (с поддержкой V4), ставить SDR# или системные драйверы не нужно.</p>
 <p>См. также: <a href="gain.html">Усиление и АРУ</a>, <a href="troubleshooting.html">Неполадки</a>.</p>
 <nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/legal.html"><span>← Назад</span>Закон и этика эфира</a><a class="next" href="../guide/decibels.html"><span>Дальше →</span>Единицы и децибелы</a></nav>
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

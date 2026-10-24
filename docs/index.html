@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RtlTV — приёмник на RTL-SDR</title>
-<meta name="description" content="RtlTV — бесплатный приёмник на RTL-SDR для Windows: ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
+<title>SDR4NOOB — всё в одном для начинающего радиолюбителя</title>
+<meta name="description" content="SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатный приёмник на RTL-SDR для Windows: ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/sdr4noob-256.png">
+<meta property="og:title" content="SDR4NOOB — всё в одном для начинающего радиолюбителя">
+<meta property="og:description" content="SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатный приёмник на RTL-SDR для Windows: ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="assets/style.css">
 <script src="assets/search-index.js" defer></script>
 <script src="assets/site.js" defer></script>
@@ -16,40 +20,41 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="index.html" aria-current="page" class="cur">Главная</a></li><li><a href="install.html">Установка и обновление</a></li><li><a href="guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="index.html" aria-current="page" class="cur">Главная</a></li><li><a href="install.html">Установка и обновление</a></li><li><a href="guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="guide/quickstart.html">Быстрый старт</a></li><li><a href="guide/bands.html">Что можно принимать</a></li><li><a href="guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="guide/sdr.html">Приёмники SDR</a></li><li><a href="guide/decibels.html">Единицы и децибелы</a></li><li><a href="guide/gain.html">Усиление и АРУ</a></li><li><a href="guide/antennas.html">Антенны и кабели</a></li><li><a href="guide/modulation.html">Виды модуляции</a></li><li><a href="guide/spectrum.html">Спектр и водопад</a></li><li><a href="guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="guide/mode-tv.html">ТВ</a></li><li><a href="guide/mode-radio.html">Радио</a></li><li><a href="guide/mode-sstv.html">SSTV</a></li><li><a href="guide/mode-sat.html">Спутники</a></li><li><a href="guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="guide/mode-tv.html">ТВ</a></li><li><a href="guide/mode-radio.html">Радио</a></li><li><a href="guide/mode-sstv.html">SSTV</a></li><li><a href="guide/mode-sat.html">Спутники</a></li><li><a href="guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
 
 <section class="hero">
   <div>
-    <h1>RtlTV — приёмник на RTL-SDR</h1>
+    <h1 class="logo-title"><img src="assets/favicon.svg" alt="" width="64" height="64">SDR4NOOB</h1>
+    <p class="tagline">Всё в одном для начинающего радиолюбителя</p>
     <p class="lead">Бесплатная программа для Windows, которая превращает недорогой USB-донгл RTL-SDR
     в радиоприёмник, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов.
     Всё в одном окне, по-русски, со встроенным драйвером и подробным руководством для начинающих.</p>
-    <p class="cta"><a class="btn big" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать для Windows</a>
+    <p class="cta"><a class="btn big" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать для Windows</a>
     <a class="btn ghost big" href="install.html">Как установить</a>
     <a class="btn ghost big" href="guide/quickstart.html">Быстрый старт</a></p>
     <p class="dim">Windows 10/11 x64 · RTL-SDR Blog V3/V4 и другие донглы на RTL2832U · без антенны есть
     тестовый эфир для знакомства</p>
   </div>
-  <figure class="shot"><a href="img/screens/launcher.webp"><img src="img/screens/launcher.webp" alt="Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов." width="1600" height="900" loading="lazy"></a><figcaption>Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов.</figcaption></figure>
+  <figure class="shot"><a href="img/screens/launcher.webp"><img src="img/screens/launcher.webp" alt="Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов." width="996" height="560" loading="lazy"></a><figcaption>Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов.</figcaption></figure>
 </section>
 
 <h2 id="modes">Возможности по режимам<a class="anchor" href="#modes" aria-label="Ссылка на этот раздел">#</a></h2>
@@ -62,7 +67,7 @@
 <b>поиск DMR</b> по диапазонам, <b>менеджер частот</b> (импорт CSV и Frequencies.xml из SDR#), запись звука в WAV,
 запись и воспроизведение <b>базовой полосы IQ</b> (WAV из SDR#/SDR++, cu8 из rtl_sdr).</p>
 <div class="shots two">
-<figure class="shot"><a href="img/screens/radio-wfm.webp"><img src="img/screens/radio-wfm.webp" alt="WFM-стерео: станция тестового эфира, RDS — название и радиотекст." width="1600" height="900" loading="lazy"></a><figcaption>WFM-стерео: станция тестового эфира, RDS — название и радиотекст.</figcaption></figure>
+<figure class="shot"><a href="img/screens/radio-wfm.webp"><img src="img/screens/radio-wfm.webp" alt="WFM-стерео: станция тестового эфира, RDS — название и радиотекст." width="1360" height="860" loading="lazy"></a><figcaption>WFM-стерео: станция тестового эфира, RDS — название и радиотекст.</figcaption></figure>
 <figure class="shot"><a href="img/screens/radio-dmr.webp"><img src="img/screens/radio-dmr.webp" alt="DMR: слоты, кто кому говорит, голос; слева — карточки настроек." width="1600" height="900" loading="lazy"></a><figcaption>DMR: слоты, кто кому говорит, голос; слева — карточки настроек.</figcaption></figure>
 </div>
 <p><a href="guide/mode-radio.html">Подробно о режиме «Радио» →</a></p>
@@ -136,7 +141,7 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 <li><b>Руководство</b> на 19 страниц — от «что такое SDR» и децибел до антенн и доплера; то же, что на этом сайте.</li>
 </ul>
 <div class="shots two">
-<figure class="shot"><a href="img/screens/devices.webp"><img src="img/screens/devices.webp" alt="«Устройства…»: найденные приёмники и их драйвер Windows." width="1100" height="700" loading="lazy"></a><figcaption>«Устройства…»: найденные приёмники и их драйвер Windows.</figcaption></figure>
+<figure class="shot"><a href="img/screens/devices.webp"><img src="img/screens/devices.webp" alt="«Устройства…»: найденные приёмники и их драйвер Windows." width="1000" height="640" loading="lazy"></a><figcaption>«Устройства…»: найденные приёмники и их драйвер Windows.</figcaption></figure>
 <figure class="shot"><a href="img/screens/guide.webp"><img src="img/screens/guide.webp" alt="Встроенное руководство с поиском по всем страницам." width="1600" height="900" loading="lazy"></a><figcaption>Встроенное руководство с поиском по всем страницам.</figcaption></figure>
 </div>
 </section>
@@ -154,10 +159,10 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="install">Установка<a class="anchor" href="#install" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
-<li>Скачайте архив <code>RtlTV-&lt;версия&gt;-win64.zip</code> со страницы
-<a href="https://github.com/Mike-iLeech/RtlTV/releases/latest">последнего выпуска</a>.</li>
-<li>Распакуйте его в папку, куда у вас есть права записи (например, <code>C:\RtlTV</code>).</li>
-<li>Запустите <code>RtlTV.exe</code>. Если донгл ещё не работал с SDR-программами — один раз поставьте WinUSB
+<li>Скачайте архив <code>SDR4NOOB-&lt;версия&gt;-win64.zip</code> со страницы
+<a href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">последнего выпуска</a>.</li>
+<li>Распакуйте его в папку, куда у вас есть права записи (например, <code>C:\SDR4NOOB</code>).</li>
+<li>Запустите <code>SDR4NOOB.exe</code>. Если донгл ещё не работал с SDR-программами — один раз поставьте WinUSB
 через Zadig.</li>
 <li>Дальше программа обновляется сама.</li>
 </ol>
@@ -165,7 +170,7 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="quickstart">Быстрый старт<a class="anchor" href="#quickstart" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
-<li>Подключите донгл с антенной из комплекта, запустите RtlTV и выберите <b>«Радио»</b>.</li>
+<li>Подключите донгл с антенной из комплекта, запустите SDR4NOOB и выберите <b>«Радио»</b>.</li>
 <li>Нажмите <b>WFM</b>, в «Менеджере частот» дважды щёлкните «FM-вещание 87,5–108 МГц», затем щёлкните
 по «горбу» станции на спектре — зазвучит музыка, появится название (RDS).</li>
 <li>Меню «Режим → Выбрать другой режим…» (Ctrl+M) → <b>«Самолёты (ADS-B)»</b> → «▶ Старт»: через несколько
@@ -178,7 +183,7 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 <div class="cards">
 <a class="card" href="guide/quickstart.html"><b>Первые шаги</b><span>Быстрый старт, что можно принимать, закон и этика эфира.</span></a>
 <a class="card" href="guide/sdr.html"><b>Основы радиоприёма</b><span>SDR, децибелы, усиление, антенны, модуляция, спектр, доплер.</span></a>
-<a class="card" href="guide/mode-radio.html"><b>Режимы RtlTV</b><span>ТВ, Радио, SSTV, Спутники, ADS-B, APRS — каждое окно по карточкам.</span></a>
+<a class="card" href="guide/mode-radio.html"><b>Режимы SDR4NOOB</b><span>ТВ, Радио, SSTV, Спутники, ADS-B, APRS — каждое окно по карточкам.</span></a>
 <a class="card" href="guide/troubleshooting.html"><b>Помощь</b><span>Помехи и неполадки, словарь терминов.</span></a>
 </div>
 
@@ -193,24 +198,24 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 ~30° и тихого эфира без помех; комнатный штырь снимка не даст. <b>«Электро-Л»</b> — только с тарелкой и МШУ.</li>
 <li>Один канал (VFO) за раз; dPMR, NXDN, TETRA, P25, D-STAR и System Fusion не декодируются; APRS 9600 бод —
 тоже.</li>
-<li>RtlTV — только приёмник: передавать он не умеет. Слушать служебные переговоры можно, разглашать — нельзя
+<li>SDR4NOOB — только приёмник: передавать он не умеет. Слушать служебные переговоры можно, разглашать — нельзя
 (<a href="guide/legal.html">подробнее</a>).</li>
 </ul>
 
 <h2 id="license">Лицензия<a class="anchor" href="#license" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>RtlTV — свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a>.
+<p>SDR4NOOB — свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a>.
 Внутри — librtlsdr (сборка rtl-sdr-blog, GPL-2.0-or-later), mbelib (ISC), Qt/PySide6 (LGPL-3.0), numpy, scipy,
 sgp4 и другие компоненты; полный список с лицензиями и источниками — в
-<a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">THIRD_PARTY.md</a>. Декодирование голоса DMR (AMBE+2) может
+<a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">THIRD_PARTY.md</a>. Декодирование голоса DMR (AMBE+2) может
 затрагивать патенты — используйте эту функцию на свой страх и риск.</p>
 
 
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

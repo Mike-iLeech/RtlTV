@@ -69,7 +69,7 @@ class SstvWindow(ModeWindow):
     sstvEvents = Signal(object)
 
     def __init__(self, opts=None):
-        super().__init__(opts, "RtlTV — SSTV")
+        super().__init__(opts, "SDR4NOOB — SSTV")
         self.s = settings.load("sstv", DEFAULTS)
         if self.opts.get("source"):
             self.s["source"] = self.opts["source"]

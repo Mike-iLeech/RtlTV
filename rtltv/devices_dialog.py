@@ -9,11 +9,11 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
 
 from . import devices
 
-INTRO = ("Встроенный драйвер RtlTV работает с RTL-SDR. Для других приёмников загрузите DLL их драйвера "
+INTRO = ("Встроенный драйвер SDR4NOOB работает с RTL-SDR. Для других приёмников загрузите DLL их драйвера "
          "(HackRF: hackrf.dll; Airspy R2/Mini: airspy.dll; обоим нужны libusb-1.0.dll и pthreadVC2.dll) — "
-         "файлы копируются в папку драйверов RtlTV. Приёмник на другом компьютере подключается как "
+         "файлы копируются в папку драйверов SDR4NOOB. Приёмник на другом компьютере подключается как "
          "сетевой rtl_tcp. Драйвер Windows (WinUSB) ставится программой Zadig: "
-         f'<a href="{devices.ZADIG_URL}">{devices.ZADIG_URL}</a> — RtlTV его не меняет.')
+         f'<a href="{devices.ZADIG_URL}">{devices.ZADIG_URL}</a> — SDR4NOOB его не меняет.')
 
 
 class DevicesDialog(QDialog):
@@ -46,7 +46,7 @@ class DevicesDialog(QDialog):
         gl.addWidget(self.usb)
         v.addWidget(g, 2)
 
-        g2 = QGroupBox("Драйверы (DLL) в папке RtlTV")
+        g2 = QGroupBox("Драйверы (DLL) в папке SDR4NOOB")
         g2l = QVBoxLayout(g2)
         self.dlls = QListWidget()
         g2l.addWidget(self.dlls)

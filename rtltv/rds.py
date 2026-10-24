@@ -336,7 +336,7 @@ def _chars(s, n):
     return list(b)
 
 
-def make_groups(pi=0x7201, ps="RTLTV FM", rt="Тестовый эфир RtlTV", pty=10, ct=None):
+def make_groups(pi=0x7201, ps="SDR4NOOB", rt="Тестовый эфир SDR4NOOB", pty=10, ct=None):
     """Цикл групп: 4 × 0A (PS) + 2A (RT) + при желании 4A (часы). Каждая группа — [(данные, смещение)] × 4."""
     groups = []
     ps_b = _chars(ps, 8)

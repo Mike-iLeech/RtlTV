@@ -21,7 +21,7 @@ from . import paths
 
 TILE = 256
 TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-USER_AGENT = "RtlTV/1.1 (personal SDR receiver; Windows)"
+USER_AGENT = "SDR4NOOB/1.1 (personal SDR receiver; Windows)"
 CACHE_DIR = paths.service("tiles")
 
 

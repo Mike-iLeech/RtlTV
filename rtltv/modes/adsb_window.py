@@ -272,7 +272,7 @@ class _Bridge(QObject):
 
 class AdsbWindow(ModeWindow):
     def __init__(self, opts=None):
-        super().__init__(opts, "RtlTV — ADS-B: самолёты на карте (1090 МГц)")
+        super().__init__(opts, "SDR4NOOB — ADS-B: самолёты на карте (1090 МГц)")
         self.s = settings.load("adsb", DEFAULTS)
         if self.opts.get("source"):
             self.s["source"] = self.opts["source"]
@@ -498,7 +498,7 @@ class AdsbWindow(ModeWindow):
         self._refresh_history(force=True)
 
     def _save_history(self, background=False):
-        """История — на диск (%LOCALAPPDATA%/RtlTV/adsb_history.json). Демо-эфир и автотесты не сохраняем."""
+        """История — на диск (%LOCALAPPDATA%/SDR4NOOB/adsb_history.json). Демо-эфир и автотесты не сохраняем."""
         if self.opts.get("shot") or self.opts.get("no_save") or self.s.get("source") == "test":
             return
         if self._hist_saving:
@@ -1684,7 +1684,7 @@ class AdsbWindow(ModeWindow):
                                         f"{lo:.5f}", "" if alt is None else round(alt * adsb.FT), kind])
             return len(hist)
         out = ['<?xml version="1.0" encoding="UTF-8"?>', '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>',
-               "<name>RtlTV ADS-B — история сеанса</name>",
+               "<name>SDR4NOOB ADS-B — история сеанса</name>",
                '<Style id="sus"><LineStyle><color>ff409fff</color><width>2</width></LineStyle></Style>']
         n = 0
         for h in hist:

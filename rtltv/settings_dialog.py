@@ -21,7 +21,7 @@ def _fmt_size(b):
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("RtlTV — настройки")
+        self.setWindowTitle("SDR4NOOB — настройки")
         self.resize(820, 700)
         self.setMinimumSize(640, 560)
         self.app_s = settings.load("app", {})
@@ -29,14 +29,14 @@ class SettingsDialog(QDialog):
 
         g = QGroupBox("Папка данных")
         gl = QVBoxLayout(g)
-        hint = QLabel("Сюда RtlTV складывает всё, что вы получаете: записи пролётов, снимки, записи звука, журналы. "
+        hint = QLabel("Сюда SDR4NOOB складывает всё, что вы получаете: записи пролётов, снимки, записи звука, журналы. "
                       "Можно выбрать любой диск, например большой второй диск для записей IQ (они весят до 2 ГБ за пролёт).")
         hint.setWordWrap(True)
         hint.setObjectName("dim")
         gl.addWidget(hint)
         row = QHBoxLayout()
         self.path = QLineEdit(paths.data_root())
-        self.path.setToolTip("Корневая папка данных RtlTV")
+        self.path.setToolTip("Корневая папка данных SDR4NOOB")
         b_pick = QPushButton("Выбрать…")
         b_pick.clicked.connect(self._pick)
         b_open = QPushButton("Открыть")
@@ -62,7 +62,7 @@ class SettingsDialog(QDialog):
         self.layout_lbl.setWordWrap(True)
         self.layout_lbl.setTextFormat(Qt.RichText)
         g2l.addWidget(self.layout_lbl)
-        settings_note = QLabel(f"Настройки программы всегда хранятся в {settings.DIR} — по ним RtlTV находит папку данных.")
+        settings_note = QLabel(f"Настройки программы всегда хранятся в {settings.DIR} — по ним SDR4NOOB находит папку данных.")
         settings_note.setObjectName("dim")
         settings_note.setWordWrap(True)
         g2l.addWidget(settings_note)
@@ -136,11 +136,11 @@ class SettingsDialog(QDialog):
             self.btn_move.setEnabled(False)
 
     def _pick(self):
-        d = QFileDialog.getExistingDirectory(self, "Папка данных RtlTV", self._root())
+        d = QFileDialog.getExistingDirectory(self, "Папка данных SDR4NOOB", self._root())
         if d:
-            # если выбрали непустую «чужую» папку — данные кладём в её подпапку RtlTV, чтобы не мусорить
+            # если выбрали непустую «чужую» папку — данные кладём в её подпапку SDR4NOOB, чтобы не мусорить
             if os.path.basename(os.path.normpath(d)).lower() != "rtltv" and os.listdir(d):
-                d = os.path.join(d, "RtlTV")
+                d = os.path.join(d, "SDR4NOOB")
             self.path.setText(os.path.normpath(d))
 
     def _open(self, d):
@@ -158,7 +158,7 @@ class SettingsDialog(QDialog):
             os.remove(test)
             return True
         except OSError as e:
-            QMessageBox.warning(self, "RtlTV", f"В папку нельзя писать:\n{root}\n\n{e}")
+            QMessageBox.warning(self, "SDR4NOOB", f"В папку нельзя писать:\n{root}\n\n{e}")
             return False
 
     def _move(self):
@@ -205,13 +205,13 @@ class SettingsDialog(QDialog):
         settings.save("app", app_s)
         self.accept()
         if changed and QMessageBox.question(
-                self.parentWidget(), "RtlTV",
+                self.parentWidget(), "SDR4NOOB",
                 "Новые папки начнут использоваться после перезапуска программы.\nПерезапустить сейчас?") == QMessageBox.Yes:
             restart()
 
 
 def restart():
-    """Перезапустить RtlTV (EXE или «py -m rtltv») и закрыть текущий процесс."""
+    """Перезапустить SDR4NOOB (EXE или «py -m rtltv») и закрыть текущий процесс."""
     if getattr(sys, "frozen", False):
         args = [sys.executable]
     else:

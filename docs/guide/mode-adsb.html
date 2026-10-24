@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Режим «Самолёты (ADS-B)» — RtlTV</title>
-<meta name="description" content="Каждый современный самолёт несколько раз в секунду сообщает на 1090 МГц свой адрес ICAO, позывной, высоту, скорость, курс и координаты (ADS-B), а также отвечает на запросы радаров (Mode S). RtlTV прин">
+<title>Режим «Самолёты (ADS-B)» — SDR4NOOB</title>
+<meta name="description" content="Каждый современный самолёт несколько раз в секунду сообщает на 1090 МГц свой адрес ICAO, позывной, высоту, скорость, курс и координаты (ADS-B), а также отвечает на запросы радаров (Mode S). SDR4NOOB п">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/mode-adsb.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/mode-adsb.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
+<meta property="og:title" content="Режим «Самолёты (ADS-B)» — SDR4NOOB">
+<meta property="og:description" content="Каждый современный самолёт несколько раз в секунду сообщает на 1090 МГц свой адрес ICAO, позывной, высоту, скорость, курс и координаты (ADS-B), а также отвечает на запросы радаров (Mode S). SDR4NOOB п">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
 <script src="../assets/site.js" defer></script>
@@ -16,30 +20,30 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html" aria-current="page" class="cur">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html" aria-current="page" class="cur">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
-<p class="crumbs"><a href="index.html">Содержание</a> › Режимы RtlTV</p>
+<p class="crumbs"><a href="index.html">Содержание</a> › Режимы SDR4NOOB</p>
 <h1>Режим «Самолёты (ADS-B)»</h1>
 <p>Каждый современный самолёт несколько раз в секунду сообщает на <b>1090 МГц</b> свой адрес ICAO, позывной,
-высоту, скорость, курс и координаты (ADS-B), а также отвечает на запросы радаров (Mode S). RtlTV принимает эти
+высоту, скорость, курс и координаты (ADS-B), а также отвечает на запросы радаров (Mode S). SDR4NOOB принимает эти
 импульсы и показывает борта на карте OpenStreetMap и в таблице.</p>
 
 <h2>Элементы окна</h2>
@@ -52,7 +56,7 @@
 <tr><td>«Выбранный борт»</td><td>Карточка выбранного самолёта: все известные поля и откуда взята позиция.</td></tr>
 <tr><td>«Приёмник 1090 МГц»</td><td>Источник, <b>«▶ Старт»</b>, «Усиление», «Коррекция», «Дискретизация» (<b>2,0 МГц — рекомендуется</b>), «АРУ RTL2832», «Bias-T (питание МШУ 4,5 В)».</td></tr>
 <tr><td>«Положение приёмника»</td><td>Широта/долгота, «Кольца, км», «⌂ К приёмнику», «✈ Все борта»; Ctrl+щелчок по карте — поставить дом.</td></tr>
-<tr><td>«Вид и журнал»</td><td>«Следы», «Подписи», «Журнал CSV», «Единицы», «Держать в списке», «Подозрительные координаты», «Папка журналов» (Документы\RtlTV\ADS-B).</td></tr>
+<tr><td>«Вид и журнал»</td><td>«Следы», «Подписи», «Журнал CSV», «Единицы», «Держать в списке», «Подозрительные координаты», «Папка журналов» (Документы\SDR4NOOB\ADS-B).</td></tr>
 <tr><td>«Статистика»</td><td>Сообщений всего и в секунду, бортов (с координатами и без), дальность сейчас и максимум за сеанс, отброшенные позиции.</td></tr>
 </table></div>
 
@@ -72,7 +76,7 @@
 навигации не знает своих координат и не передаёт их — тогда он попадает в список <b>«Без координат»</b>: высота,
 позывной и сквок видны, а положение один приёмник определить не может (для этого нужна сеть приёмников
 и мультилатерация).</p>
-<p>При <b>подмене</b> борт передаёт ложные координаты — например, за сотни километров. RtlTV считает
+<p>При <b>подмене</b> борт передаёт ложные координаты — например, за сотни километров. SDR4NOOB считает
 позиции дальше 700 км от приёмника или со скачками невозможными для ADS-B и отбрасывает их как
 <b>подозрительные</b> (обычно это подмена GNSS). С галочкой «Подозрительные координаты» такие борта рисуются
 на последней «сырой» позиции полупрозрачными, со знаком «?»; в истории сеанса их треки — пунктиром.</p>
@@ -100,9 +104,9 @@
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

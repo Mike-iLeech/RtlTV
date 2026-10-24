@@ -1,11 +1,11 @@
-"""Главное окно RtlTV."""
+"""Окно режима «ТВ» SDR4NOOB."""
 import json
 import os
 import time
 
 import numpy as np
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QIcon, QImage, QKeySequence, QPainter, QPixmap, QColor, QShortcut
+from PySide6.QtGui import QImage, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QFormLayout,
                                QGridLayout, QGroupBox, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
                                QMessageBox, QProgressBar, QPushButton, QRadioButton,
@@ -18,10 +18,11 @@ from .standards import PLANS, STANDARDS, channels
 from .themes import PALETTES, THEMES, gradient_lut
 from .widgets import FreqDisplay, LevelMeter, SpectrumView, VideoView
 from . import paths
+from . import settings as _settings
 
 RATES = [2048000, 2400000, 2560000, 2880000, 3200000]
 STEPS = [(1e3, "1 кГц"), (10e3, "10 кГц"), (50e3, "50 кГц"), (100e3, "100 кГц"), (250e3, "250 кГц"), (1e6, "1 МГц")]
-SETTINGS_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "RtlTV")
+SETTINGS_DIR = _settings.DIR
 SETTINGS_FILE = os.path.join(SETTINGS_DIR, "settings.json")
 
 DEFAULTS = {
@@ -48,31 +49,13 @@ def load_settings():
     return s
 
 
-def make_icon():
-    pm = QPixmap(64, 64)
-    pm.fill(Qt.transparent)
-    p = QPainter(pm)
-    p.setRenderHint(QPainter.Antialiasing)
-    p.setBrush(QColor("#1e2530"))
-    p.setPen(QColor("#4fb3ff"))
-    p.drawRoundedRect(4, 12, 56, 40, 6, 6)
-    p.setBrush(QColor("#4fb3ff"))
-    for i, h in enumerate((10, 22, 16, 28, 12, 20)):
-        p.drawRect(12 + i * 7, 46 - h, 5, h)
-    p.drawLine(24, 12, 16, 2)
-    p.drawLine(40, 12, 48, 2)
-    p.end()
-    return QIcon(pm)
-
-
 class MainWindow(ModeWindow):
     def __init__(self, opts=None):
-        super().__init__(opts, "RtlTV — телевизор на RTL-SDR")
+        super().__init__(opts, "SDR4NOOB — ТВ")
         self.s = load_settings()
         for k in ("mode", "source"):
             if self.opts.get(k):
                 self.s[k] = self.opts[k]
-        self.setWindowIcon(make_icon())
         if self.opts.get("theme"):
             self.s["theme"] = self.opts["theme"]
         self.theme_name = self.s["theme"]
@@ -483,7 +466,7 @@ class MainWindow(ModeWindow):
         self.statusBar().showMessage("Ошибка: " + msg, 10000)
         if "открыть" in msg or "USB" in msg:
             self.stop()
-            QMessageBox.warning(self, "RtlTV", msg)
+            QMessageBox.warning(self, "SDR4NOOB", msg)
 
     def _on_frame(self, fr):
         """Кадр только запоминается; выводит его таймер с выбранной частотой (без очереди и отставания)."""
@@ -743,7 +726,7 @@ class MainWindow(ModeWindow):
             return
         folder = paths.pictures(paths.PICS_TV)
         os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, time.strftime("rtltv_%Y%m%d_%H%M%S.png"))
+        path = os.path.join(folder, time.strftime("SDR4NOOB_%Y%m%d_%H%M%S.png"))
         h, w, _ = self.last_rgb.shape
         img = QImage(np.ascontiguousarray(self.last_rgb).data, w, h, 3 * w, QImage.Format_RGB888)
         img.scaled(int(h * 4 / 3), h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation).save(path)

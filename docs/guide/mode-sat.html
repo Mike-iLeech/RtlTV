@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Режим «Спутники» — RtlTV</title>
+<title>Режим «Спутники» — SDR4NOOB</title>
 <meta name="description" content="Прогноз пролётов над вашим домом (SGP4 по TLE), карта с трассами, приём снимков «Метеор-М» (LRPT, 137,9 МГц) и «Электро-Л» (LRIT, 1691 МГц), прослушивание МКС и любительских спутников с автоматической">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/mode-sat.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/mode-sat.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
+<meta property="og:title" content="Режим «Спутники» — SDR4NOOB">
+<meta property="og:description" content="Прогноз пролётов над вашим домом (SGP4 по TLE), карта с трассами, приём снимков «Метеор-М» (LRPT, 137,9 МГц) и «Электро-Л» (LRIT, 1691 МГц), прослушивание МКС и любительских спутников с автоматической">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
 <script src="../assets/site.js" defer></script>
@@ -16,27 +20,27 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html" aria-current="page" class="cur">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html" aria-current="page" class="cur">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
-<p class="crumbs"><a href="index.html">Содержание</a> › Режимы RtlTV</p>
+<p class="crumbs"><a href="index.html">Содержание</a> › Режимы SDR4NOOB</p>
 <h1>Режим «Спутники»</h1>
 <p>Прогноз пролётов над вашим домом (SGP4 по TLE), карта с трассами, приём снимков <b>«Метеор-М»</b> (LRPT,
 137,9 МГц) и <b>«Электро-Л»</b> (LRIT, 1691 МГц), прослушивание МКС и любительских спутников с автоматической
@@ -73,9 +77,9 @@
 <h3>Снимок «Метеора»</h3>
 <p>Пошагово — в разделе <a href="satellites.html#meteor">«Доплер и спутники»</a>. Коротко: V-диполь на балконе →
 пролёт с «Макс.» от 30° → «Автоприём по расписанию» → снимок на вкладке «Снимки со спутников» и в папке
-Изображения\RtlTV\meteor.</p>
+Изображения\SDR4NOOB\meteor.</p>
 <h3>Повторно декодировать запись</h3>
-<p>При включённом «Записывать IQ» сырой поток сохраняется в Документы\RtlTV\meteor-iq (~2 МБ/с, пролёт ~1,5 ГБ).
+<p>При включённом «Записывать IQ» сырой поток сохраняется в Документы\SDR4NOOB\meteor-iq (~2 МБ/с, пролёт ~1,5 ГБ).
 «Декодировать файл…» прогонит его через декодер ещё раз — удобно, если во время приёма что-то пошло не так.</p>
 <h3>Послушать МКС или любительский спутник</h3>
 <p>Нажмите на строку пролёта или выберите спутник на вкладке «Слушать» → «Передатчик» → «▶ Слушать». Частота
@@ -83,7 +87,7 @@
 <a href="satellites.html#iss">Подробнее про МКС</a>.</p>
 <h3>«Электро-Л»</h3>
 <p>Геостационарный спутник, стоит на месте, но сигнал слабый: нужна тарелка 60–100 см с облучателем на
-1691 МГц и МШУ с питанием через bias-T. Это проект «на вырост». Снимки — в Изображения\RtlTV\elektro.</p>
+1691 МГц и МШУ с питанием через bias-T. Это проект «на вырост». Снимки — в Изображения\SDR4NOOB\elektro.</p>
 
 <h2>Ограничения</h2>
 <ul>
@@ -97,9 +101,9 @@
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

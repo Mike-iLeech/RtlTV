@@ -1,7 +1,7 @@
 """Запись и воспроизведение базовой полосы IQ (как «IQ file» / «Baseband recorder» в SDR#).
 
 Форматы записи: WAV 16 бит стерео (I — левый, Q — правый; имя как у SDR#:
-RtlTV_20261024_101500Z_101200000Hz_IQ.wav) и сырой cu8 (байты донгла, как у rtl_sdr).
+SDR4NOOB_20261024_101500Z_101200000Hz_IQ.wav) и сырой cu8 (байты донгла, как у rtl_sdr).
 Воспроизведение: WAV 8/16 бит PCM и 32 бит float, сырые .cu8/.raw/.bin (uint8), .cs8 (int8),
 .cs16 (int16), .cf32/.cfile/.fc32 (float32). Частота дискретизации — из заголовка WAV или имени файла
 (…_2400000sps…, …_2.4MSPS…, …_2400k…), центральная частота — из имени (…_101200000Hz…, …_101.2MHz…).
@@ -26,7 +26,7 @@ EXTS = sorted(set(RAW_KINDS) | {".wav"})
 def file_name(folder, center, fs, fmt="wav"):
     stamp = time.strftime("%Y%m%d_%H%M%SZ", time.gmtime())
     ext = "wav" if fmt == "wav" else "cu8"
-    return os.path.join(folder, f"RtlTV_{stamp}_{int(round(center))}Hz_{int(fs)}sps_IQ.{ext}")
+    return os.path.join(folder, f"SDR4NOOB_{stamp}_{int(round(center))}Hz_{int(fs)}sps_IQ.{ext}")
 
 
 def parse_name(path):

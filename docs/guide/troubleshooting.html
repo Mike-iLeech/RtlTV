@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Помехи и неполадки — RtlTV</title>
-<meta name="description" content="Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы RtlTV — %LOCALAPPDATA%\RtlTV\rtltv.log (туда же пишутся отчёты о зависаниях).">
+<title>Помехи и неполадки — SDR4NOOB</title>
+<meta name="description" content="Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы SDR4NOOB — %LOCALAPPDATA%\SDR4NOOB\sdr4noob.log (туда же пишутся отчёты о зависаниях).">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/troubleshooting.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/troubleshooting.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
+<meta property="og:title" content="Помехи и неполадки — SDR4NOOB">
+<meta property="og:description" content="Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы SDR4NOOB — %LOCALAPPDATA%\SDR4NOOB\sdr4noob.log (туда же пишутся отчёты о зависаниях).">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
 <script src="../assets/site.js" defer></script>
@@ -16,30 +20,30 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html" aria-current="page" class="cur">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
 <p class="crumbs"><a href="index.html">Содержание</a> › Помощь</p>
 <h1>Помехи и неполадки</h1>
-<p>Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы RtlTV —
-<span class="mono">%LOCALAPPDATA%\RtlTV\rtltv.log</span> (туда же пишутся отчёты о зависаниях).</p>
+<p>Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы SDR4NOOB —
+<span class="mono">%LOCALAPPDATA%\SDR4NOOB\sdr4noob.log</span> (туда же пишутся отчёты о зависаниях).</p>
 
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Симптом</th><th>Куда смотреть</th></tr>
@@ -56,8 +60,8 @@
 <h2 id="busy">Донгл занят другой программой или нет драйвера<a class="anchor" href="#busy" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
 <li><b>Закройте другие SDR-программы:</b> SDR#, SDR++, HDSDR, rtl_tcp, dump1090, SatDump — донгл может работать
-только с одной программой. Проверьте также, не запущено ли второе окно RtlTV.</li>
-<li><b>Переключение режима</b> RtlTV освобождает донгл сам; если окно закрылось с ошибкой, подождите 2–3 секунды и
+только с одной программой. Проверьте также, не запущено ли второе окно SDR4NOOB.</li>
+<li><b>Переключение режима</b> SDR4NOOB освобождает донгл сам; если окно закрылось с ошибкой, подождите 2–3 секунды и
 нажмите «Старт» ещё раз.</li>
 <li><b>Выньте и вставьте донгл</b> в тот же порт.</li>
 <li><b>Драйвер WinUSB.</b> Если донгл в «Диспетчере устройств» виден как «RTL2832U DVB-T» в разделе
@@ -91,7 +95,7 @@
 <h2 id="sound">Нет звука<a class="anchor" href="#sound" aria-label="Ссылка на этот раздел">#</a></h2>
 <ol>
 <li>Меню <b>«Звук»</b> — выберите устройство вывода. Индексы устройств меняются при подключении наушников,
-RtlTV запоминает устройство по названию. Внизу меню — «Сейчас: …», что реально открыто.</li>
+SDR4NOOB запоминает устройство по названию. Внизу меню — «Сейчас: …», что реально открыто.</li>
 <li>Если строка состояния пишет «Звук не открылся…» — выберите другое устройство в меню «Звук».</li>
 <li><b>Bluetooth-гарнитура</b> в режиме «гарнитуры» (Hands-Free, 1 канал, 8–16 кГц) работает плохо или не
 открывается. Выберите её «стерео»-вариант (без слова Hands-Free) или другие колонки.</li>
@@ -128,14 +132,14 @@ RtlTV запоминает устройство по названию. Вниз�
 <h2>Всё ещё не работает?</h2>
 <p>Включите <b>«Без антенны: тестовый эфир»</b> на экране выбора режима: если с тестовым эфиром всё работает,
 программа в порядке, а дело в донгле, драйвере или антенне. Приложите к вопросу файл журнала
-<span class="mono">rtltv.log</span>.</p>
+<span class="mono">sdr4noob.log</span>.</p>
 <nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/mode-aprs.html"><span>← Назад</span>APRS</a><a class="next" href="../guide/glossary.html"><span>Дальше →</span>Словарь терминов</a></nav>
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

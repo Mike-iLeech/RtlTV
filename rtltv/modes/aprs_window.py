@@ -241,7 +241,7 @@ def _hms(sec):
 
 class AprsWindow(ModeWindow):
     def __init__(self, opts=None):
-        super().__init__(opts, "RtlTV — APRS")
+        super().__init__(opts, "SDR4NOOB — APRS")
         self.s = settings.load("aprs", DEFAULTS)
         # снимок для автотестов: базовый класс обнуляет opts["shot"] до закрытия — запоминаем сразу
         self._nosave = bool(self.opts.get("shot") or self.opts.get("nosave"))

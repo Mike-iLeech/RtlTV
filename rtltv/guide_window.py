@@ -36,7 +36,7 @@ TOC = [
         ("spectrum", "Спектр и водопад"),
         ("satellites", "Доплер и спутники"),
     ]),
-    ("Режимы RtlTV", [
+    ("Режимы SDR4NOOB", [
         ("mode-tv", "ТВ"),
         ("mode-radio", "Радио"),
         ("mode-sstv", "SSTV"),
@@ -252,7 +252,7 @@ class GuideWindow(QWidget):
     def __init__(self, page=None, parent=None):
         super().__init__(parent, Qt.Window)
         self.setAttribute(Qt.WA_QuitOnClose, False)  # не держит приложение, когда окна режимов закрыты
-        self.setWindowTitle("RtlTV — руководство")
+        self.setWindowTitle("SDR4NOOB — руководство")
         self.resize(1180, 780)
         self.st = settings.load("guide", {"zoom": 11})
         self.theme_name, self.theme = "Тёмная", THEMES["Тёмная"]
@@ -427,7 +427,7 @@ class GuideWindow(QWidget):
         # source() при переходе на якорь другой страницы обновляется позже сигнала — берём url из сигнала
         pid = self._pid_of(url)
         self.title.setText(page_title(pid))
-        self.setWindowTitle(f"RtlTV — руководство: {page_title(pid)}")
+        self.setWindowTitle(f"SDR4NOOB — руководство: {page_title(pid)}")
         it = self.items.get(pid)
         if it is not None:
             self.tree.blockSignals(True)

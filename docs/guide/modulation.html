@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Виды модуляции — RtlTV</title>
+<title>Виды модуляции — SDR4NOOB</title>
 <meta name="description" content="Модуляция — способ «нагрузить» радиоволну (несущую) полезной информацией: меняют её амплитуду, частоту или фазу. Чтобы услышать передачу, приёмник должен применить обратную операцию — демодуляцию того">
 <meta name="color-scheme" content="light dark">
-<link rel="canonical" href="https://mike-ileech.github.io/RtlTV/guide/modulation.html">
+<link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/modulation.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
+<meta property="og:title" content="Виды модуляции — SDR4NOOB">
+<meta property="og:description" content="Модуляция — способ «нагрузить» радиоволну (несущую) полезной информацией: меняют её амплитуду, частоту или фазу. Чтобы услышать передачу, приёмник должен применить обратную операцию — демодуляцию того">
+<meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/search-index.js" defer></script>
 <script src="../assets/site.js" defer></script>
@@ -16,23 +20,23 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">RtlTV<small>2.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.0.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
   </div>
   <nav class="links" aria-label="Ссылки">
     <a href="../guide/index.html">Руководство</a>
-    <a href="https://github.com/Mike-iLeech/RtlTV">GitHub</a>
-    <a class="btn" href="https://github.com/Mike-iLeech/RtlTV/releases/latest">Скачать</a>
+    <a href="https://github.com/Mike-iLeech/SDR4NOOB">GitHub</a>
+    <a class="btn" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать</a>
   </nav>
 </header>
 <div class="layout">
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
-<div class="nav-group"><h2>RtlTV</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
+<div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
 <div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html" aria-current="page" class="cur">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
-<div class="nav-group"><h2>Режимы RtlTV</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
+<div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
@@ -65,7 +69,7 @@
 на 100 Гц — речь звучит «как у утёнка». Подстраивайтесь шагом 10–100 Гц, пока голос не станет естественным.
 Перепутаете USB и LSB — речь станет неразборчивым бормотанием.</p>
 <h3 id="cw">Как приёмник делает тон из телеграфа<a class="anchor" href="#cw" aria-label="Ссылка на этот раздел">#</a></h3>
-<p>Несущая CW — просто «чистая» частота без звука. RtlTV сдвигает её так, что вы слышите тон 700 Гц —
+<p>Несущая CW — просто «чистая» частота без звука. SDR4NOOB сдвигает её так, что вы слышите тон 700 Гц —
 поэтому сигнал на спектре должен быть на 700 Гц в стороне от частоты настройки (это делается автоматически).</p>
 
 <h2 id="stereo">FM-стерео и пилот-тон<a class="anchor" href="#stereo" aria-label="Ссылка на этот раздел">#</a></h2>
@@ -73,7 +77,7 @@
 <p><figure class="diagram"><picture><source srcset="img/fm-mpx-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/fm-mpx.svg" alt="Схема" width="720" height="189" loading="lazy"></picture></figure></p>
 <ul>
 <li><b>L+R</b> (сумма каналов) — обычное моно до 15 кГц: его слышит любой приёмник.</li>
-<li><b>Пилот-тон 19 кГц</b> — метка «здесь стерео». RtlTV включает стерео, только когда слышит пилот
+<li><b>Пилот-тон 19 кГц</b> — метка «здесь стерео». SDR4NOOB включает стерео, только когда слышит пилот
 (галочка «Стерео (WFM)»).</li>
 <li><b>L−R</b> (разность) передаётся на поднесущей 38 кГц = 2 × 19 кГц. Сложив и вычтя L+R и L−R,
 приёмник получает левый и правый каналы.</li>
@@ -85,7 +89,7 @@
 
 <h2 id="digital">Цифровые виды<a class="anchor" href="#digital" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
-<tr><th style="width:16%">Вид</th><th>Принцип</th><th>Где и параметры</th><th>Режим RtlTV</th></tr>
+<tr><th style="width:16%">Вид</th><th>Принцип</th><th>Где и параметры</th><th>Режим SDR4NOOB</th></tr>
 <tr><td><b>FSK</b></td><td>«0» и «1» — две разные частоты</td><td>пейджеры, телеметрия, датчики</td><td>—</td></tr>
 <tr><td><b>4FSK</b></td><td>четыре частоты — 2 бита на символ</td><td><b>DMR</b>: 4800 символ/с = 9600 бит/с, отклонения ±648 и ±1944 Гц, два слота TDMA по 30 мс в канале 12,5 кГц, голос — вокодер AMBE+2</td><td>«Радио» → DMR</td></tr>
 <tr><td><b>AFSK</b></td><td>FSK тонами звука поверх обычной NFM</td><td><b>APRS</b>: Bell 202, 1200 бод, тоны 1200/2200 Гц, кадры AX.25; 144,800 МГц, МКС 145,825</td><td>«APRS»</td></tr>
@@ -107,9 +111,9 @@
 </main>
 </div>
 <footer class="foot">
-  <p>RtlTV 2.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/LICENSE">GPL-3.0-or-later</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
-  <a href="https://github.com/Mike-iLeech/RtlTV">исходный код</a> · <a href="https://github.com/Mike-iLeech/RtlTV/issues">сообщить об ошибке</a></p>
+  <p>SDR4NOOB 3.0.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
+  <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
 </footer>
 </body>

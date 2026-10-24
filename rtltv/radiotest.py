@@ -6,7 +6,7 @@
 import numpy as np
 
 MORSE = {"C": "-.-.", "Q": "--.-", "D": "-..", "E": ".", "R": ".-.", "T": "-", "L": ".-..", "V": "...-",
-         " ": " "}
+         "S": "...", "N": "-.", "O": "---", "B": "-...", "4": "....-", " ": " "}
 
 
 def _morse_env(text, wpm, fs, n0, n):
@@ -43,7 +43,7 @@ class RadioTestSignal:
         self.n = 0
         self.rng = np.random.default_rng(7)
         self.stations = [
-            Station(101.2e6, "wfm", 0.25, stereo=True, rds=("RTLTV FM", "Тестовый эфир RtlTV: музыка в стерео")),
+            Station(101.2e6, "wfm", 0.25, stereo=True, rds=("SDR4NOOB", "Тестовый эфир SDR4NOOB: музыка в стерео")),
             Station(104.0e6, "wfm", 0.12, stereo=False),
             Station(446.00625e6, "nfm", 0.15),
             Station(125.5e6, "am", 0.12),
@@ -161,7 +161,7 @@ class RadioTestSignal:
             from scipy.signal import hilbert
             return hilbert(a) * np.exp(2j * np.pi * off * t)
         if k == "cw":
-            env = _morse_env("CQ CQ DE RTLTV ", 18, self.fs, int(t[0] * self.fs), t.size)
+            env = _morse_env("CQ CQ DE SDR4NOOB ", 18, self.fs, int(t[0] * self.fs), t.size)
             return env * np.exp(2j * np.pi * off * t)
         if k == "dmr":
             return self._dmr_iq(st, t, off)

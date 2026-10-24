@@ -1225,7 +1225,7 @@ def iter_iq(path, fmt=None, block=262144):
 
 
 def offset_from_name(path, fs, freqs):
-    """Смещение сигнала от центра записи по имени файла RtlTV «…_<fs>Hz_<центр>.cu8» (или None)."""
+    """Смещение сигнала от центра записи по имени файла SDR4NOOB «…_<fs>Hz_<центр>.cu8» (или None)."""
     m = re.search(r"_(\d{5,8})Hz_(\d{7,11})", os.path.basename(path))
     if not m:
         return None

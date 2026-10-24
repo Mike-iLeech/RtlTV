@@ -24,7 +24,7 @@ def test_versions():
 
 
 def _release(digest=None, extra=()):
-    assets = [{"name": "RtlTV-2.0.1-win64.zip", "browser_download_url": "https://x/RtlTV-2.0.1-win64.zip",
+    assets = [{"name": "SDR4NOOB-2.0.1-win64.zip", "browser_download_url": "https://x/SDR4NOOB-2.0.1-win64.zip",
                "size": 123, **({"digest": digest} if digest else {})}, *extra]
     return json.dumps({"tag_name": "v2.0.1", "body": "* новое", "html_url": "https://g/r", "assets": assets}).encode()
 
@@ -38,8 +38,8 @@ def test_check_latest_digest(monkeypatch):
 def test_check_latest_sha_file(monkeypatch):
     def get(url, timeout=15):
         if url.endswith(".sha256"):
-            return b"0123abcd  RtlTV-2.0.1-win64.zip\n"
-        return _release(None, [{"name": "RtlTV-2.0.1-win64.zip.sha256", "browser_download_url": "https://x/s.sha256"}])
+            return b"0123abcd  SDR4NOOB-2.0.1-win64.zip\n"
+        return _release(None, [{"name": "SDR4NOOB-2.0.1-win64.zip.sha256", "browser_download_url": "https://x/s.sha256"}])
     monkeypatch.setattr(updater, "_get", get)
     assert updater.check_latest()["asset"]["sha256"] == "0123abcd"
 
@@ -90,14 +90,14 @@ class _Resp(io.BytesIO):
 
 def test_download_checks_sha(monkeypatch, tmp_path):
     monkeypatch.setattr(updater.paths, "LOCAL", str(tmp_path))
-    data = _zip_bytes({"RtlTV/RtlTV.exe": b"exe", "RtlTV/_internal/a.txt": b"a"})
+    data = _zip_bytes({"SDR4NOOB/SDR4NOOB.exe": b"exe", "SDR4NOOB/RtlTV.exe": b"exe", "SDR4NOOB/_internal/a.txt": b"a"})
     monkeypatch.setattr(updater.urllib.request, "urlopen", lambda req, timeout=30: _Resp(data))
-    good = {"asset": {"name": "RtlTV-2.0.1-win64.zip", "url": "https://x", "size": len(data),
+    good = {"asset": {"name": "SDR4NOOB-2.0.1-win64.zip", "url": "https://x", "size": len(data),
                       "sha256": hashlib.sha256(data).hexdigest()}}
     path = updater.download(good)
     assert open(path, "rb").read() == data
     new = updater.prepare(path)
-    assert os.path.isfile(os.path.join(new, "RtlTV.exe")) and os.path.isdir(os.path.join(new, "_internal"))
+    assert os.path.isfile(os.path.join(new, "SDR4NOOB.exe")) and os.path.isdir(os.path.join(new, "_internal"))
     bad = {"asset": dict(good["asset"], sha256="00" * 32)}
     with pytest.raises(updater.UpdateError):
         updater.download(bad)
@@ -105,7 +105,7 @@ def test_download_checks_sha(monkeypatch, tmp_path):
 
 def test_prepare_rejects_traversal(tmp_path):
     p = tmp_path / "evil.zip"
-    p.write_bytes(_zip_bytes({"../evil.txt": b"x", "RtlTV/RtlTV.exe": b"e", "RtlTV/_internal/x": b"x"}))
+    p.write_bytes(_zip_bytes({"../evil.txt": b"x", "SDR4NOOB/SDR4NOOB.exe": b"e", "SDR4NOOB/_internal/x": b"x"}))
     with pytest.raises(updater.UpdateError):
         updater.prepare(str(p))
 
@@ -158,12 +158,12 @@ def test_install_script_rolls_back(tmp_path):
 def test_download_requires_sha(monkeypatch, tmp_path):
     monkeypatch.setattr(updater.paths, "LOCAL", str(tmp_path))
     with pytest.raises(updater.UpdateError):
-        updater.download({"asset": {"name": "RtlTV-2.0.1-win64.zip", "url": "https://x", "sha256": None}})
+        updater.download({"asset": {"name": "SDR4NOOB-2.0.1-win64.zip", "url": "https://x", "sha256": None}})
 
 
 def test_temp_root(tmp_path):
     root = os.path.join(updater.tempfile.gettempdir(), "rtltv-update-abc")
-    assert updater.temp_root(os.path.join(root, "RtlTV")) == root
+    assert updater.temp_root(os.path.join(root, "SDR4NOOB")) == root
     assert updater.temp_root(str(tmp_path / "other")) == ""
 
 
@@ -182,3 +182,32 @@ def test_install_script_rolls_back_when_exe_locked(tmp_path):
     assert (app / "_internal" / "lib.txt").read_text() == "старый"   # _internal вернулся на место
     assert (app / "RtlTV.exe").read_bytes() == b"old-exe"
     assert "откат" in log
+
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="PowerShell")
+def test_install_script_migrates_rtltv_to_sdr4noob(tmp_path):
+    """Установка 2.x (только RtlTV.exe) обновляется до 3.0: появляются SDR4NOOB.exe и новая копия RtlTV.exe."""
+    app = tmp_path / "app"
+    (app / "_internal").mkdir(parents=True)
+    (app / "RtlTV.exe").write_bytes(b"old-exe")
+    new = tmp_path / "new"
+    (new / "_internal").mkdir(parents=True)
+    (new / "SDR4NOOB.exe").write_bytes(b"new-exe")
+    (new / "RtlTV.exe").write_bytes(b"new-exe")
+    (new / "LICENSE").write_text("GPL")
+    r, log = _run_ps(tmp_path, app, new)
+    assert r.returncode == 0, (r.stdout, r.stderr, log)
+    assert (app / "SDR4NOOB.exe").read_bytes() == b"new-exe"
+    assert (app / "RtlTV.exe").read_bytes() == b"new-exe"
+    assert (app / "LICENSE").exists() and not (app / "RtlTV.exe.old").exists()
+
+
+def test_prepare_accepts_old_layout_and_start_name(tmp_path):
+    p = tmp_path / "old.zip"
+    p.write_bytes(_zip_bytes({"RtlTV/RtlTV.exe": b"e", "RtlTV/_internal/x": b"x"}))
+    new = updater.prepare(str(p))
+    assert updater.start_name(new) == "RtlTV.exe"
+    p2 = tmp_path / "new.zip"
+    p2.write_bytes(_zip_bytes({"SDR4NOOB/SDR4NOOB.exe": b"e", "SDR4NOOB/RtlTV.exe": b"e", "SDR4NOOB/_internal/x": b"x"}))
+    assert updater.start_name(updater.prepare(str(p2))) == "SDR4NOOB.exe"

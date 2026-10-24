@@ -1,4 +1,4 @@
-# Зависимости RtlTV (сборка релиза и запуск из исходников, Python 3.12, Windows x64)
+# Зависимости SDR4NOOB (сборка релиза и запуск из исходников, Python 3.12, Windows x64)
 numpy==2.5.4
 scipy==1.18.1
 PySide6-Essentials==6.12.0
