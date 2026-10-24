@@ -506,3 +506,22 @@ def test_radio_window_offscreen():
     finally:
         w.close()
         pump(0.3)
+
+
+def test_smeter_calibration_offset():
+    from PySide6.QtWidgets import QApplication
+    QApplication.instance() or QApplication([])
+    from rtltv.modes.radio_window import RadioWindow
+    w = RadioWindow({"source": "test"})
+    try:
+        w.cb_agc.setChecked(False)
+        w.scal.setValue(0.0)
+        w._on_level(-40.0, 0.0, False)
+        raw = w._last_dbm_raw
+        assert raw is not None and "dBm" in w.lvl.text
+        w.scal.setValue(12.5)                       # поправка сохраняется в настройки режима
+        assert w.s["smeter_cal"] == 12.5
+        w._on_level(-40.0, 0.0, False)
+        assert abs(w._last_dbm_raw - raw) < 1e-9    # «сырой» уровень от поправки не зависит
+    finally:
+        w.close()

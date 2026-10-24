@@ -9,7 +9,7 @@ import wave
 import numpy as np
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QDoubleSpinBox, QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
                                QInputDialog, QLabel, QListWidget, QMessageBox, QPushButton, QScrollArea, QSlider,
                                QSpinBox, QSplitter, QVBoxLayout, QWidget)
 
@@ -655,10 +655,72 @@ class RadioWindow(ModeWindow):
         self.cb_bias.setToolTip(TIPS["bias"])
         self.cb_bias.toggled.connect(lambda v: self.engine.cmd("bias", v))
         f.addRow(self.cb_bias)
+        row = QHBoxLayout()
+        self.scal = QDoubleSpinBox()
+        self.scal.setRange(-60.0, 60.0)
+        self.scal.setSingleStep(0.5)
+        self.scal.setDecimals(1)
+        self.scal.setSuffix(" dB")
+        self.scal.setValue(float(self.s.get("smeter_cal", 0)))
+        self.scal.setToolTip(TIPS["smeter_cal"])
+        self.scal.valueChanged.connect(lambda v: self.s.__setitem__("smeter_cal", float(v)))
+        b_cal = QPushButton("Калибровать…")
+        b_cal.setToolTip("Настройтесь на сигнал известного уровня и введите его — поправка посчитается сама")
+        b_cal.clicked.connect(self._calibrate_smeter)
+        row.addWidget(self.scal, 1)
+        row.addWidget(b_cal)
+        f.addRow("Поправка S-метра:", row)
         self.center_lbl = QLabel("")
         self.center_lbl.setObjectName("dim")
         f.addRow(self.center_lbl)
+        self._last_dbm_raw = None
         self._gain_changed()
+
+    def _calibrate_smeter(self):
+        """Калибровка по сигналу известного уровня: поправка = известный уровень − измеренный без поправки."""
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout as _F, QLabel as _L, QDoubleSpinBox as _D
+        raw = self._last_dbm_raw
+        if raw is None:
+            QMessageBox.information(self, "Калибровка S-метра",
+                                    "Запустите приём, выключите АРУ тюнера и настройтесь на сигнал известного уровня "
+                                    "(генератор, маяк, опорная станция) — тогда можно калибровать.")
+            return
+        d = QDialog(self)
+        d.setWindowTitle("Калибровка S-метра")
+        lay = _F(d)
+        hint = _L("Настройтесь точно на опорный сигнал (полоса демодулятора должна его целиком охватывать) и "
+                  "введите его уровень на входе приёмника. Поправка = известный уровень − измеренный.\n"
+                  "Поправка зависит от частоты и усиления — калибруйте там, где чаще слушаете.")
+        hint.setWordWrap(True)
+        lay.addRow(hint)
+        meas = _L(f"{raw:.1f} dBm (без поправки)")
+        lay.addRow("Сейчас измерено:", meas)
+        known = _D()
+        known.setRange(-160.0, 10.0)
+        known.setDecimals(1)
+        known.setSuffix(" dBm")
+        known.setValue(round(raw + float(self.s.get("smeter_cal", 0)), 1))
+        lay.addRow("Известный уровень:", known)
+        res = _L("")
+        lay.addRow("Поправка будет:", res)
+
+        def upd():
+            r = self._last_dbm_raw if self._last_dbm_raw is not None else raw
+            meas.setText(f"{r:.1f} dBm (без поправки)")
+            res.setText(f"{known.value() - r:+.1f} dB")
+        known.valueChanged.connect(lambda _v: upd())
+        t = QTimer(d)
+        t.timeout.connect(upd)
+        t.start(300)
+        upd()
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.button(QDialogButtonBox.Ok).setText("Применить")
+        bb.button(QDialogButtonBox.Cancel).setText("Отмена")
+        bb.accepted.connect(d.accept)
+        bb.rejected.connect(d.reject)
+        lay.addRow(bb)
+        if d.exec() == QDialog.Accepted and self._last_dbm_raw is not None:
+            self.scal.setValue(round(known.value() - self._last_dbm_raw, 1))
 
     def _grp_radio(self, body):
         f = QFormLayout(body)
@@ -1394,9 +1456,12 @@ class RadioWindow(ModeWindow):
 
     def _on_level(self, ch_db, audio_rms, stereo):
         txt = f"{ch_db:.0f} дБFS"
+        self._last_dbm_raw = None
         if not self.cb_agc.isChecked() and not self.engine.fixed_center:
-            dbm = ch_db - 10.0 - self._gain_tenths() / 10.0 + float(self.s.get("smeter_cal", 0))
-            txt = f"{s_units(dbm, self.fdisp.value)} · {txt}"
+            raw = ch_db - 10.0 - self._gain_tenths() / 10.0
+            self._last_dbm_raw = raw
+            dbm = raw + float(self.s.get("smeter_cal", 0))
+            txt = f"{s_units(dbm, self.fdisp.value)} · {dbm:.0f} dBm · {txt}"
         self.lvl.set_value(ch_db, txt)
         self.stereo_lbl.setText("СТЕРЕО" if stereo else ("МОНО" if self._mode() == "WFM" else ""))
 
