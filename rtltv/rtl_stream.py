@@ -94,6 +94,8 @@ class RtlStreamSource(RtlSource):
                     self._dev_commands()
                 i = self._seq % self.NBUF
                 r = L.rtlsdr_read_sync(dev, C.addressof(self._bufs[i]), nb, C.byref(got))
+                if r == -7:   # LIBUSB_ERROR_TIMEOUT: управление отвечает, а поток данных молчит
+                    raise rtlsdr.RtlSdrError(rtlsdr.TIMEOUT_HINT)
                 if r < 0:
                     raise rtlsdr.RtlSdrError(f"Чтение USB: ошибка {r} (донгл отключён?)")
                 self.q.put((self.cur, self._seq, got.value))

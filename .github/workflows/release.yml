@@ -65,10 +65,6 @@ jobs:
             --hidden-import PySide6.QtSvg `
             --exclude-module tkinter `
             run.py
-          # копия под прежним именем: обновлятор версий 2.x ищет RtlTV.exe и запускает его после обновления.
-          # ВЫПУСКАТЬ ВСЕГДА: установщик заменяет только exe из архива — без копии у пользователей остался бы
-          # старый RtlTV.exe (со старым кодом внутри) рядом с новым _internal, и старые ярлыки сломались бы.
-          Copy-Item dist/SDR4NOOB/SDR4NOOB.exe dist/SDR4NOOB/RtlTV.exe
           Copy-Item LICENSE, THIRD_PARTY.md, README.md, CHANGELOG.md dist/SDR4NOOB/
           $ver = python -c "import rtltv; print(rtltv.__version__)"
           New-Item -ItemType Directory -Force release | Out-Null
@@ -77,6 +73,19 @@ jobs:
           $h = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           "$h  SDR4NOOB-$ver-win64.zip" | Set-Content "$zip.sha256" -Encoding ascii
           "ZIP=$zip" >> $env:GITHUB_ENV
+          "VER=$ver" >> $env:GITHUB_ENV
+
+      - name: Установщик (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y | Out-Null }
+          & $iscc /Q "/DAppVersion=$env:VER" installer\sdr4noob.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC: код $LASTEXITCODE" }
+          $setup = "release/SDR4NOOB-$env:VER-setup.exe"
+          $h = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          "$h  SDR4NOOB-$env:VER-setup.exe" | Set-Content "$setup.sha256" -Encoding ascii
+          "SETUP=$setup" >> $env:GITHUB_ENV
 
       - name: Проверка сборки (запуск без окна)
         timeout-minutes: 3
@@ -85,9 +94,30 @@ jobs:
           $env:APPDATA = "$env:RUNNER_TEMP\appdata"
           $p = Start-Process dist/SDR4NOOB/SDR4NOOB.exe -ArgumentList "--mode","radio","--test","--shot","$env:RUNNER_TEMP\shot.png","--shot-delay","5" -PassThru -Wait
           if (-not (Test-Path "$env:RUNNER_TEMP\shot.png")) { throw "SDR4NOOB.exe не открыл окно" }
-          Remove-Item "$env:RUNNER_TEMP\shot.png"
-          $p = Start-Process dist/SDR4NOOB/RtlTV.exe -ArgumentList "--mode","radio","--test","--shot","$env:RUNNER_TEMP\shot.png","--shot-delay","5" -PassThru -Wait
-          if (-not (Test-Path "$env:RUNNER_TEMP\shot.png")) { throw "копия RtlTV.exe (для обновления с 2.x) не запускается" }
+
+      - name: Проверка установщика (тихая установка, настройки, удаление)
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP\inst prog"
+          $data = "$env:RUNNER_TEMP\Мои записи"
+          # «обновление» поверх старой раскладки: должен исчезнуть прежний RtlTV.exe
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Set-Content "$dir\RtlTV.exe" "old" -Encoding ascii
+          $p = Start-Process $env:SETUP -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=`"$dir`"","/DATADIR=`"$data`"","/UPDATES=0" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "установщик: код $($p.ExitCode)" }
+          foreach ($f in "SDR4NOOB.exe", "_internal", "unins000.exe", "LICENSE") {
+            if (-not (Test-Path "$dir\$f")) { throw "после установки нет $f" }
+          }
+          if (Test-Path "$dir\RtlTV.exe") { throw "старый RtlTV.exe не удалён" }
+          $app = Get-Content "$env:APPDATA\SDR4NOOB\app.json" -Raw -Encoding utf8 | ConvertFrom-Json
+          if ($app.data_dir -ne $data) { throw "data_dir = '$($app.data_dir)', ожидалось '$data'" }
+          if ($app.update_check -ne "never") { throw "update_check = '$($app.update_check)', ожидалось never" }
+          if (-not (Test-Path $data)) { throw "папка данных не создана" }
+          $p = Start-Process "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -PassThru -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path "$dir\SDR4NOOB.exe") { throw "после удаления остался SDR4NOOB.exe" }
+          if (-not (Test-Path $data)) { throw "удаление стёрло папку данных" }
 
       - name: Сборка как артефакт (PR)
         if: github.event_name == 'pull_request'
@@ -112,9 +142,9 @@ jobs:
           Set-Content notes.md $notes -Encoding utf8
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $env:ZIP "$env:ZIP.sha256" --clobber
+            gh release upload $tag $env:SETUP "$env:SETUP.sha256" $env:ZIP "$env:ZIP.sha256" --clobber
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             gh release edit $tag --notes-file notes.md
           } else {
-            gh release create $tag $env:ZIP "$env:ZIP.sha256" --title "SDR4NOOB $ver" --notes-file notes.md
+            gh release create $tag $env:SETUP "$env:SETUP.sha256" $env:ZIP "$env:ZIP.sha256" --title "SDR4NOOB $ver" --notes-file notes.md
           }

@@ -77,8 +77,10 @@ class UpdateDialog(QDialog):
         self.setWindowTitle("Доступно обновление SDR4NOOB")
         self.resize(620, 480)
         v = QVBoxLayout(self)
-        a = info.get("asset") or {}
-        size = f", архив {a['size'] / 1e6:.0f} МБ".replace(".", ",") if a.get("size") else ""
+        self.kind = updater.update_kind(info)
+        a = info.get(self.kind) or {}
+        what = "установщик" if self.kind == "setup" else "архив"
+        size = f", {what} {a['size'] / 1e6:.0f} МБ".replace(".", ",") if a.get("size") else ""
         head = QLabel(f"<b>Новая версия {info['version']}</b> (у вас {__version__}){size}.")
         head.setWordWrap(True)
         v.addWidget(head)
@@ -86,7 +88,9 @@ class UpdateDialog(QDialog):
         notes.setOpenExternalLinks(True)
         notes.setMarkdown(info.get("notes") or "Описание изменений не указано.")
         v.addWidget(notes, 1)
-        hint = QLabel("Будут заменены только файлы программы. Настройки, записи, снимки и журналы останутся на месте."
+        hint = QLabel("Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "
+                      "вручную (может понадобиться запуск от имени администратора)." if self.kind == "manual" else
+                      "Будут заменены только файлы программы. Настройки, записи, снимки и журналы останутся на месте."
                       if updater.frozen() else
                       "Программа запущена из исходников — обновите их (git pull) или скачайте сборку со страницы релиза.")
         hint.setObjectName("dim")
@@ -103,7 +107,7 @@ class UpdateDialog(QDialog):
         row.addWidget(b_page)
         row.addStretch(1)
         row.addWidget(b_later)
-        if updater.frozen() and a.get("url"):
+        if updater.frozen() and self.kind != "manual" and a.get("url"):
             b_go = QPushButton("Обновить сейчас")
             b_go.setDefault(True)
             b_go.clicked.connect(self._update)
@@ -124,7 +128,7 @@ class UpdateDialog(QDialog):
         def run():
             try:
                 state["path"] = updater.download(self.info, lambda d, t: state.update(done=d, total=t),
-                                                 lambda: state["cancel"])
+                                                 lambda: state["cancel"], kind=self.kind)
             except Exception as e:  # noqa: BLE001
                 state["err"] = e
             state["finished"] = True
@@ -149,6 +153,17 @@ class UpdateDialog(QDialog):
             if not state["cancel"]:
                 QMessageBox.warning(self, "Обновление", str(state["err"]))
             return
+        if self.kind == "setup":
+            QMessageBox.information(self, "Обновление",
+                                    "Обновление скачано. SDR4NOOB сейчас закроется, установщик обновит программу "
+                                    "и запустит её снова.")
+            try:
+                updater.run_setup(state["path"])
+            except Exception as e:  # noqa: BLE001
+                QMessageBox.warning(self, "Обновление", str(e))
+                return
+            self._quit()
+            return
         try:
             new_dir = updater.prepare(state["path"])
         except Exception as e:  # noqa: BLE001
@@ -161,6 +176,9 @@ class UpdateDialog(QDialog):
         except Exception as e:  # noqa: BLE001
             QMessageBox.warning(self, "Обновление", str(e))
             return
+        self._quit()
+
+    def _quit(self):
         self.accept()
         app = QApplication.instance()
         for w in app.topLevelWidgets():

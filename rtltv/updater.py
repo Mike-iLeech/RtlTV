@@ -7,9 +7,12 @@
 программы (_internal и все *.exe из архива; прежняя версия сохраняется как *.old и восстанавливается при
 ошибке) и запускает новую версию. Данные и настройки (папка данных, %APPDATA%\\SDR4NOOB) не трогаются.
 
-Переименование RtlTV → SDR4NOOB (3.0): в архиве лежат SDR4NOOB.exe и его копия RtlTV.exe — старый обновлятор
-(2.x) ищет RtlTV.exe, ставит обе и запускает RtlTV.exe, то есть уже новую программу. Старый адрес API
-(repos/Mike-iLeech/RtlTV) GitHub перенаправляет на переименованный репозиторий.
+Если программа поставлена установщиком (рядом лежит unins000.exe), обновление делает новый установщик
+SDR4NOOB-<версия>-setup.exe в тихом режиме в ту же папку — так версия в «Приложениях» Windows остаётся верной.
+Переносная копия (из zip) обновляется архивом, как описано выше.
+
+До 3.0 программа называлась RtlTV; с 3.1 копии RtlTV.exe в архиве нет, а установщик и обновлятор удаляют
+устаревший RtlTV.exe из папки программы. Старый адрес API (repos/Mike-iLeech/RtlTV) GitHub перенаправляет.
 """
 import hashlib
 import json
@@ -26,7 +29,8 @@ import zipfile
 from . import REPO, __version__, paths, settings
 
 
-EXE_NAMES = ("SDR4NOOB.exe", "RtlTV.exe")   # основное имя и копия для совместимости с 2.x
+EXE_NAMES = ("SDR4NOOB.exe", "RtlTV.exe")   # основное имя и прежнее (архивы 2.x/3.0)
+STALE_EXES = ("RtlTV.exe",)                  # удаляются из папки программы, если их нет в новой версии
 API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/latest"
 UA = f"SDR4NOOB/{__version__} (+https://github.com/{REPO})"
@@ -69,23 +73,101 @@ def check_latest(timeout=15):
         raise UpdateError(f"Не удалось проверить обновления: {e}") from e
     tag = data.get("tag_name") or ""
     ver = ".".join(str(x) for x in parse_version(tag))
-    asset = None
-    sha_url = None
+    found = {}          # "asset" — архив zip, "setup" — установщик
+    sha_urls = {}
     for a in data.get("assets") or []:
         name = a.get("name", "")
-        if name.lower().endswith("-win64.zip"):
+        low = name.lower()
+        kind = "asset" if low.endswith("-win64.zip") else "setup" if low.endswith("-setup.exe") else None
+        if kind:
             digest = a.get("digest") or ""
-            asset = {"name": name, "url": a.get("browser_download_url"), "size": a.get("size", 0),
-                     "sha256": digest.split(":", 1)[1].lower() if digest.startswith("sha256:") else None}
-        elif name.lower().endswith(".zip.sha256"):
-            sha_url = a.get("browser_download_url")
-    if asset and not asset["sha256"] and sha_url:
-        try:
-            asset["sha256"] = _get(sha_url, timeout).decode("ascii", "ignore").split()[0].lower()
-        except Exception:  # noqa: BLE001
-            pass
+            found[kind] = {"name": name, "url": a.get("browser_download_url"), "size": a.get("size", 0),
+                           "sha256": digest.split(":", 1)[1].lower() if digest.startswith("sha256:") else None}
+        elif low.endswith(".sha256"):
+            sha_urls[name[:-len(".sha256")].lower()] = a.get("browser_download_url")
+    for item in found.values():
+        url = sha_urls.get(item["name"].lower())
+        if not item["sha256"] and url:
+            try:
+                item["sha256"] = _get(url, timeout).decode("ascii", "ignore").split()[0].lower()
+            except Exception:  # noqa: BLE001
+                pass
     return {"version": ver, "tag": tag, "notes": data.get("body") or "", "url": data.get("html_url") or RELEASES_PAGE,
-            "asset": asset, "published": data.get("published_at") or ""}
+            "asset": found.get("asset"), "setup": found.get("setup"), "published": data.get("published_at") or ""}
+
+
+def installed():
+    """Программа поставлена установщиком (Inno Setup кладёт рядом unins000.exe)."""
+    d = app_dir()
+    return bool(d) and os.path.isfile(os.path.join(d, "unins000.exe"))
+
+
+def writable(d):
+    """Можно ли писать в папку (программы) — без этого ни архив, ни тихий установщик не обновят файлы."""
+    test = os.path.join(d, ".sdr4noob_write_test")
+    try:
+        with open(test, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(test)
+        return True
+    except OSError:
+        return False
+
+
+def update_kind(info):
+    """Чем обновлять: "setup" (поставлено установщиком и он есть в релизе), "asset" (архив zip) или
+    "manual" (в папку программы нельзя писать — например, её поставили в Program Files от администратора)."""
+    d = app_dir()
+    if d and not writable(d):
+        return "manual"
+    return "setup" if installed() and (info.get("setup") or {}).get("url") else "asset"
+
+
+_RELINK_PS1 = r"""
+param([string]$Old, [string]$New)
+$sh = New-Object -ComObject WScript.Shell
+$dirs = @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'),
+          [Environment]::GetFolderPath('StartMenu'))
+foreach ($d in $dirs) {
+  if (-not $d -or -not (Test-Path -LiteralPath $d)) { continue }
+  Get-ChildItem -LiteralPath $d -Filter *.lnk -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+    try {
+      $l = $sh.CreateShortcut($_.FullName)
+      if ($l.TargetPath -and ($l.TargetPath -ieq $Old)) {
+        $l.TargetPath = $New
+        $l.WorkingDirectory = Split-Path -Parent $New
+        $l.IconLocation = $New + ',0'
+        $l.Save()
+      }
+    } catch {}
+  }
+}
+Remove-Item -LiteralPath $Old -Force -ErrorAction SilentlyContinue
+"""
+
+
+def cleanup_legacy_exe():
+    """Один раз после обновления с 3.0 обновлятором той версии: рядом мог остаться RtlTV.exe от 3.0 (код 3.0
+    вшит в exe), а ярлыки эпохи RtlTV ведут на него и запускали бы старую версию. Перенаправляем такие ярлыки
+    (рабочий стол, «Пуск») на SDR4NOOB.exe и удаляем RtlTV.exe. Работает только в собранной версии."""
+    d = app_dir()
+    if not d or os.path.basename(sys.executable).lower() == "rtltv.exe":
+        return False
+    old = os.path.join(d, "RtlTV.exe")
+    if not os.path.isfile(old):
+        return False
+    try:
+        u = os.path.join(paths.LOCAL, "updates")
+        os.makedirs(u, exist_ok=True)
+        ps1 = os.path.join(u, "relink_shortcuts.ps1")
+        with open(ps1, "w", encoding="utf-8-sig") as f:
+            f.write(_RELINK_PS1)
+        subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1,
+                          "-Old", old, "-New", sys.executable],
+                         creationflags=0x08000000 | 0x00000008, close_fds=True)
+        return True
+    except OSError:
+        return False
 
 
 # ---------------------------------------------------------------- расписание проверок
@@ -126,18 +208,20 @@ def skip(version):
 
 # ---------------------------------------------------------------- загрузка и установка
 
-def download(info, progress=None, cancel=None):
-    """Скачать архив релиза в %LOCALAPPDATA%\\SDR4NOOB\\updates, проверить SHA-256. Возвращает путь к zip."""
-    a = info.get("asset")
+def download(info, progress=None, cancel=None, kind="asset"):
+    """Скачать архив (kind="asset") или установщик (kind="setup") релиза в %LOCALAPPDATA%\\SDR4NOOB\\updates,
+    проверить SHA-256. Возвращает путь к файлу."""
+    a = info.get(kind)
     if not a or not a.get("url"):
-        raise UpdateError("В релизе нет архива для Windows (SDR4NOOB-*-win64.zip).")
+        raise UpdateError("В релизе нет установщика SDR4NOOB-*-setup.exe." if kind == "setup" else
+                          "В релизе нет архива для Windows (SDR4NOOB-*-win64.zip).")
     if not a.get("sha256"):
-        raise UpdateError("Не удалось получить контрольную сумму архива — без неё обновление не ставится. "
-                          "Скачайте архив вручную со страницы релиза.")
+        raise UpdateError("Не удалось получить контрольную сумму файла — без неё обновление не ставится. "
+                          "Скачайте его вручную со страницы релиза.")
     d = os.path.join(paths.LOCAL, "updates")
     os.makedirs(d, exist_ok=True)
-    for old in os.listdir(d):   # прежние скачанные архивы больше не нужны
-        if old.lower().endswith((".zip", ".zip.part")) and old != a["name"]:
+    for old in os.listdir(d):   # прежние скачанные архивы и установщики больше не нужны
+        if old.lower().endswith((".zip", ".zip.part", "-setup.exe", "-setup.exe.part")) and old != a["name"]:
             _rm(os.path.join(d, old))
     path = os.path.join(d, a["name"])
     req = urllib.request.Request(a["url"], headers={"User-Agent": UA})
@@ -253,6 +337,12 @@ try {
   Get-ChildItem -LiteralPath $New -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $App -Force }
   Remove-Item -LiteralPath $intOld -Recurse -Force -ErrorAction SilentlyContinue
   foreach ($n in $moved) { Remove-Item -LiteralPath (Join-Path $App ($n + '.old')) -Force -ErrorAction SilentlyContinue }
+  foreach ($n in @('RtlTV.exe')) {   # прежнее имя программы (до 3.0) — если в новой версии его нет, убрать
+    if ($exes -notcontains $n) {
+      Remove-Item -LiteralPath (Join-Path $App $n) -Force -ErrorAction SilentlyContinue
+      Remove-Item -LiteralPath (Join-Path $App ($n + '.old')) -Force -ErrorAction SilentlyContinue
+    }
+  }
   L ("обновление установлено (" + ($exes -join ', ') + "), запуск $Start")
   $ok = $true
 } catch {
@@ -265,6 +355,17 @@ if (-not (Test-Path -LiteralPath $run)) { $run = Join-Path $App 'RtlTV.exe' }
 if (-not $NoStart -and (Test-Path -LiteralPath $run)) { Start-Process -FilePath $run -WorkingDirectory $App }
 if (-not $ok) { exit 1 }
 """
+
+
+def run_setup(setup_path):
+    """Запустить скачанный установщик тихо в папку текущей программы; он сам закроет её и запустит новую
+    версию (/LAUNCH=1). Вызывающий должен сразу закрыть программу."""
+    if not frozen():
+        raise UpdateError("Обновление установщиком работает только в собранной версии (SDR4NOOB.exe).")
+    flags = 0x00000008   # DETACHED_PROCESS
+    subprocess.Popen([setup_path, "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS",
+                      "/DIR=" + app_dir(), "/LAUNCH=1"], creationflags=flags, close_fds=True)
+    return True
 
 
 def start_name(new_dir):
