@@ -639,7 +639,10 @@
   var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced) { paused = true; }
 
-  function demo(name, anim, draw) { DEMOS[name] = { name: name, anim: anim, draw: draw, t: 0, dirty: true, visible: false }; }
+  // анимации — не чаще 30 кадров/с: для схем глазу хватает, а нагрузка вдвое меньше, чем при 60;
+  // перерисовка по действию (ползунок, поворот мышью) — сразу, в ближайшем кадре
+  var ANIM_STEP = 1 / 30;
+  function demo(name, anim, draw) { DEMOS[name] = { name: name, anim: anim, draw: draw, t: 0, acc: 0, dirty: true, visible: false }; }
 
   function setupCanvas(d) {
     var cv = d.cv;
@@ -694,12 +697,16 @@
       if (!Object.prototype.hasOwnProperty.call(DEMOS, k)) { continue; }
       var d = DEMOS[k];
       if (!d.cv || !d.visible || hidden) { continue; }
-      var run = d.anim && !paused;
-      if (!run && !d.dirty) { continue; }
+      var run = d.anim && !paused, step = 0;
+      if (run) {
+        d.acc = Math.min(0.1, d.acc + dt);
+        if (d.acc >= ANIM_STEP - 0.004) { step = d.acc; d.acc = 0; }
+      }
+      if (!step && !d.dirty) { continue; }
       if (!d.ready && !setupCanvas(d)) { continue; }
-      if (run) { d.t += dt; }
+      d.t += step;
       d.ctx.clearRect(0, 0, d.w, d.h);
-      try { d.draw(d, run ? dt : 0); } catch (err) { if (window.console) { console.error(k, err); } d.anim = false; }
+      try { d.draw(d, step); } catch (err) { if (window.console) { console.error(k, err); } d.anim = false; }
       d.dirty = false;
     }
     requestAnimationFrame(frame);
@@ -1594,7 +1601,37 @@
     }
   }
   // вид диаграммы: 3D-каркас (поворот мышью/пальцем или автоповорот) и сечения
-  var PAT = { view: "3d", yaw: -0.6, pitch: 0.38, drag: null, gShow: null };
+  var PAT = { view: "3d", yaw: -0.6, pitch: 0.38, drag: null, gShow: null, mesh: null, meshKey: "", xy: null };
+  // точки каркаса 3D-диаграммы: «меридианы» и «параллели» вокруг оси симметрии фигуры (у бублика — ось
+  // вибратора, у Яги/LPDA — ось луча). pts — x, y, z подряд; lines — [начало, конец) каждой линии в pts.
+  function patMesh(sh, key, dir, pol, rad) {
+    if (PAT.meshKey === key && PAT.mesh) { return PAT.mesh; }
+    var pole = dir === "yagi" ? [1, 0, 0] : dir === "omni" ? polAxis(pol) : [0, 0, 1];
+    var b1 = pole[0] ? [0, 1, 0] : pole[1] ? [1, 0, 0] : [1, 0, 0], b2 = pole[0] ? [0, 0, 1] : pole[1] ? [0, 0, 1] : [0, 1, 0];
+    var pts = [], lines = [];
+    var pt = function (e, az) {  // e — «широта» от экватора фигуры, az — поворот вокруг её оси
+      var ce = Math.cos(e), se = Math.sin(e), ca = Math.cos(az), sa = Math.sin(az);
+      var ux = ce * (ca * b1[0] + sa * b2[0]) + se * pole[0];
+      var uy = ce * (ca * b1[1] + sa * b2[1]) + se * pole[1];
+      var uz = ce * (ca * b1[2] + sa * b2[2]) + se * pole[2];
+      var r = rad(10 * LOG10(Math.max(1e-6, sh.f3(ux, uy, uz))));
+      pts.push(r * ux, r * uy, r * uz);
+    };
+    var NU = 36, NV = 24, u, v, s;
+    for (v = 0; v < NV; v++) {        // «меридианы»
+      s = pts.length;
+      for (u = 0; u <= NU; u++) { pt(-Math.PI / 2 + Math.PI * u / NU, TAU * v / NV); }
+      lines.push([s, pts.length]);
+    }
+    for (u = 1; u < 12; u++) {        // «параллели»
+      s = pts.length;
+      for (v = 0; v <= 48; v++) { pt(-Math.PI / 2 + Math.PI * u / 12, TAU * v / 48); }
+      lines.push([s, pts.length]);
+    }
+    PAT.meshKey = key;
+    PAT.mesh = { pts: pts, lines: lines };
+    return PAT.mesh;
+  }
   function patTypeSync(t) {
     $$("#patType button").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-v") === t); });
     var pv = S.txPol === "h" ? "h" : "v";
@@ -1604,7 +1641,7 @@
     var ctx = d.ctx, w = d.w, h = d.h, type = S.txAnt || "dipole";
     // плавный переход к новому усилению — видно, как сжимается «бублик» или сужается луч
     if (PAT.gShow === null || PAT.type !== type) { PAT.gShow = S.gTx; PAT.type = type; }
-    PAT.gShow += (S.gTx - PAT.gShow) * Math.min(1, (dt || 1) * 6);
+    PAT.gShow += (S.gTx - PAT.gShow) * Math.min(1, (paused || !d.anim ? 1 : dt) * 6);  // dt = 0 — перерисовка без шага времени
     if (Math.abs(S.gTx - PAT.gShow) < 0.03) { PAT.gShow = S.gTx; }
     var g = Math.round(PAT.gShow * 20) / 20;
     var pol = S.txPol === "h" ? "h" : "v", sh = antShape(g, type, pol), shape = sh.f, dir = sh.dir;
@@ -1631,35 +1668,23 @@
       ctx.strokeStyle = alpha(C.air, 0.6); ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
       // сетка строится вокруг оси симметрии фигуры: у бублика — ось вибратора, у Яги/LPDA — ось луча,
       // поэтому «бублик» при горизонтальной поляризации виден как бублик с горизонтальной осью
-      var pole = dir === "yagi" ? [1, 0, 0] : dir === "omni" ? polAxis(pol) : [0, 0, 1];
-      var b1 = pole[0] ? [0, 1, 0] : pole[1] ? [1, 0, 0] : [1, 0, 0], b2 = pole[0] ? [0, 0, 1] : pole[1] ? [0, 0, 1] : [0, 1, 0];
-      var pt = function (e, az) {  // точка поверхности: e — «широта» от экватора фигуры, az — поворот вокруг её оси
-        var ce = Math.cos(e), se = Math.sin(e), ca = Math.cos(az), sa = Math.sin(az);
-        var ux = ce * (ca * b1[0] + sa * b2[0]) + se * pole[0];
-        var uy = ce * (ca * b1[1] + sa * b2[1]) + se * pole[1];
-        var uz = ce * (ca * b1[2] + sa * b2[2]) + se * pole[2];
-        var r = rad(10 * LOG10(Math.max(1e-6, sh.f3(ux, uy, uz))));
-        return proj(r * ux, r * uy, r * uz);
-      };
-      var A1 = [-Math.PI / 2, Math.PI / 2];
-      var seg = function (pts) {
-        for (var k = 1; k < pts.length; k++) {
-          var dz = (pts[k][2] + pts[k - 1][2]) / 2, front = dz < 0;
-          ctx.strokeStyle = alpha(C.tx, front ? 0.85 : 0.25); ctx.lineWidth = front ? 1.3 : 1;
-          ctx.beginPath(); ctx.moveTo(pts[k - 1][0], pts[k - 1][1]); ctx.lineTo(pts[k][0], pts[k][1]); ctx.stroke();
-        }
-      };
-      var NU = 36, NV = 24, u, v, line1;
-      for (v = 0; v < NV; v++) {        // «меридианы»
-        line1 = [];
-        for (u = 0; u <= NU; u++) { line1.push(pt(A1[0] + (A1[1] - A1[0]) * u / NU, TAU * v / NV)); }
-        seg(line1);
+      // каркас (точки в 3D) считается один раз на форму и размер, в кадре — только поворот и два stroke()
+      var mesh = patMesh(sh, g + "|" + type + "|" + pol + "|" + Rr, dir, pol, rad);
+      var xy = PAT.xy && PAT.xy.length === mesh.pts.length ? PAT.xy : (PAT.xy = new Float64Array(mesh.pts.length));
+      for (var q = 0; q < mesh.pts.length; q += 3) {
+        var Q = proj(mesh.pts[q], mesh.pts[q + 1], mesh.pts[q + 2]);
+        xy[q] = Q[0]; xy[q + 1] = Q[1]; xy[q + 2] = Q[2];
       }
-      for (u = 1; u < 12; u++) {        // «параллели»
-        line1 = [];
-        for (v = 0; v <= 48; v++) { line1.push(pt(A1[0] + (A1[1] - A1[0]) * u / 12, TAU * v / 48)); }
-        seg(line1);
-      }
+      [false, true].forEach(function (front) {  // сначала задние отрезки (бледные), поверх — передние
+        ctx.beginPath();
+        mesh.lines.forEach(function (ln) {
+          for (var k = ln[0] + 3; k < ln[1]; k += 3) {
+            if ((xy[k + 2] + xy[k - 1] < 0) !== front) { continue; }
+            ctx.moveTo(xy[k - 3], xy[k - 2]); ctx.lineTo(xy[k], xy[k + 1]);
+          }
+        });
+        ctx.strokeStyle = alpha(C.tx, front ? 0.85 : 0.25); ctx.lineWidth = front ? 1.3 : 1; ctx.stroke();
+      });
       // антенна и направления
       drawAnt(ctx, type, pol, proj, cx, cy);
       var th = (S.thTx || 0) * Math.PI / 180, ge = rOf(th);
@@ -2171,6 +2196,7 @@
       if (!FS.avg || FS.avg.length !== N) { FS.avg = Float64Array.from(db); }
       for (i = 0; i < N; i++) { FS.avg[i] = FS.avg[i] * 0.6 + db[i] * 0.4; }
       FS.db = db;
+      FS.med = Float64Array.from(FS.avg).sort()[N >> 1];
       // строка водопада
       var wc = FS.wf.getContext("2d");
       wc.drawImage(FS.wf, 0, 1);
@@ -2200,19 +2226,27 @@
     for (var g = -80; g <= 0; g += 20) { hline(ctx, sx0, sx1, SY(g), alpha(C.grid, 0.9)); }
     var sel = SIGS[FS.sel], selX0 = sx0 + (sel.f - sel.bw / 2 + 0.5) * (sx1 - sx0), selX1 = sx0 + (sel.f + sel.bw / 2 + 0.5) * (sx1 - sx0);
     ctx.fillStyle = alpha(C.accent, 0.16); ctx.fillRect(selX0, sy0, selX1 - selX0, sy1 - sy0);
-    ctx.beginPath();
-    ctx.moveTo(sx0, sy1);
-    for (i = 0; i < N; i++) { ctx.lineTo(sx0 + (i + 0.5) / N * (sx1 - sx0), SY(FS.avg[i])); }
-    ctx.lineTo(sx1, sy1); ctx.closePath();
+    // линия спектра: не больше двух точек (минимум и максимум) на пиксель — при N = 4096 это в разы меньше вершин
+    var spn = Math.max(1, Math.round(sx1 - sx0)), spx = [], spy = [];
+    if (N <= spn) {
+      for (i = 0; i < N; i++) { spx.push(sx0 + (i + 0.5) / N * (sx1 - sx0)); spy.push(SY(FS.avg[i])); }
+    } else {
+      for (var c = 0; c < spn; c++) {
+        var i0 = Math.floor(c * N / spn), i1 = Math.floor((c + 1) * N / spn), vmin = Infinity, vmax = -Infinity;
+        for (i = i0; i < i1; i++) { var av = FS.avg[i]; if (av < vmin) { vmin = av; } if (av > vmax) { vmax = av; } }
+        spx.push(sx0 + c + 0.5, sx0 + c + 0.5); spy.push(SY(vmin), SY(vmax));
+      }
+    }
+    var spPath = function () { for (var k = 0; k < spx.length; k++) { if (k) { ctx.lineTo(spx[k], spy[k]); } else { ctx.moveTo(spx[k], spy[k]); } } };
+    ctx.beginPath(); ctx.moveTo(sx0, sy1); spPath(); ctx.lineTo(sx1, sy1); ctx.closePath();
     ctx.fillStyle = alpha(C.sdr, 0.22); ctx.fill();
-    ctx.beginPath();
-    for (i = 0; i < N; i++) { var px = sx0 + (i + 0.5) / N * (sx1 - sx0), py = SY(FS.avg[i]); if (i) { ctx.lineTo(px, py); } else { ctx.moveTo(px, py); } }
+    ctx.beginPath(); spPath();
     ctx.strokeStyle = C.sdr; ctx.lineWidth = 1.3; ctx.stroke();
     text(ctx, "спектр (строка БПФ, dB)", sx0 + 4, sy0 + 13, C.fg, "left", "11px 'Segoe UI', sans-serif");
     text(ctx, "IQ → окно Ханна → БПФ → |X|² в dB", sx1 - 4, sy0 + 13, C.sdr, "right", "600 11px 'Segoe UI', sans-serif");
     text(ctx, sel.name, (selX0 + selX1) / 2, sy0 + 28, C.accent, "center", "600 11px 'Segoe UI', sans-serif");
     // «пол» шума: медиана сглаженного спектра — смещается на 3 dB при каждом удвоении N
-    var srt = Array.prototype.slice.call(FS.avg).sort(function (a, b) { return a - b; }), med = srt[srt.length >> 1];
+    var med = FS.med;
     hline(ctx, sx0, sx1, SY(med), C.warn, [5, 4]);
     text(ctx, "пол шума " + num(med, 0) + " dB (RBW " + num(2400 / N * 1.5, 1) + " кГц)", sx0 + 4, SY(med) - 4, C.warn,
       "left", "600 11px 'Segoe UI', sans-serif");
@@ -2945,6 +2979,9 @@
     bindCanvases();
     if (/[?&]open=all\b/.test(location.search)) { $$("details.blk").forEach(function (det) { det.open = true; }); }
     if (location.hash && /^#b-/.test(location.hash)) { openBlock(location.hash.slice(1), true); }
+    window.addEventListener("hashchange", function () {  // переход на #b-… извне (окно справки) — открыть блок
+      if (/^#b-/.test(location.hash)) { openBlock(location.hash.slice(1), true); }
+    });
     requestAnimationFrame(frame);
     window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss, antShape: antShape, antEff: antEff, modSynth: modSynth, modCorr: modCorr, adcMusic: adcMusic, antTypes: ANT_TYPES, selfTestAnt: selfTestAnt };  // для проверки
   }

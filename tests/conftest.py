@@ -10,3 +10,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QPA_FONTDIR", r"C:\Windows\Fonts")
 os.environ["RTLTV_MUTE"] = "1"
 os.environ["RTLTV_NO_MIGRATE"] = "1"
+os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu")  # схема в справке: без GPU в offscreen
+from PySide6.QtCore import QCoreApplication, Qt  # noqa: E402
+
+QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # до первого QApplication — для QtWebEngine

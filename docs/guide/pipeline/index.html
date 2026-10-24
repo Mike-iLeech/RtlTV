@@ -6,6 +6,13 @@
 <title>Путь радиосигнала — SDR4NOOB</title>
 <meta name="description" content="Интерактивная схема: как сигнал проходит от микрофона передатчика через эфир до динамика SDR-приёмника (например, RTL-SDR). Уровни в dBm, ваттах и вольтах, модуляция, спектр, водопад, демодуляция.">
 <link rel="icon" href="data:,">
+<script>(function () {  // тема: ?theme=dark|light или как в системе (следит за сменой)
+  var m = /[?&]theme=(dark|light)\b/.exec(location.search), el = document.documentElement;
+  var q = !m && window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  var set = function () { el.setAttribute("data-theme", m ? m[1] : q && q.matches ? "dark" : "light"); };
+  set();
+  if (q) { if (q.addEventListener) { q.addEventListener("change", set); } else if (q.addListener) { q.addListener(set); } }
+})();</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>

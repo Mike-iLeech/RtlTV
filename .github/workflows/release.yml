@@ -63,8 +63,10 @@ jobs:
             --add-data "rtltv\assets;rtltv\assets" `
             --icon "rtltv\assets\sdr4noob.ico" `
             --hidden-import PySide6.QtSvg `
+            --hidden-import PySide6.QtWebEngineWidgets `
             --exclude-module tkinter `
             run.py
+          python tools/prune_webengine.py dist/SDR4NOOB
           Copy-Item LICENSE, THIRD_PARTY.md, README.md, CHANGELOG.md dist/SDR4NOOB/
           $ver = python -c "import rtltv; print(rtltv.__version__)"
           New-Item -ItemType Directory -Force release | Out-Null
@@ -94,6 +96,9 @@ jobs:
           $env:APPDATA = "$env:RUNNER_TEMP\appdata"
           $p = Start-Process dist/SDR4NOOB/SDR4NOOB.exe -ArgumentList "--mode","radio","--test","--shot","$env:RUNNER_TEMP\shot.png","--shot-delay","5" -PassThru -Wait
           if (-not (Test-Path "$env:RUNNER_TEMP\shot.png")) { throw "SDR4NOOB.exe не открыл окно" }
+          # интерактивная схема в справке: QtWebEngine упакован и страница оживает
+          $p = Start-Process dist/SDR4NOOB/SDR4NOOB.exe -ArgumentList "--selftest-guide" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "SDR4NOOB.exe --selftest-guide: код $($p.ExitCode) — схема в справке не открылась" }
 
       - name: Проверка установщика (тихая установка, настройки, удаление)
         timeout-minutes: 5

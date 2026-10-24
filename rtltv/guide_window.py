@@ -5,9 +5,11 @@
 show_guide(page, parent) открывает единственное окно на нужной странице («radio», «antennas#v-dipole»).
 В сборке PyInstaller папку надо положить как данные: --add-data "rtltv\\guide;rtltv\\guide".
 Интерактивные страницы с JavaScript лежат в подпапках (guide/pipeline/index.html): QTextBrowser их не
-показывает, ссылка на них открывается во внешнем браузере как file://.
+показывает, поэтому они открываются здесь же во встроенном браузере QtWebEngine (модуль грузится при первом
+открытии схемы). Без QtWebEngine в сборке (или с RTLTV_NO_WEBENGINE=1) — во внешнем браузере как file://.
 """
 import html
+import logging
 import os
 import re
 import sys
@@ -21,6 +23,8 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QListWidget, QLis
 
 from . import settings
 from .themes import THEMES, qss
+
+log = logging.getLogger(__name__)
 
 # (страница, заголовок) или (заголовок группы, [страницы])
 TOC = [
@@ -207,6 +211,95 @@ def open_in_browser(path):
     return QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
 
+_WEB = None
+
+
+def web_engine():
+    """(QtWebEngineWidgets, QtWebEngineCore) или None, если модуля нет в сборке или он отключён
+    RTLTV_NO_WEBENGINE=1 — тогда интерактивные страницы открываются в системном браузере."""
+    global _WEB
+    if os.environ.get("RTLTV_NO_WEBENGINE") == "1":
+        return None
+    if _WEB is None:
+        try:
+            from PySide6 import QtWebEngineCore, QtWebEngineWidgets
+            _WEB = (QtWebEngineWidgets, QtWebEngineCore)
+        except ImportError as e:  # сборка без QtWebEngine
+            log.warning("QtWebEngine недоступен (%s): схема откроется в браузере", e)
+            _WEB = False
+    return _WEB or None
+
+
+def is_dark(t):
+    """Тёмная ли тема приложения (по яркости фона) — для ?theme= интерактивной страницы."""
+    return QColor(t["bg"]).lightnessF() < 0.5
+
+
+def web_nav(url):
+    """Куда ведёт переход со встроенной интерактивной страницы:
+    ("web", None) — остаётся во встроенном браузере (сама схема, её якоря, data:/about:);
+    ("guide", "antennas#lna") — обычная страница руководства, открывается в окне справки;
+    ("external", QUrl) — http(s)/mailto в системный браузер; ("block", None) — остальное не открывать."""
+    scheme = url.scheme().lower()
+    if scheme in ("http", "https", "mailto"):
+        return "external", url
+    if scheme in ("data", "about", "blob"):
+        return "web", None
+    if not url.isLocalFile():
+        return "block", None
+    if interactive_path(url):
+        return "web", None
+    path = os.path.normcase(os.path.abspath(url.toLocalFile()))
+    root = os.path.normcase(os.path.abspath(guide_dir()))
+    if os.path.dirname(path) == root and path.endswith(".html"):
+        pid = os.path.splitext(os.path.basename(url.toLocalFile()))[0]
+        return "guide", pid + ("#" + url.fragment() if url.fragment() else "")
+    return "block", None
+
+
+def make_web_view(owner):
+    """Встроенный браузер для интерактивных страниц (QWebEngineView) или None без QtWebEngine.
+    Профиль без диска (кэш и куки только в памяти); переходы на обычные страницы руководства — в окно справки."""
+    mods = web_engine()
+    if not mods:
+        return None
+    QtWebEngineWidgets, QtWebEngineCore = mods
+    QWebEnginePage, QWebEngineProfile = QtWebEngineCore.QWebEnginePage, QtWebEngineCore.QWebEngineProfile
+
+    class GuideWebPage(QWebEnginePage):
+        def acceptNavigationRequest(self, url, _nav_type, is_main):
+            if not is_main:
+                return True
+            kind, arg = web_nav(url)
+            if kind == "guide":
+                QTimer.singleShot(0, lambda: owner.open_page(arg))
+            elif kind == "external":
+                QDesktopServices.openUrl(arg)
+            return kind == "web"
+
+        def javaScriptConsoleMessage(self, level, msg, line, src):
+            if level == QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel:
+                log.warning("схема: %s (%s:%s)", msg, os.path.basename(QUrl(src).toLocalFile() or src), line)
+
+        def createWindow(self, _type):  # window.open и target=_blank — не плодим окна
+            return None
+
+    view = QtWebEngineWidgets.QWebEngineView()
+    profile = QWebEngineProfile(view)  # без имени — off-the-record
+    page = GuideWebPage(profile, view)
+    WA = QtWebEngineCore.QWebEngineSettings.WebAttribute
+    page.settings().setAttribute(WA.LocalContentCanAccessRemoteUrls, False)
+    page.settings().setAttribute(WA.PluginsEnabled, False)
+    view.setPage(page)
+
+    def crashed(status, code):
+        if status != QWebEnginePage.RenderProcessTerminationStatus.NormalTerminationStatus:
+            log.warning("схема: процесс страницы завершился (%s, код %s) — перезагрузка", status, code)
+            QTimer.singleShot(500, view.reload)
+    page.renderProcessTerminated.connect(crashed)
+    return view
+
+
 def render_svg(data, t, width=0):
     """SVG со шаблонами цветов темы -> QImage. width — желаемая ширина в точках (0 — как в файле)."""
     from PySide6.QtSvg import QSvgRenderer
@@ -268,11 +361,12 @@ class GuideBrowser(QTextBrowser):
         bar.setValue(int(frac * bar.maximum()))
 
     def doSetSource(self, url, kind=QTextDocument.UnknownResource):
-        """Интерактивные страницы (pipeline/index.html) — во внешний браузер, остальное — как обычно."""
+        """Интерактивные страницы (pipeline/index.html) — во встроенный браузер окна (или внешний), остальное —
+        как обычно. В историю QTextBrowser они не попадают: «Назад» со схемы возвращает на страницу со ссылкой."""
         path = interactive_path(url)
         if path:
             if os.path.exists(path):
-                open_in_browser(path)
+                self.owner.show_interactive(path, url.fragment())
             return
         super().doSetSource(url, kind)
 
@@ -388,10 +482,17 @@ class GuideWindow(QWidget):
 
         self.view = GuideBrowser(self)
         self.view.setSearchPaths([guide_dir()])
+        # справа: страница руководства или интерактивная схема (QWebEngineView создаётся при первом открытии)
+        self.web = None
+        self._web_theme = None
+        self._web_fwd = False      # «Вперёд» со страницы вернёт на схему, с которой ушли «Назад»
+        self._web_from = None      # страница, с которой открыта схема
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self.view)
 
         split = QSplitter(Qt.Horizontal)
         split.addWidget(left)
-        split.addWidget(self.view)
+        split.addWidget(self.pages)
         split.setStretchFactor(1, 1)
         split.setSizes([270, 900])
         split.setChildrenCollapsible(False)
@@ -404,13 +505,13 @@ class GuideWindow(QWidget):
         v.addWidget(split, 1)
 
         # ---- сигналы
-        self.b_back.clicked.connect(self.view.backward)
-        self.b_fwd.clicked.connect(self.view.forward)
+        self.b_back.clicked.connect(self.go_back)
+        self.b_fwd.clicked.connect(self.go_forward)
         self.b_home.clicked.connect(lambda: self.open_page("index"))
         self.b_zm.clicked.connect(lambda: self.zoom(-1))
         self.b_zp.clicked.connect(lambda: self.zoom(+1))
-        self.view.backwardAvailable.connect(self.b_back.setEnabled)
-        self.view.forwardAvailable.connect(self.b_fwd.setEnabled)
+        self.view.backwardAvailable.connect(lambda _on: self._sync_nav())
+        self.view.forwardAvailable.connect(lambda _on: self._sync_nav())
         self.view.sourceChanged.connect(self._source_changed)
         self.tree.itemClicked.connect(self._tree_clicked)
         self.tree.itemActivated.connect(self._tree_clicked)
@@ -420,7 +521,7 @@ class GuideWindow(QWidget):
         self.results.itemActivated.connect(self._result_clicked)
         self.b_back.setEnabled(False)
         self.b_fwd.setEnabled(False)
-        for key, fn in (("Alt+Left", self.view.backward), ("Alt+Right", self.view.forward),
+        for key, fn in (("Alt+Left", self.go_back), ("Alt+Right", self.go_forward),
                         ("Alt+Home", lambda: self.open_page("index")), ("Ctrl+F", self._focus_search),
                         ("Ctrl+=", lambda: self.zoom(+1)), ("Ctrl++", lambda: self.zoom(+1)),
                         ("Ctrl+-", lambda: self.zoom(-1)), ("F3", self._find_next), ("Escape", self._escape)):
@@ -447,6 +548,12 @@ class GuideWindow(QWidget):
         self.view.document().setDefaultStyleSheet(doc_css(t))
         if not self.view.source().isEmpty():
             self.view.reload()
+        if self.web is not None:
+            self.web.page().setBackgroundColor(QColor(t["bg"]))
+            if self._web_theme is not None and self._web_theme != is_dark(t) and not self.web.url().isEmpty():
+                url = self.web.url()
+                url.setQuery(self._theme_query())
+                self.web.load(url)
 
     def zoom(self, d):
         self.st["zoom"] = max(self.ZOOM_MIN, min(self.ZOOM_MAX, int(self.st.get("zoom", 11)) + d))
@@ -458,6 +565,104 @@ class GuideWindow(QWidget):
         f.setPointSizeF(float(self.st.get("zoom", 11)))
         self.view.setFont(f)
         self.view.document().setDefaultFont(f)
+        if self.web is not None:
+            self.web.setZoomFactor(float(self.st.get("zoom", 11)) / 11)
+
+    # ---------- интерактивная схема ----------
+    def _theme_query(self):
+        self._web_theme = is_dark(self.theme)
+        return "theme=" + ("dark" if self._web_theme else "light")
+
+    def web_shown(self):
+        return self.web is not None and self.pages.currentWidget() is self.web
+
+    def show_interactive(self, path, frag=""):
+        """Открыть интерактивную страницу (pipeline/index.html) справа вместо текста. Та же страница не
+        перезагружается — положение и ползунки сохраняются; без QtWebEngine — системный браузер."""
+        if self.web is None:
+            self.web = make_web_view(self)
+            if self.web is None:
+                return open_in_browser(path)
+            self.web.page().setBackgroundColor(QColor(self.theme["bg"]))
+            self.web.setZoomFactor(float(self.st.get("zoom", 11)) / 11)
+            self.pages.addWidget(self.web)
+        url = QUrl.fromLocalFile(path)
+        url.setQuery(self._theme_query())
+        cur = self.web.url()
+        same = (cur.isLocalFile() and os.path.normcase(cur.toLocalFile()) == os.path.normcase(url.toLocalFile())
+                and cur.query() == url.query())
+        if frag:
+            url.setFragment(frag)
+        if not same:
+            self.web.load(url)
+        elif frag:  # блок схемы по якорю: страница сама откроет его и прокрутит (обработчик hashchange)
+            self.web.page().runJavaScript("location.hash = " + repr("#" + frag))
+        self._web_fwd = False
+        self._web_from = self.current_page()
+        self._set_web_active(True)
+        self.pages.setCurrentWidget(self.web)
+        self._web_title()
+        self._sync_nav()
+        self.raise_()
+        self.activateWindow()
+        return True
+
+    def _web_title(self):
+        title = page_title(self.current_page())
+        self.title.setText(f"{title} — интерактивная схема")
+        self.setWindowTitle(f"SDR4NOOB — руководство: {title} (схема)")
+
+    def _set_web_active(self, on):
+        """Скрытая схема не тратит процессор и молчит: таймеры и анимации заморожены, звук выключен."""
+        if self.web is None:
+            return
+        from PySide6.QtWebEngineCore import QWebEnginePage
+        page = self.web.page()
+        page.setAudioMuted(not on)
+        if on:
+            page.setLifecycleState(QWebEnginePage.LifecycleState.Active)
+        elif not self.web.isVisible() and page.lifecycleState() == QWebEnginePage.LifecycleState.Active:
+            page.setLifecycleState(QWebEnginePage.LifecycleState.Frozen)
+
+    def _show_text(self):
+        if self.web_shown():
+            self.pages.setCurrentWidget(self.view)
+            self._set_web_active(False)
+            self._source_changed(self.view.source())
+        self._sync_nav()
+
+    def go_back(self):
+        """«Назад»: со схемы — на страницу, откуда её открыли; иначе — по истории страниц."""
+        if self.web_shown():
+            self._show_text()
+            self._web_fwd = True
+            self._sync_nav()
+        else:
+            self.view.backward()
+
+    def go_forward(self):
+        if not self.web_shown() and self._web_fwd and not self.view.isForwardAvailable():
+            self._web_fwd = False
+            self._set_web_active(True)
+            self.pages.setCurrentWidget(self.web)
+            self._web_title()
+            self._sync_nav()
+        else:
+            self.view.forward()
+
+    def _sync_nav(self):
+        web = self.web_shown()
+        self.b_back.setEnabled(web or self.view.isBackwardAvailable())
+        self.b_fwd.setEnabled(not web and (self.view.isForwardAvailable() or self._web_fwd))
+
+    def hideEvent(self, e):
+        super().hideEvent(e)
+        self._set_web_active(False)
+
+    def showEvent(self, e):
+        super().showEvent(e)
+        if self.web_shown():
+            self._set_web_active(True)
 
     # ---------- навигация ----------
     def open_page(self, page):
@@ -470,6 +675,8 @@ class GuideWindow(QWidget):
         url = QUrl.fromLocalFile(page_path(pid))
         if frag:
             url.setFragment(frag)
+        self._show_text()
+        self._web_fwd = False
         self.view.setSource(url)
         self.raise_()
         self.activateWindow()
@@ -484,8 +691,14 @@ class GuideWindow(QWidget):
     def _source_changed(self, url):
         # source() при переходе на якорь другой страницы обновляется позже сигнала — берём url из сигнала
         pid = self._pid_of(url)
-        self.title.setText(page_title(pid))
-        self.setWindowTitle(f"SDR4NOOB — руководство: {page_title(pid)}")
+        if self._web_fwd and pid != self._web_from:  # ушли по ссылке на другую страницу — «Вперёд» уже не на схему
+            self._web_fwd = False
+            self._sync_nav()
+        if self.web_shown():
+            self._web_title()
+        else:
+            self.title.setText(page_title(pid))
+            self.setWindowTitle(f"SDR4NOOB — руководство: {page_title(pid)}")
         it = self.items.get(pid)
         if it is not None:
             self.tree.blockSignals(True)
@@ -585,6 +798,34 @@ class GuideWindow(QWidget):
 
 
 _window = None
+
+
+def selftest_interactive(timeout=40.0):
+    """Проверка сборки (SDR4NOOB.exe --selftest-guide): схема грузится во встроенном браузере и её JavaScript
+    запускается. -> код выхода: 0 — работает, 1 — нет QtWebEngine или страница не ожила за timeout с."""
+    import time
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance()
+    path = os.path.join(guide_dir(), "pipeline", "index.html")
+    w = GuideWindow("pipeline")
+    if not w.show_interactive(path) or w.web is None:
+        log.error("самопроверка справки: QtWebEngine недоступен")
+        return 1
+    box = []
+    end = time.time() + timeout
+    while time.time() < end and box != [True]:
+        box.clear()
+        w.web.page().runJavaScript("!!(window.SDR4NOOB_PIPELINE && document.documentElement.getAttribute('data-theme'))",
+                                   0, box.append)
+        t = time.time() + 0.5
+        while time.time() < t and not box:
+            app.processEvents()
+            time.sleep(0.01)
+    ok = box == [True]
+    (log.info if ok else log.error)("самопроверка справки: схема %s", "работает" if ok else "не загрузилась")
+    w.close()
+    w.deleteLater()
+    return 0 if ok else 1
 
 
 def show_guide(page=None, parent=None):
