@@ -183,19 +183,27 @@ begin
   Old := '';
   if Data = '' then
   begin
-    Data := ExpandConstant('{userdocs}\SDR4NOOB');
-    { прежняя версия (RtlTV) по умолчанию писала в «Документы\RtlTV» }
-    if DirHasFiles(ExpandConstant('{userdocs}\RtlTV')) then
-      Old := ExpandConstant('{userdocs}\RtlTV');
+    { прежняя версия (RtlTV) по умолчанию писала в «Документы\RtlTV»: тихое обновление (без страниц мастера)
+      остаётся там, а в мастере предлагаем «Документы\SDR4NOOB» и подсказываем про перенос }
+    if WizardSilent() and DirHasFiles(ExpandConstant('{userdocs}\RtlTV')) and
+       not DirExists(ExpandConstant('{userdocs}\SDR4NOOB')) then
+      Data := ExpandConstant('{userdocs}\RtlTV')
+    else
+    begin
+      Data := ExpandConstant('{userdocs}\SDR4NOOB');
+      if DirHasFiles(ExpandConstant('{userdocs}\RtlTV')) then
+        Old := ExpandConstant('{userdocs}\RtlTV');
+    end;
   end
-  else if CompareText(ExtractFileName(Data), 'RtlTV') = 0 then
+  { тихое обновление не меняет выбранную папку без спроса — файлы остались бы в старой }
+  else if (CompareText(ExtractFileName(Data), 'RtlTV') = 0) and not WizardSilent() then
   begin
     { папка с прежним именем программы (…\RtlTV) — предлагаем рядом …\SDR4NOOB }
     Old := Data;
     Data := ExtractFilePath(Data) + 'SDR4NOOB';
   end;
   Note := '';
-  if Old <> '' then
+  if (Old <> '') and (ExpandConstant('{param:DATADIR|}') = '') then
     Note := #13#10#13#10 + 'Файлы из прежней папки «' + Old + '» останутся на месте — их можно перенести ' +
       'в новую кнопкой «Настройки» → «Перенести их в папку данных…».';
   if ExpandConstant('{param:DATADIR|}') <> '' then
