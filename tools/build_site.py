@@ -237,13 +237,10 @@ def svg_variants(name, light, dark):
 
 # ---------------------------------------------------------------- общий шаблон
 
-ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<rect width="64" height="64" rx="14" fill="#15181d"/>
-<path d="M14 46 L26 22 L32 36 L38 14 L50 46" fill="none" stroke="#4fb3ff" stroke-width="4"
- stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="32" cy="50" r="4" fill="#7fffd4"/>
-</svg>
-"""
+# логотип — один на всё: rtltv/assets/sdr4noob.svg (из него же иконка EXE, см. tools/make_icon.py)
+LOGO_DIR = os.path.join(ROOT, "rtltv", "assets")
+ICON_SVG = open(os.path.join(LOGO_DIR, "sdr4noob.svg"), encoding="utf-8").read()
+
 
 
 def nav_tree(toc):
@@ -291,6 +288,10 @@ def page(*, title, body, current, root, groups, version, description="", prevnex
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="{canonical}">
 <link rel="icon" href="{root}assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{root}assets/sdr4noob-256.png">
+<meta property="og:title" content="{html.escape(full_title)}">
+<meta property="og:description" content="{desc}">
+<meta property="og:image" content="{SITE_URL}assets/sdr4noob-256.png">
 <link rel="stylesheet" href="{root}assets/style.css">
 <script src="{root}assets/search-index.js" defer></script>
 <script src="{root}assets/site.js" defer></script>
@@ -349,7 +350,7 @@ def home_body():
     return f"""
 <section class="hero">
   <div>
-    <h1>SDR4NOOB</h1>
+    <h1 class="logo-title"><img src="assets/favicon.svg" alt="" width="64" height="64">SDR4NOOB</h1>
     <p class="tagline">Всё в одном для начинающего радиолюбителя</p>
     <p class="lead">Бесплатная программа для Windows, которая превращает недорогой USB-донгл RTL-SDR
     в радиоприёмник, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов.
@@ -737,6 +738,8 @@ figure { margin: 1rem 0; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; align-items: center; margin-bottom: 1rem; }
 .hero h1 { font-size: 2.2rem; }
 .lead { font-size: 1.12rem; }
+.logo-title { display: flex; align-items: center; gap: .6rem; }
+.logo-title img { width: 64px; height: 64px; }
 .tagline { font-size: 1.3rem; font-weight: 600; color: var(--accent); margin: -.4rem 0 .6rem; }
 .cta { margin: 1.2rem 0 .6rem; }
 .mode { border-top: 1px solid var(--grid); padding-top: .4rem; }
@@ -923,6 +926,7 @@ def build(verbose=True):
     write(os.path.join(DOCS, "assets", "style.css"), CSS.lstrip())
     write(os.path.join(DOCS, "assets", "site.js"), JS.lstrip())
     write(os.path.join(DOCS, "assets", "favicon.svg"), ICON_SVG)
+    shutil.copyfile(os.path.join(LOGO_DIR, "sdr4noob-256.png"), os.path.join(DOCS, "assets", "sdr4noob-256.png"))
     for name in sorted(os.listdir(os.path.join(GUIDE, "img"))):
         if name.endswith(".svg"):
             for out, txt in svg_variants(name, light, dark).items():

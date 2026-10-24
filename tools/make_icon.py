@@ -1,4 +1,5 @@
-"""Собрать rtltv/assets/sdr4noob.ico (иконка EXE) из логотипа сайта rtltv/assets/sdr4noob.svg.
+"""Собрать rtltv/assets/sdr4noob.ico (иконка EXE) и sdr4noob-256.png (руководство, сайт) из логотипа
+rtltv/assets/sdr4noob.svg — единственного источника логотипа.
 
     py -3.12 tools/make_icon.py
 
@@ -15,6 +16,7 @@ from PySide6.QtSvg import QSvgRenderer
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SVG = os.path.join(ROOT, "rtltv", "assets", "sdr4noob.svg")
 ICO = os.path.join(ROOT, "rtltv", "assets", "sdr4noob.ico")
+PNG = os.path.join(ROOT, "rtltv", "assets", "sdr4noob-256.png")
 SIZES = [16, 20, 24, 32, 40, 48, 64, 128, 256]
 
 
@@ -36,6 +38,7 @@ def main():
     app = QGuiApplication(sys.argv)
     imgs = [render(s) for s in SIZES]
     imgs[-1].save(ICO, format="ICO", sizes=[(s, s) for s in SIZES], append_images=imgs[:-1])
+    imgs[-1].save(PNG, format="PNG", optimize=True)
     print(ICO, os.path.getsize(ICO), "байт")
     del app
 

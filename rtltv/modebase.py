@@ -6,7 +6,7 @@
   * при желании переопределить apply_theme(t) — перекрасить свои виджеты (QSS приложение ставит само).
 opts: {"theme": имя темы, "source": "rtl:0" | "rtltcp:host:port" | "hackrf:0" | ... | "test", "shot": путь снимка окна для автотестов, ...}
 """
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QColor, QKeySequence, QPalette
 from PySide6.QtWidgets import QApplication, QMainWindow
 
@@ -77,12 +77,17 @@ class ModeWindow(QMainWindow):
     def show_about(self):
         from PySide6.QtWidgets import QMessageBox
         from . import __version__
-        QMessageBox.about(self, "О программе",
-                          f"<h3>SDR4NOOB {__version__}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
+        from .branding import app_icon
+        box = QMessageBox(self)
+        box.setWindowTitle("О программе")
+        box.setIconPixmap(app_icon().pixmap(72, 72))
+        box.setTextFormat(Qt.RichText)
+        box.setText(f"<h3>SDR4NOOB {__version__}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
                           "Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p><p>Руководство для начинающих — меню «Справка → "
                           "Руководство» (F1).</p><p>Сайт и вики: <a href='https://mike-ileech.github.io/SDR4NOOB/'>"
                           "mike-ileech.github.io/SDR4NOOB</a><br>Исходники и релизы: <a href='https://github.com/"
                           "Mike-iLeech/SDR4NOOB'>github.com/Mike-iLeech/SDR4NOOB</a><br>Лицензия GPL-3.0-or-later.</p>")
+        box.exec()
 
     # ---------- устройства: диалог «Устройства…» и обновление списка источников ----------
     def show_devices(self):
