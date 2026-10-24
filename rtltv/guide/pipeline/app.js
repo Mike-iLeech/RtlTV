@@ -2477,7 +2477,7 @@
       }
       if (f < cut[0] || f > cut[1]) { target *= 0.03; }
       target = Math.min(1, target * (0.92 + 0.16 * Math.random()));
-      audBars[i] += (target - audBars[i]) * Math.min(1, paused || !d.anim ? 1 : dt * 10);  // dt = 0 — без шага
+      audBars[i] += (target - audBars[i]) * Math.min(1, paused || !d.anim ? 1 : dt * 10);  // на паузе — сразу к цели; перерисовка dt = 0 в ходу — без шага
     }
     var bw = (R0 - L0) / nb;
     var X = function (f) { return L0 + (R0 - L0) * f / fmax; };

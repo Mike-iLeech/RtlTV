@@ -348,6 +348,16 @@ def test_interactive_navigation_cases(monkeypatch):
     w.go_forward()
     app.processEvents()
     assert not w.web_shown() and w.current_page() == "glossary" and w.view.source().fragment() == "t-fspl"
+    # ссылка → «Назад» (схема) → «Назад» — на страницу, с которой открыта схема, а не на словарь
+    w.go_back()
+    app.processEvents()
+    assert w.web_shown()
+    w.go_back()
+    app.processEvents()
+    assert not w.web_shown() and w.current_page() == "pipeline" and w.b_fwd.isEnabled()
+    w.go_forward()
+    app.processEvents()
+    assert w.web_shown()
     # A → B → «Назад» на A → схема с A → «Назад» → «Вперёд» ведёт на схему, а не на B
     w.open_page("sdr")
     w.open_page("decibels")

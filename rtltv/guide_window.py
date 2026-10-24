@@ -286,8 +286,10 @@ def make_web_view(owner):
 
     view = QtWebEngineWidgets.QWebEngineView()
     # профиль без имени — off-the-record; он должен пережить страницу (иначе падение при выходе), поэтому его
-    # владелец — окно справки, а страница принадлежит view, который удаляется раньше (closeEvent окна)
-    profile = QWebEngineProfile(owner)
+    # владелец — окно справки (один на окно), а страницу и view раньше него удаляет owner.release_web()
+    profile = getattr(owner, "_web_profile", None)
+    if profile is None:
+        profile = owner._web_profile = QWebEngineProfile(owner)
     page = GuideWebPage(profile, view)
     WA = QtWebEngineCore.QWebEngineSettings.WebAttribute
     page.settings().setAttribute(WA.LocalContentCanAccessRemoteUrls, False)
@@ -296,10 +298,15 @@ def make_web_view(owner):
 
     restarts = [0]
 
+    def loaded(ok):
+        if ok:
+            restarts[0] = 0   # страница ожила — счётчик падений подряд с нуля
+    page.loadFinished.connect(loaded)
+
     def crashed(status, code):
         if status != QWebEnginePage.RenderProcessTerminationStatus.NormalTerminationStatus:
             restarts[0] += 1
-            if restarts[0] > 3:  # падает раз за разом (драйвер, GPU) — не крутить перезагрузку бесконечно
+            if restarts[0] > 3:  # падает раз за разом подряд (драйвер, GPU) — не крутить перезагрузку бесконечно
                 log.error("схема: процесс страницы завершился (%s, код %s), больше не перезагружаю", status, code)
                 return
             log.warning("схема: процесс страницы завершился (%s, код %s) — перезагрузка", status, code)
@@ -676,7 +683,12 @@ class GuideWindow(QWidget):
             self._web_fwd = True
             self._sync_nav()
         elif self._back_web_ready():
-            self._back_to_web = None   # _web_next остаётся: «Вперёд» со схемы — снова на эту страницу
+            # текст — обратно на страницу, с которой открыта схема (иначе следующее «Назад» со схемы покажет
+            # страницу из ссылки); _web_next остаётся: «Вперёд» со схемы — снова на неё
+            nxt = self._web_next
+            if self.view.isBackwardAvailable():
+                self.view.backward()
+            self._back_to_web, self._web_next = None, nxt
             self._return_to_web()
         else:
             self.view.backward()
@@ -715,6 +727,8 @@ class GuideWindow(QWidget):
             page = web.page()
             shiboken6.delete(page)   # сразу, не deleteLater: при выходе из приложения цикла событий уже нет
             shiboken6.delete(web)
+            self._web_fwd, self._back_to_web, self._web_next = False, None, None
+            self._source_changed(self.view.source())
 
     def showEvent(self, e):
         super().showEvent(e)
