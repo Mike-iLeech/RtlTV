@@ -152,7 +152,7 @@
       (cut > 0.05 ? " · канал уже сигнала: −" + num(cut, 1) + " дБ" : " · весь сигнал в канале"));
     setLive("rssi_noise", fmtDbm(nrssi));
     setLive("rssi_noise_sub", "шум в " + fmtBw(S.bw) + "; разница = С/Ш " + num(snr, 1) + " дБ");
-    setLive("smeter", sUnits(rssi));
+    setLive("smeter", sUnits(meas));
     setLive("smeter_sub", "шум: " + sUnits(nrssi) + "; S9 = " + num(s9, 0) + " дБм (" + (S.freq < 30 ? "50" : "5") + " мкВ), " +
       (S.freq < 30 ? "ниже" : "выше") + " 30 МГц");
     setLive("margin", fmtDb(margin).replace("+", "+"));
@@ -162,7 +162,7 @@
     document.getElementById("o-tGain").textContent = num(tg, 0) + " дБ";
     var fsIn = FS_DBM - tg, dfs = rssi - fsIn, nfs = nrssi - fsIn;
     // шум квантования 8-битного АЦП (как у RTL-SDR, f_д = 2,4 МГц) в полосе канала
-    var qn = -(6.02 * 8 + 1.76) - 10 * LOG10(1.2e6 / S.bw);
+    var qn = -(6.02 * 8 + 1.76) - 10 * LOG10(2.4e6 / S.bw);   // комплексный IQ: шум по всей полосе f_д
     setLive("dbfs_q", num(qn, 1) + " дБFS");
     setLive("dbfs", num(dfs, 1) + " дБFS");
     setLive("dbfs_noise", num(nfs, 1) + " дБFS");
@@ -197,7 +197,7 @@
         "font-size": 12, "font-weight": 600, fill: col }, lbl));
     };
     mark(nrssi, C.noise, "шум " + sUnits(nrssi), false);
-    mark(rssi, C.accent, "сигнал " + sUnits(rssi) + " (" + num(rssi, 0) + " дБм)", true);
+    mark(meas, C.accent, "показание " + sUnits(meas) + " (" + num(meas, 0) + " дБм)", true);
   }
   function readControls() {
     IDS.forEach(function (k) {
@@ -227,11 +227,11 @@
     r.paGain = r.pa - r.exc;
     r.txLoss = s.txLen > 0 ? cableLoss(s.txType, f, s.txLen) + conn : 0;
     r.txOut = r.pa - r.txLoss;
-    r.antLoss = 0;                                    // потери в самой антенне (КПД 100 %)
-    r.prad = r.txOut - r.antLoss;                     // полная излучаемая мощность — от усиления не зависит
+    r.antLoss = -10 * LOG10(antEff(s.gTx));           // потери в самой антенне: у укороченного штыря < 1,76 дБi
+    r.prad = r.txOut - r.antLoss;                     // полная излучаемая мощность — от направленности не зависит
     r.gTxEff = antGainAt(s.gTx, s.thTx || 0);         // усиление в сторону приёмника по диаграмме
     r.gRxEff = antGainAt(s.gRx, s.thRx || 0);
-    r.eirp = r.prad + r.gTxEff;                       // эквивалент в направлении на приёмник, не энергия
+    r.eirp = r.txOut + r.gTxEff;                      // эквивалент на приёмник (G уже включает КПД), не энергия
     r.fspl = 20 * LOG10(s.dist) + 20 * LOG10(f) + 32.44;
     r.air = r.eirp - r.fspl - s.extra;
     r.rxAnt = r.air + r.gRxEff;
@@ -272,7 +272,7 @@
   function nodeVals(r) {
     return {
       src: [r.exc, "—"], pa: [r.pa, fmtDb(r.paGain)], txfeed: [r.txOut, S.txLen > 0 ? fmtLoss(r.txLoss, 2) : "нет кабеля"],
-      prad: [r.prad, "КПД 100 % (0 дБ)"], air: [r.air, fmtLoss(r.fspl + S.extra, 1) + ", G(θ) " + fmtDb(r.gTxEff) + "i"],
+      prad: [r.prad, r.antLoss > 0.005 ? "КПД " + num(100 / lin(r.antLoss), 0) + " % (" + fmtLoss(r.antLoss, 1) + ": укороченный штырь греется)" : "КПД 100 % (0 дБ)"], air: [r.air, fmtLoss(r.fspl + S.extra, 1) + ", G(θ) " + fmtDb(r.gTxEff) + "i"],
       rxant: [r.rxAnt, "G(θ) " + fmtDb(r.gRxEff) + "i"], lna: [r.lna, S.lnaOn ? fmtDb(r.lnaG) : "нет МШУ"],
       rxin: [r.rxIn, fmtLoss(r.rxLoss, 2)]
     };
@@ -875,12 +875,35 @@
         return Math.max(peak * Math.pow(Math.abs(Math.cos(e)), m), peak * 1e-3);  // провал вдоль оси
       } };
     }
-    var n = Math.max(0, G - 1);
-    return { dir: "yagi", f: function (a) {
-      var side = G * Math.pow(10, -(15 + 5 * Math.abs(Math.sin(a))) / 10);  // задний лепесток −15 дБ, боковые −20 дБ
-      return Math.max(G * Math.pow((1 + Math.cos(a)) / 2, n), side);
-    } };
+    var y = YAGI[g.toFixed(2)] || (YAGI[g.toFixed(2)] = yagiFit(G));
+    return { dir: "yagi", f: function (a) { return G * yagiRel(a, y.n, y.k); } };
   }
+  // Яги: форма относительно пика = max(главный лепесток ((1+cos a)/2)^n, k·задние/боковые −15/−20 дБ).
+  // Нормировка: среднее по сфере ½∫ f(a)·sin a da = 1/G, тогда G·f даёт ∮G dΩ = 4π (КПД 100 %).
+  // Если боковые −15/−20 дБ «съедают» больше 20 % излучения (G > ~10,5 дБi), их уровень k снижается,
+  // а n подбирается так, чтобы главный лепесток давал ровно G (ширина луча ~ 1/√G).
+  // Проверено в браузере (шаг 0,25 дБ, 4000 точек): среднее G по сфере / КПД = 1 с ошибкой ≤ 0,12 % для −5…20 дБi
+  // (всенаправленная модель: среднее = КПД = min(1, G/1,5)).
+  var YAGI = {};
+  function yagiRel(a, n, k) {
+    return Math.max(Math.pow((1 + Math.cos(a)) / 2, n), k * Math.pow(10, -(15 + 5 * Math.abs(Math.sin(a))) / 10));
+  }
+  function sphereAvg(f) {  // ½∫₀^π f(a)·sin a da
+    var acc = 0, N = 720;
+    for (var i = 0; i < N; i++) { var a = Math.PI * (i + 0.5) / N; acc += f(a) * Math.sin(a) * Math.PI / N; }
+    return acc / 2;
+  }
+  function yagiFit(G) {
+    var sideAvg = sphereAvg(function (a) { return yagiRel(a, 1e6, 1); });
+    var k = Math.min(1, 0.2 / (G * sideAvg));
+    var lo = 0, hi = 5000;
+    for (var it = 0; it < 60; it++) {
+      var n = (lo + hi) / 2;
+      if (1 / sphereAvg(function (a) { return yagiRel(a, n, k); }) < G) { lo = n; } else { hi = n; }
+    }
+    return { n: (lo + hi) / 2, k: k };
+  }
+  function antEff(g) { return g <= 6 ? Math.min(1, lin(g) / 1.5) : 1; }  // КПД, заложенный в модель
   function antGainAt(g, deg) { return 10 * LOG10(Math.max(1e-6, antShape(g).f(deg * Math.PI / 180))); }
   demo("pattern", false, function (d) {
     var ctx = d.ctx, w = d.w, h = d.h, g = S.gTx;
@@ -1742,7 +1765,7 @@
     if (/[?&]open=all\b/.test(location.search)) { $$("details.blk").forEach(function (det) { det.open = true; }); }
     if (location.hash && /^#b-/.test(location.hash)) { openBlock(location.hash.slice(1), true); }
     requestAnimationFrame(frame);
-    window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss };  // для проверки
+    window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss, antShape: antShape, antEff: antEff };  // для проверки
   }
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); } else { init(); }
 })();
