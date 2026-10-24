@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.2.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -35,7 +35,7 @@
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
 <div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
-<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html">Путь радиосигнала</a></li><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
 <div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html" aria-current="page" class="cur">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
@@ -50,7 +50,7 @@
 <div class="tw"><table class="t">
 <tr><th style="width:26%">Элемент</th><th>Что делает</th></tr>
 <tr><td>Карта</td><td>Борта с курсом и высотой (цвет), следы, подписи, кольца дальности вокруг приёмника. Список «Без координат» — поверх карты.</td></tr>
-<tr><td>«Борта сейчас»</td><td>ICAO, Позывной, Высота, Скор., Курс, Вертик., Сквок, Дальн., Сообщ., Сигн. (дБ), Приём. Щелчок — выбрать борт.</td></tr>
+<tr><td>«Борта сейчас»</td><td>ICAO, Позывной, Высота, Скор., Курс, Вертик., Сквок, Дальн., Сообщ., Сигн. (dB), Приём. Щелчок — выбрать борт.</td></tr>
 <tr><td>«Журнал сообщений»</td><td>Расшифровка каждого принятого кадра (DF17, DF4, DF11…); «Только выбранный борт», «⏸ Пауза», «Очистить», «Сохранить в файл…».</td></tr>
 <tr><td>«История сеанса»</td><td>Все борта за сеанс: первый/последний приём, мин./макс. высота, макс. дальность; «Показать на карте рейсы из истории», «Сохранить историю…».</td></tr>
 <tr><td>«Выбранный борт»</td><td>Карточка выбранного самолёта: все известные поля и откуда взята позиция.</td></tr>
@@ -67,7 +67,7 @@
 <li><b>Место:</b> как можно выше, у окна или на улице. 1090 МГц — прямая видимость: самолёт на 10 км слышен
 до ~400 км, если ничто не заслоняет горизонт.</li>
 <li><b>Кабель:</b> короткий; при длинном — МШУ 1090 МГц с фильтром у антенны, питание через «Bias-T».</li>
-<li><b>Усиление:</b> обычно 40–49,6 дБ без МШУ; с МШУ меньше. Если ближние борта у 0 дБ в колонке «Сигн.»,
+<li><b>Усиление:</b> обычно 40–49,6 dB без МШУ; с МШУ меньше. Если ближние борта у 0 dB в колонке «Сигн.»,
 а сообщения теряются — уменьшите.</li>
 </ol>
 
@@ -104,7 +104,7 @@
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.2.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>

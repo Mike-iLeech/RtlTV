@@ -1260,7 +1260,7 @@ def _pos_text(p):
         out.append(f"высота {p['alt_m']:.0f} м")
     if p.get("phg"):
         g = p["phg"]
-        out.append(f"мощность {g['power_w']} Вт, антенна {g['height_m']:.0f} м, {g['gain_db']} дБ"
+        out.append(f"мощность {g['power_w']} Вт, антенна {g['height_m']:.0f} м, {g['gain_db']} dB"
                    + ("" if g["dir"] is None else f", направл. {g['dir']}°"))
     if p.get("range_km"):
         out.append(f"радиус {p['range_km']:.0f} км")

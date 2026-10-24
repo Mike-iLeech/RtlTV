@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.2.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -35,7 +35,7 @@
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
 <div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
-<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html" aria-current="page" class="cur">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html">Путь радиосигнала</a></li><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html" aria-current="page" class="cur">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
 <div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
@@ -46,16 +46,16 @@
 километров. Записывать такие числа неудобно, поэтому в радио всё считают в <b>децибелах</b> — логарифмах
 отношений.</p>
 
-<h2 id="db">дБ — отношение<a class="anchor" href="#db" aria-label="Ссылка на этот раздел">#</a></h2>
-<p><b>Децибел (дБ)</b> — не единица чего-то, а <b>отношение двух величин</b>:</p>
+<h2 id="db">dB — отношение<a class="anchor" href="#db" aria-label="Ссылка на этот раздел">#</a></h2>
+<p><b>Децибел (dB)</b> — не единица чего-то, а <b>отношение двух величин</b>:</p>
 <div class="tw"><table class="t">
 <tr><th>Для мощности</th><th>Для напряжения (или тока)</th></tr>
-<tr><td class="mono">дБ = 10 · lg(P2 / P1)</td><td class="mono">дБ = 20 · lg(U2 / U1)</td></tr>
+<tr><td class="mono">dB = 10 · lg(P2 / P1)</td><td class="mono">dB = 20 · lg(U2 / U1)</td></tr>
 </table></div>
 <p>Почему ×20 для напряжения: мощность пропорциональна квадрату напряжения (P = U²/R), а lg(x²) = 2·lg(x).
-Так что <b>+6 дБ — это вдвое больше напряжения, но вчетверо больше мощности</b>.</p>
+Так что <b>+6 dB — это вдвое больше напряжения, но вчетверо больше мощности</b>.</p>
 <div class="tw"><table class="t">
-<tr><th>дБ</th><th>Мощность, раз</th><th>Напряжение, раз</th><th>Запомнить</th></tr>
+<tr><th>dB</th><th>Мощность, раз</th><th>Напряжение, раз</th><th>Запомнить</th></tr>
 <tr><td>+3</td><td>×2</td><td>×1,41</td><td>удвоение мощности</td></tr>
 <tr><td>+6</td><td>×4</td><td>×2</td><td>удвоение напряжения; одна «единица S» на шкале S-метра</td></tr>
 <tr><td>+10</td><td>×10</td><td>×3,16</td><td></td></tr>
@@ -64,51 +64,51 @@
 <tr><td>−3</td><td>×0,5</td><td>×0,71</td><td>граница полосы фильтра</td></tr>
 <tr><td>−10</td><td>×0,1</td><td>×0,32</td><td></td></tr>
 </table></div>
-<p>Децибелы <b>складываются</b> там, где разы перемножаются: антенна +5 дБ, кабель −3 дБ, МШУ +20 дБ →
-итого +22 дБ.</p>
+<p>Децибелы <b>складываются</b> там, где разы перемножаются: антенна +5 dB, кабель −3 dB, МШУ +20 dB →
+итого +22 dB.</p>
 
-<h2 id="dbm">дБм и дБмкВ — абсолютный уровень<a class="anchor" href="#dbm" aria-label="Ссылка на этот раздел">#</a></h2>
+<h2 id="dbm">dBm и dBµV — абсолютный уровень<a class="anchor" href="#dbm" aria-label="Ссылка на этот раздел">#</a></h2>
 <p>Если отношение берётся к фиксированной величине, получается абсолютная единица:</p>
 <ul>
-<li><b>дБм (dBm)</b> — мощность относительно 1 мВт. 0 дБм = 1 мВт, +30 дБм = 1 Вт, −30 дБм = 1 мкВт,
-−90 дБм = 1 пВт.</li>
-<li><b>дБмкВ (dBµV)</b> — напряжение относительно 1 мкВ. Так меряют ТВ-сигнал на входе антенны.</li>
-<li>На нагрузке 50 Ом: <b>дБмкВ = дБм + 107</b>. Например, −107 дБм = 0 дБмкВ = 1 мкВ, 0 дБм = 107 дБмкВ ≈ 0,224 В.</li>
+<li><b>dBm</b> — мощность относительно 1 мВт. 0 dBm = 1 мВт, +30 dBm = 1 Вт, −30 dBm = 1 мкВт,
+−90 dBm = 1 пВт.</li>
+<li><b>dBµV</b> — напряжение относительно 1 мкВ. Так меряют ТВ-сигнал на входе антенны.</li>
+<li>На нагрузке 50 Ом: <b>dBµV = dBm + 107</b>. Например, −107 dBm = 0 dBµV = 1 мкВ, 0 dBm = 107 dBµV ≈ 0,224 В.</li>
 </ul>
 <div class="tw"><table class="t">
-<tr><th>Сигнал на входе приёмника</th><th>дБм</th><th>Напряжение (50 Ом)</th></tr>
+<tr><th>Сигнал на входе приёмника</th><th>dBm</th><th>Напряжение (50 Ом)</th></tr>
 <tr><td>Мощная FM-станция в городе</td><td>−20 … −40</td><td>22 мВ … 2,2 мВ</td></tr>
 <tr><td>Хороший ТВ-мультиплекс (DVB-T2)</td><td>−50 … −70</td><td>0,7 мВ … 70 мкВ</td></tr>
 <tr><td>«S9» на УКВ (по стандарту IARU)</td><td>−93</td><td>5 мкВ</td></tr>
 <tr><td>«S9» на КВ</td><td>−73</td><td>50 мкВ</td></tr>
 <tr><td>Самолёт ADS-B за 200 км</td><td>≈ −85 … −95</td><td>≈ 12 … 4 мкВ</td></tr>
 <tr><td>«Метеор-М» на V-диполь</td><td>≈ −110 … −120</td><td>≈ 0,7 … 0,2 мкВ</td></tr>
-<tr><td>Собственный шум приёмника в 12,5 кГц (КШ 4 дБ)</td><td>≈ −129</td><td>≈ 0,08 мкВ</td></tr>
+<tr><td>Собственный шум приёмника в 12,5 кГц (КШ 4 dB)</td><td>≈ −129</td><td>≈ 0,08 мкВ</td></tr>
 </table></div>
 <p class="dim">Значения ориентировочные — зависят от расстояния, антенны и кабеля.</p>
 
-<h2 id="dbi">дБi и дБd — усиление антенны<a class="anchor" href="#dbi" aria-label="Ссылка на этот раздел">#</a></h2>
+<h2 id="dbi">dBi и dBd — усиление антенны<a class="anchor" href="#dbi" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>дБi</b> — относительно воображаемой изотропной антенны, излучающей одинаково во все стороны.</li>
-<li><b>дБd</b> — относительно полуволнового <a href="antennas.html#dipole">диполя</a>. Сам диполь имеет
-2,15 дБi, поэтому <b>дБi = дБd + 2,15</b>.</li>
+<li><b>dBi</b> — относительно воображаемой изотропной антенны, излучающей одинаково во все стороны.</li>
+<li><b>dBd</b> — относительно полуволнового <a href="antennas.html#dipole">диполя</a>. Сам диполь имеет
+2,15 dBi, поэтому <b>dBi = dBd + 2,15</b>.</li>
 <li>Усиление антенны — не «бесплатная» мощность: она просто собирает сигнал с одного направления и хуже
-слышит остальные. Яги на 10 дБi «слышит» вперёд в 10 раз лучше изотропной, но назад — хуже.</li>
+слышит остальные. Яги на 10 dBi «слышит» вперёд в 10 раз лучше изотропной, но назад — хуже.</li>
 </ul>
 
-<h2 id="dbfs">дБFS — уровень относительно шкалы АЦП<a class="anchor" href="#dbfs" aria-label="Ссылка на этот раздел">#</a></h2>
-<p><b>дБFS</b> (dB Full Scale) — уровень относительно максимума, который может записать
-<a href="sdr.html#adc">АЦП</a>. 0 дБFS — полная шкала, дальше — обрезание (клиппинг). Все уровни в SDR4NOOB
-(индикатор <b>«Канал»</b> в «Радио», шкала спектра, «Уровень» в «Спутниках») — в дБ относительно полной шкалы.
-Это не дБм: одна и та же станция покажет разные дБFS при разном <a href="gain.html">усилении</a>.</p>
+<h2 id="dbfs">dBFS — уровень относительно шкалы АЦП<a class="anchor" href="#dbfs" aria-label="Ссылка на этот раздел">#</a></h2>
+<p><b>dBFS</b> (dB Full Scale) — уровень относительно максимума, который может записать
+<a href="sdr.html#adc">АЦП</a>. 0 dBFS — полная шкала, дальше — обрезание (клиппинг). Все уровни в SDR4NOOB
+(индикатор <b>«Канал»</b> в «Радио», шкала спектра, «Уровень» в «Спутниках») — в dB относительно полной шкалы.
+Это не dBm: одна и та же станция покажет разные dBFS при разном <a href="gain.html">усилении</a>.</p>
 <ul>
-<li>Шумовая дорожка спектра при нормальном усилении — примерно −60 … −90 дБ (зависит от разрешения БПФ).</li>
-<li>Если отдельные станции подходят к −10 … 0 дБ — АЦП близок к перегрузке, уменьшите усиление.</li>
+<li>Шумовая дорожка спектра при нормальном усилении — примерно −60 … −90 dB (зависит от разрешения БПФ).</li>
+<li>Если отдельные станции подходят к −10 … 0 dB — АЦП близок к перегрузке, уменьшите усиление.</li>
 </ul>
 
 <h2 id="snr">ОСШ, C/N, SINAD<a class="anchor" href="#snr" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>ОСШ</b> (SNR, signal-to-noise ratio) — во сколько раз сигнал сильнее шума, в дБ. На спектре это
+<li><b>ОСШ</b> (SNR, signal-to-noise ratio) — во сколько раз сигнал сильнее шума, в dB. На спектре это
 высота сигнала над шумовой дорожкой <b>в той же полосе</b>.</li>
 <li><b>C/N</b> (carrier-to-noise) — то же для несущей или цифрового сигнала в его полосе. Измеритель DVB-T2
 в «ТВ» показывает именно C/N.</li>
@@ -116,33 +116,33 @@
 </ul>
 <div class="tw"><table class="t">
 <tr><th>Сигнал</th><th>Нужное ОСШ / C/N</th></tr>
-<tr><td>NFM-речь «с шумом, но понятно»</td><td>≈ 6–10 дБ в канале</td></tr>
-<tr><td>FM-вещание без шипения, стерео</td><td>≥ 30–40 дБ</td></tr>
-<tr><td>LRPT «Метеора» (снимок без пропусков)</td><td>≈ 5–8 дБ на спектре 150 кГц</td></tr>
-<tr><td>ADS-B</td><td>≈ 10 дБ над шумом в импульсе</td></tr>
-<tr><td>DVB-T2 256-QAM (как в России)</td><td>≈ 18–22 дБ</td></tr>
+<tr><td>NFM-речь «с шумом, но понятно»</td><td>≈ 6–10 dB в канале</td></tr>
+<tr><td>FM-вещание без шипения, стерео</td><td>≥ 30–40 dB</td></tr>
+<tr><td>LRPT «Метеора» (снимок без пропусков)</td><td>≈ 5–8 dB на спектре 150 кГц</td></tr>
+<tr><td>ADS-B</td><td>≈ 10 dB над шумом в импульсе</td></tr>
+<tr><td>DVB-T2 256-QAM (как в России)</td><td>≈ 18–22 dB</td></tr>
 </table></div>
 
 <h2 id="noise">Шум и почему узкая полоса «слышит» лучше<a class="anchor" href="#noise" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Тепловой шум на входе любого приёмника при комнатной температуре — <b>−174 дБм на каждый 1 Гц</b> полосы.
+<p>Тепловой шум на входе любого приёмника при комнатной температуре — <b>−174 dBm на каждый 1 Гц</b> полосы.
 В полосе B мощность шума растёт как 10·lg(B):</p>
 <div class="tw"><table class="t">
 <tr><th>Полоса</th><th>10·lg(B)</th><th>Тепловой шум</th><th>Где</th></tr>
-<tr><td>500 Гц</td><td>27 дБ</td><td>−147 дБм</td><td>CW</td></tr>
-<tr><td>2,8 кГц</td><td>34,5 дБ</td><td>−139,5 дБм</td><td>SSB</td></tr>
-<tr><td>12,5 кГц</td><td>41 дБ</td><td>−133 дБм</td><td>NFM, DMR</td></tr>
-<tr><td>200 кГц</td><td>53 дБ</td><td>−121 дБм</td><td>WFM</td></tr>
-<tr><td>2,4 МГц</td><td>63,8 дБ</td><td>−110 дБм</td><td>вся полоса донгла</td></tr>
+<tr><td>500 Гц</td><td>27 dB</td><td>−147 dBm</td><td>CW</td></tr>
+<tr><td>2,8 кГц</td><td>34,5 dB</td><td>−139,5 dBm</td><td>SSB</td></tr>
+<tr><td>12,5 кГц</td><td>41 dB</td><td>−133 dBm</td><td>NFM, DMR</td></tr>
+<tr><td>200 кГц</td><td>53 dB</td><td>−121 dBm</td><td>WFM</td></tr>
+<tr><td>2,4 МГц</td><td>63,8 dB</td><td>−110 dBm</td><td>вся полоса обзора (например, RTL-SDR)</td></tr>
 </table></div>
 <p>К этому прибавляется <a href="sdr.html#nf">коэффициент шума</a> приёмника. Вывод: телеграф (500 Гц)
-слышно при сигнале на ~14 дБ слабее, чем NFM-речь (12,5 кГц). Поэтому сужайте <b>«Полосу»</b> демодулятора до
+слышно при сигнале на ~14 dB слабее, чем NFM-речь (12,5 кГц). Поэтому сужайте <b>«Полосу»</b> демодулятора до
 нужной — меньше шума.</p>
 <p>См. также: <a href="gain.html">Усиление и АРУ</a>, <a href="spectrum.html#scale">шкала спектра</a>.</p>
 <nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/sdr.html"><span>← Назад</span>Приёмники SDR</a><a class="next" href="../guide/gain.html"><span>Дальше →</span>Усиление и АРУ</a></nav>
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.2.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>

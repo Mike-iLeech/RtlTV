@@ -9,7 +9,7 @@ import wave
 import numpy as np
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QDoubleSpinBox, QButtonGroup, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
                                QInputDialog, QLabel, QListWidget, QMessageBox, QPushButton, QScrollArea, QSlider,
                                QSpinBox, QSplitter, QVBoxLayout, QWidget)
 
@@ -63,7 +63,7 @@ LP_CHOICES = [(0, "выкл"), (2400, "2,4 кГц"), (3000, "3 кГц"), (4000, 
 
 class RadioEngine(QObject):
     spectrum = Signal(object)
-    level = Signal(float, float, bool)       # уровень канала дБ, уровень звука, стерео
+    level = Signal(float, float, bool)       # уровень канала dB, уровень звука, стерео
     dmr = Signal(object, object)             # события, статус
     opened = Signal(object)
     error = Signal(str)
@@ -91,11 +91,11 @@ class RadioEngine(QObject):
         self.generator = radiotest.factory
         # дополнительно (включает окно «Радио»; у других режимов всё как раньше)
         self.front = None         # FrontEnd: бланкер, постоянная составляющая, коррекция IQ
-        self.spec_dbfs = False    # спектр в дБFS (тон полной шкалы = 0 дБ)
+        self.spec_dbfs = False    # спектр в dBFS (тон полной шкалы = 0 dB)
         self.async_rtl = False    # RTL-SDR через отдельный поток чтения USB (без пропусков отсчётов)
         self.fixed_center = False  # источник — файл IQ: центр и полоса заданы файлом
         self.iqrec = None
-        self.noise_db = None      # уровень шума на бин спектра, дБFS
+        self.noise_db = None      # уровень шума на бин спектра, dBFS
         self._last_vfo = None
 
     def start(self, kind, index, gain, file_fs=None, file_center=None):
@@ -437,7 +437,7 @@ class RadioWindow(ModeWindow):
         self.sql_lbl = QLabel("")
         self.sql_lbl.setMinimumWidth(56)
         t2.addWidget(self.sql_lbl)
-        self.lvl = LevelMeter(-110, -10, "дБ")
+        self.lvl = LevelMeter(-110, -10, "dB")
         self.lvl.setMinimumWidth(150)
         self.lvl.setMaximumWidth(230)
         self.lvl.setToolTip(TIPS["smeter"])
@@ -522,13 +522,13 @@ class RadioWindow(ModeWindow):
         self._jump_timer = QTimer(self)
         self._jump_timer.setSingleShot(True)
         self._jump_timer.timeout.connect(self._apply_jump)
-        fmt_db = lambda v: f"{v:+d} дБ" if v else "0 дБ"   # noqa: E731
+        fmt_db = lambda v: f"{v:+d} dB" if v else "0 dB"   # noqa: E731
         self.sidebar = SpectrumSideBar([
             ("Зум", self.zoom, lambda v: f"×{2 ** (v / 10):.1f}" if v < 34 else f"×{2 ** (v / 10):.0f}",
              "Масштаб (Zoom)\n" + TIPS["zoom"]),
             ("Контр.", self.spec_ctl.wf_con, lambda v: f"{v}%",
              "Контраст водопада (Contrast)\n" + self.spec_ctl.wf_con.toolTip()),
-            ("Диап.", self.spec_ctl.range, lambda v: f"{v} дБ" if v else "авто",
+            ("Диап.", self.spec_ctl.range, lambda v: f"{v} dB" if v else "авто",
              "Диапазон шкалы спектра (Range)\n" + self.spec_ctl.range.toolTip()),
             ("Смещ.", self.spec_ctl.wf_off, fmt_db,
              "Смещение — яркость водопада (Offset)\n" + self.spec_ctl.wf_off.toolTip()),
@@ -655,10 +655,77 @@ class RadioWindow(ModeWindow):
         self.cb_bias.setToolTip(TIPS["bias"])
         self.cb_bias.toggled.connect(lambda v: self.engine.cmd("bias", v))
         f.addRow(self.cb_bias)
+        row = QHBoxLayout()
+        self.scal = QDoubleSpinBox()
+        self.scal.setRange(-60.0, 60.0)
+        self.scal.setSingleStep(0.5)
+        self.scal.setDecimals(1)
+        self.scal.setSuffix(" dB")
+        self.scal.setValue(float(self.s.get("smeter_cal", 0)))
+        self.scal.setToolTip(TIPS["smeter_cal"])
+        self.scal.valueChanged.connect(lambda v: self.s.__setitem__("smeter_cal", float(v)))
+        b_cal = QPushButton("Калибровать…")
+        b_cal.setToolTip("Настройтесь на сигнал известного уровня и введите его — поправка посчитается сама")
+        b_cal.clicked.connect(self._calibrate_smeter)
+        row.addWidget(self.scal, 1)
+        row.addWidget(b_cal)
+        f.addRow("Поправка S-метра:", row)
         self.center_lbl = QLabel("")
         self.center_lbl.setObjectName("dim")
         f.addRow(self.center_lbl)
+        self._last_dbm_raw = None
         self._gain_changed()
+
+    def _calibrate_smeter(self):
+        """Калибровка по сигналу известного уровня: поправка = известный уровень − измеренный без поправки."""
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout as _F, QLabel as _L, QDoubleSpinBox as _D
+        raw = self._last_dbm_raw
+        if raw is None:
+            QMessageBox.information(self, "Калибровка S-метра",
+                                    "Запустите приём, выключите АРУ тюнера и настройтесь на сигнал известного уровня "
+                                    "(генератор, маяк, опорная станция) — тогда можно калибровать.")
+            return
+        d = QDialog(self)
+        d.setWindowTitle("Калибровка S-метра")
+        lay = _F(d)
+        hint = _L("Настройтесь точно на опорный сигнал (полоса демодулятора должна его целиком охватывать) и "
+                  "введите его уровень на входе приёмника. Поправка = известный уровень − измеренный.\n"
+                  "Поправка зависит от частоты и усиления — калибруйте там, где чаще слушаете.")
+        hint.setWordWrap(True)
+        lay.addRow(hint)
+        meas = _L(f"{raw:.1f} dBm (без поправки)")
+        lay.addRow("Сейчас измерено:", meas)
+        known = _D()
+        known.setRange(-160.0, 10.0)
+        known.setDecimals(1)
+        known.setSuffix(" dBm")
+        known.setValue(round(raw + float(self.s.get("smeter_cal", 0)), 1))
+        lay.addRow("Известный уровень:", known)
+        res = _L("")
+        lay.addRow("Поправка будет:", res)
+
+        def upd():
+            r = self._last_dbm_raw if self._last_dbm_raw is not None else raw
+            meas.setText(f"{r:.1f} dBm (без поправки)")
+            res.setText(f"{known.value() - r:+.1f} dB")
+        known.valueChanged.connect(lambda _v: upd())
+        t = QTimer(d)
+        t.timeout.connect(upd)
+        t.start(300)
+        upd()
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.button(QDialogButtonBox.Ok).setText("Применить")
+        bb.button(QDialogButtonBox.Cancel).setText("Отмена")
+        bb.accepted.connect(d.accept)
+        bb.rejected.connect(d.reject)
+        lay.addRow(bb)
+        if d.exec() == QDialog.Accepted:
+            if self._last_dbm_raw is None:      # пока диалог был открыт, включили АРУ или остановили приём
+                QMessageBox.warning(self, "Калибровка S-метра",
+                                    "Уровень сейчас не измеряется (включена АРУ тюнера или приём остановлен) — "
+                                    "поправка не изменена.")
+                return
+            self.scal.setValue(round(known.value() - self._last_dbm_raw, 1))
 
     def _grp_radio(self, body):
         f = QFormLayout(body)
@@ -749,13 +816,13 @@ class RadioWindow(ModeWindow):
             r.addWidget(lbl)
             return s, r
 
-        self.agc_thr, r = slider(-140, -20, self.s["agc_thr"], TIPS["agc_thr"], lambda v: f"{v} дБ")
+        self.agc_thr, r = slider(-140, -20, self.s["agc_thr"], TIPS["agc_thr"], lambda v: f"{v} dB")
         f.addRow("Порог:", r)
         self.agc_decay, r = slider(20, 3000, self.s["agc_decay"], TIPS["agc_decay"], lambda v: f"{v} мс")
         f.addRow("Спад:", r)
-        self.agc_slope, r = slider(0, 10, self.s["agc_slope"], TIPS["agc_slope"], lambda v: f"{v} дБ")
+        self.agc_slope, r = slider(0, 10, self.s["agc_slope"], TIPS["agc_slope"], lambda v: f"{v} dB")
         f.addRow("Наклон:", r)
-        self.if_gain, r = slider(0, 100, self.s["if_gain"], TIPS["if_gain"], lambda v: f"+{v} дБ")
+        self.if_gain, r = slider(0, 100, self.s["if_gain"], TIPS["if_gain"], lambda v: f"+{v} dB")
         f.addRow("Усиление ПЧ:", r)
         self.agc_lbl = QLabel("")
         self.agc_lbl.setObjectName("dim")
@@ -1332,12 +1399,12 @@ class RadioWindow(ModeWindow):
             self.engine.cmd("gain", None)
         else:
             t = self._gain_tenths()
-            self.gain_lbl.setText(f"{t / 10:.1f} дБ")
+            self.gain_lbl.setText(f"{t / 10:.1f} dB")
             self.engine.cmd("gain", t)
 
     def _sql_changed(self, v):
         self.engine.configure(squelch_db=-200.0 if v <= -120 else float(v))
-        self.sql_lbl.setText("выкл" if v <= -120 else f"{v} дБ")
+        self.sql_lbl.setText("выкл" if v <= -120 else f"{v} dB")
 
     # ================= менеджер частот =================
     def _current_entry(self):
@@ -1393,10 +1460,13 @@ class RadioWindow(ModeWindow):
         self.spec.set_data(freqs, d["psd"])
 
     def _on_level(self, ch_db, audio_rms, stereo):
-        txt = f"{ch_db:.0f} дБFS"
+        txt = f"{ch_db:.0f} dBFS"
+        self._last_dbm_raw = None
         if not self.cb_agc.isChecked() and not self.engine.fixed_center:
-            dbm = ch_db - 10.0 - self._gain_tenths() / 10.0 + float(self.s.get("smeter_cal", 0))
-            txt = f"{s_units(dbm, self.fdisp.value)} · {txt}"
+            raw = ch_db - 10.0 - self._gain_tenths() / 10.0
+            self._last_dbm_raw = raw
+            dbm = raw + float(self.s.get("smeter_cal", 0))
+            txt = f"{s_units(dbm, self.fdisp.value)} · {dbm:.0f} dBm · {txt}"
         self.lvl.set_value(ch_db, txt)
         self.stereo_lbl.setText("СТЕРЕО" if stereo else ("МОНО" if self._mode() == "WFM" else ""))
 
@@ -1405,14 +1475,14 @@ class RadioWindow(ModeWindow):
         self.ovl_lbl.setText("ПЕРЕГРУЗКА" if clip > 1e-3 else "")
         parts = []
         if inf.get("snr") is not None:
-            parts.append(f"С/Ш ≈ {inf['snr']:.0f} дБ")
+            parts.append(f"С/Ш ≈ {inf['snr']:.0f} dB")
         if inf.get("agc_db") is not None:
-            parts.append(f"АРУ +{inf['agc_db']:.0f} дБ")
+            parts.append(f"АРУ +{inf['agc_db']:.0f} dB")
         if inf.get("latency"):
             parts.append(f"задержка звука {inf['latency'] * 1000:.0f} мс")
         self._info_txt = " · ".join(parts)
         if inf.get("agc_db") is not None:
-            self.agc_lbl.setText(f"Сейчас усиление {inf['agc_db']:+.0f} дБ"
+            self.agc_lbl.setText(f"Сейчас усиление {inf['agc_db']:+.0f} dB"
                                  + ("" if self.cb_agc_on.isChecked() else " (вручную)"))
         else:
             self.agc_lbl.setText("АРУ работает в AM, SSB и CW; в ЧМ громкость задаёт девиация")
@@ -1421,7 +1491,7 @@ class RadioWindow(ModeWindow):
             rf.append(f"бланкер вырезает {inf.get('nb', 0) * 100:.2f} % отсчётов")
         if self.cb_iq.isChecked() and inf.get("iq_err"):
             g, ph = inf["iq_err"]
-            rf.append(f"дисбаланс I/Q: {g:+.2f} дБ, {ph:+.2f}°")
+            rf.append(f"дисбаланс I/Q: {g:+.2f} dB, {ph:+.2f}°")
         self.rf_lbl.setText("; ".join(rf))
         if "file" in inf:
             pos, tot = inf["file"]

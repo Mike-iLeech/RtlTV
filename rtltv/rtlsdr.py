@@ -150,7 +150,7 @@ class RtlSdr:
         self.L.rtlsdr_set_freq_correction(self.dev, int(ppm))  # -2 = значение не изменилось
 
     def set_gain(self, tenths_db):
-        """None — АРУ тюнера, иначе усиление в десятых дБ."""
+        """None — АРУ тюнера, иначе усиление в десятых dB."""
         if tenths_db is None:
             self.L.rtlsdr_set_tuner_gain_mode(self.dev, 0)
         else:

@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Путь радиосигнала — SDR4NOOB</title>
+<meta name="description" content="Интерактивная схема: как сигнал проходит от микрофона передатчика через эфир до динамика SDR-приёмника (например, RTL-SDR). Уровни в dBm, ваттах и вольтах, модуляция, спектр, водопад, демодуляция.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mic" viewBox="0 0 32 32"><rect x="12" y="4" width="8" height="15" rx="4"/><path d="M8 15a8 8 0 0 0 16 0M16 23v5M11 28h10"/></symbol>
+  <symbol id="i-adc" viewBox="0 0 32 32"><path d="M3 20c3-10 6-10 9 0s6 10 9 0"/><path d="M21 9h2v4h2v-4h2v4h2"/><path d="M4 26h24"/></symbol>
+  <symbol id="i-mod" viewBox="0 0 32 32"><path d="M2 16c1-6 2-6 3 0s2 6 3 0 2-6 3 0 2 6 3 0 1-9 2-9 1 18 2 18 1-18 2-18 1 9 2 9 2-6 3 0 2 6 3 0"/></symbol>
+  <symbol id="i-amp" viewBox="0 0 32 32"><path d="M8 5v22l18-11z"/><path d="M2 16h6M26 16h4"/></symbol>
+  <symbol id="i-cable" viewBox="0 0 32 32"><path d="M3 12h4v8H3zM25 12h4v8h-4z"/><path d="M7 14c6-4 12 8 18 4"/><path d="M7 18c6-4 12 8 18 4" opacity=".5"/></symbol>
+  <symbol id="i-ant" viewBox="0 0 32 32"><path d="M16 12v17M8 4l8 8 8-8M11 29h10"/><path d="M5 10a12 12 0 0 1 0 0M26 15c2-2 3-5 3-7M6 15c-2-2-3-5-3-7"/></symbol>
+  <symbol id="i-air" viewBox="0 0 32 32"><path d="M4 16a4 4 0 0 1 0 0"/><path d="M8 10a8 8 0 0 1 0 12M13 6a14 14 0 0 1 0 20M18 3a19 19 0 0 1 0 26"/><circle cx="4" cy="16" r="2"/><path d="M24 12l4 4-4 4" opacity=".6"/></symbol>
+  <symbol id="i-rxant" viewBox="0 0 32 32"><path d="M16 4v24M10 28h12"/><path d="M5 8c3 3 3 8 0 11M27 8c-3 3-3 8 0 11"/><path d="M12 10h8M12 22h8" opacity=".6"/></symbol>
+  <symbol id="i-lna" viewBox="0 0 32 32"><path d="M8 6v20l16-10z"/><path d="M2 16h6M24 16h6"/><path d="M12 13v6M10 16h4"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 32 32"><path d="M3 26h26"/><path d="M4 25c4 0 5-15 8-15h8c3 0 4 15 8 15"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 32 32"><rect x="8" y="8" width="16" height="16" rx="2"/><path d="M12 4v4M16 4v4M20 4v4M12 24v4M16 24v4M20 24v4M4 12h4M4 20h4M24 12h4M24 20h4"/></symbol>
+  <symbol id="i-iq" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M16 16l7-6"/><path d="M3 16h26M16 3v26" opacity=".4"/></symbol>
+  <symbol id="i-fft" viewBox="0 0 32 32"><path d="M3 27h26"/><path d="M5 27V22M9 27V18M13 27V8M17 27V14M21 27V20M25 27V24"/></symbol>
+  <symbol id="i-wf" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="2"/><path d="M15 6v20M17 6v20" opacity=".7"/><path d="M8 10h3M21 16h3M9 21h2"/></symbol>
+  <symbol id="i-chan" viewBox="0 0 32 32"><path d="M3 26h26"/><path d="M3 22c3 0 4-4 6-4s3 6 5 6"/><rect x="13" y="6" width="8" height="18" rx="1" opacity=".8"/><path d="M21 22c2 0 3-3 5-3s2 2 3 2"/></symbol>
+  <symbol id="i-demod" viewBox="0 0 32 32"><path d="M2 16c1-5 2-5 3 0s2 5 3 0 2-5 3 0" opacity=".55"/><path d="M13 16h3M16 12l4 4-4 4"/><path d="M21 16c2-7 4-7 5 0s3 7 4 0"/></symbol>
+  <symbol id="i-dec" viewBox="0 0 32 32"><rect x="3" y="7" width="26" height="18" rx="3"/><path d="M8 13h2M8 19h2M14 13h4M14 19h4M22 13h2M22 19h2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 32 32"><rect x="7" y="14" width="18" height="14" rx="2"/><path d="M11 14V10a5 5 0 0 1 10 0v4M16 19v4"/></symbol>
+  <symbol id="i-spk" viewBox="0 0 32 32"><path d="M5 12h5l7-6v20l-7-6H5z"/><path d="M21 11a6 6 0 0 1 0 10M24 7a11 11 0 0 1 0 18"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow"><a href="../pipeline.html">SDR4NOOB · Основы радиоприёма</a></p>
+    <h1>Путь радиосигнала</h1>
+    <p class="lead">Что происходит со звуком от микрофона передатчика до динамика у вас: оцифровка, модуляция,
+    усилитель, кабель, антенна, эфир, приёмная антенна, малошумящий усилитель и всё, что делает внутри
+    программа SDR. Каждый блок можно раскрыть, ползунки пересчитывают уровни по всей цепочке.</p>
+    <div class="toolbar">
+      <span class="lbl">Пример:</span>
+      <span class="seg" id="presets">
+        <button type="button" data-preset="pmr" class="on">Рация PMR 0,5 Вт</button>
+        <button type="button" data-preset="fm">FM-вещание 10 кВт</button>
+        <button type="button" data-preset="meteor">Спутник «Метеор»</button>
+        <button type="button" data-preset="adsb">Самолёт ADS-B</button>
+      </span>
+      <button type="button" class="btn ghost" id="pauseAll" aria-pressed="false">Пауза анимаций</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<h2 id="chain">Тракт целиком</h2>
+<div class="chain">
+  <div class="stage tx">
+    <h3>Передатчик</h3>
+    <div class="nodes">
+      <button type="button" class="node" data-go="b-src"><svg><use href="#i-mic"/></svg><span class="nm">Источник</span><span class="lv" data-node="src">—</span></button>
+      <button type="button" class="node" data-go="b-adc"><svg><use href="#i-adc"/></svg><span class="nm">Оцифровка</span><span class="lv">АЦП</span></button>
+      <button type="button" class="node" data-go="b-mod"><svg><use href="#i-mod"/></svg><span class="nm">Модулятор</span><span class="lv">AM/FM/цифра</span></button>
+      <button type="button" class="node" data-go="b-pa"><svg><use href="#i-amp"/></svg><span class="nm">Усилитель</span><span class="lv" data-node="pa">—</span></button>
+      <button type="button" class="node" data-go="b-txfeed"><svg><use href="#i-cable"/></svg><span class="nm">Фидер</span><span class="lv" data-node="txfeed">—</span></button>
+      <button type="button" class="node" data-go="b-txant"><svg><use href="#i-ant"/></svg><span class="nm">Антенна</span><span class="lv" data-node="prad">—</span></button>
+    </div>
+  </div>
+  <div class="stage air">
+    <h3>Эфир</h3>
+    <div class="nodes">
+      <button type="button" class="node" data-go="b-air"><svg><use href="#i-air"/></svg><span class="nm">Свободное пространство</span><span class="lv" data-node="air">—</span></button>
+    </div>
+  </div>
+  <div class="stage rx">
+    <h3>Приём</h3>
+    <div class="nodes">
+      <button type="button" class="node" data-go="b-rxant"><svg><use href="#i-rxant"/></svg><span class="nm">Антенна</span><span class="lv" data-node="rxant">—</span></button>
+      <button type="button" class="node" data-go="b-lna" id="nodeLna"><svg><use href="#i-lna"/></svg><span class="nm">МШУ (LNA)</span><span class="lv" data-node="lna">—</span></button>
+      <button type="button" class="node" data-go="b-rxfeed"><svg><use href="#i-cable"/></svg><span class="nm">Фидер</span><span class="lv" data-node="rxin">—</span></button>
+    </div>
+  </div>
+  <div class="stage sdr">
+    <h3>Внутри приёмника SDR (пример: RTL-SDR, Airspy, SDRplay, HackRF)</h3>
+    <div class="nodes">
+      <button type="button" class="node" data-go="b-rxin"><svg><use href="#i-filter"/></svg><span class="nm">Вход и фильтр</span><span class="lv">ПФ</span></button>
+      <button type="button" class="node" data-go="b-tuner"><svg><use href="#i-chip"/></svg><span class="nm">Тюнер, смеситель</span><span class="lv">→ ПЧ / ноль</span></button>
+      <button type="button" class="node" data-go="b-rtladc"><svg><use href="#i-adc"/></svg><span class="nm">АЦП</span><span class="lv">8–16 бит</span></button>
+      <button type="button" class="node" data-go="b-ddc"><svg><use href="#i-iq"/></svg><span class="nm">IQ и децимация</span><span class="lv">полоса обзора</span></button>
+      <button type="button" class="node" data-go="b-fft"><svg><use href="#i-wf"/></svg><span class="nm">БПФ: спектр и водопад</span><span class="lv">FFT</span></button>
+      <button type="button" class="node" data-go="b-chan"><svg><use href="#i-chan"/></svg><span class="nm">Фильтр канала</span><span class="lv">VFO</span></button>
+      <button type="button" class="node" data-go="b-demod"><svg><use href="#i-demod"/></svg><span class="nm">Демодулятор</span><span class="lv">AM/FM</span></button>
+      <button type="button" class="node" data-go="b-decoder"><svg><use href="#i-dec"/></svg><span class="nm">Декодер</span><span class="lv">если цифра</span></button>
+      <button type="button" class="node" data-go="b-decrypt"><svg><use href="#i-lock"/></svg><span class="nm">Дешифратор</span><span class="lv">если шифр</span></button>
+      <button type="button" class="node" data-go="b-audio"><svg><use href="#i-spk"/></svg><span class="nm">Звук</span><span class="lv">ЦАП</span></button>
+    </div>
+  </div>
+</div>
+<p class="hint">Щёлкните по блоку, чтобы раскрыть подробности. Под цепочкой — расчёт уровня сигнала в каждой точке.
+Если антенн две, их сигналы объединяют до демодулятора — см. <a href="#b-div">разнесённый приём</a>.</p>
+
+<h2 id="budget">Сквозной расчёт уровней («бюджет радиолинии»)</h2>
+<div class="budget">
+  <form class="card ctl" id="ctl" onsubmit="return false">
+    <fieldset>
+      <legend>Передатчик</legend>
+      <div class="row"><label for="exc">Уровень возбудителя (выход модулятора → вход усилителя мощности)</label><output id="o-exc"></output>
+        <input type="range" id="exc" min="-20" max="20" step="0.5" value="0"></div>
+      <div class="row"><label for="pTx">Мощность передатчика (выход усилителя мощности)</label><output id="o-pTx"></output>
+        <input type="range" id="pTx" min="-10" max="80" step="0.5"></div>
+      <div class="row"><label for="txType">Фидер передатчика</label>
+        <select id="txType"><option value="RG-174">RG-174 (тонкий)</option><option value="RG316">RG316 (тонкий, тефлон)</option><option value="RG-58">RG-58</option><option value="RG-6">RG-6 (75 Ом)</option><option value="RG-213">RG-213 (толстый)</option><option value="LMR-400">LMR-400</option></select>
+        </div>
+      <div class="row"><label for="txLen">Длина кабеля</label><output id="o-txLen"></output>
+        <input type="range" id="txLen" min="0" max="100" step="1"></div>
+      <div class="row"><label for="txAnt">Тип антенны передатчика</label>
+        <select id="txAnt"><option value="iso">изотропная (0 dBi)</option><option value="dipole" selected>штырь / диполь (до 2,15 dBi)</option><option value="colinear">коллинеар (3–9 dBi)</option><option value="yagi">Яги / волновой канал (5–20 dBi)</option><option value="lpda">логопериодическая LPDA (5–8 dBi)</option></select></div>
+      <div class="row"><label for="txPol">Поляризация передатчика</label>
+        <select id="txPol"><option value="v" selected>вертикальная</option><option value="h">горизонтальная</option><option value="c">круговая</option></select></div>
+      <div class="row"><label for="gTx">Усиление антенны передатчика (в главном лепестке)</label><output id="o-gTx"></output>
+        <input type="range" id="gTx" min="-5" max="20" step="0.5"><span class="small dim" id="gTxLim" style="grid-column:1/-1"></span></div>
+      <div class="row"><label for="thTx">Угол от главного лепестка до приёмника</label><output id="o-thTx"></output>
+        <input type="range" id="thTx" min="0" max="180" step="1" value="0"></div>
+      <p class="small dim" style="margin:2px 0 0">Усиление не добавляет мощности: излучается столько же
+      (<span data-live="prad_short"></span>), антенна лишь направляет её. В сторону приёмника —
+      <span data-live="gtx_eff"></span>.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Эфир</legend>
+      <div class="row"><label for="dist">Расстояние</label><output id="o-dist"></output>
+        <input type="range" id="dist" min="-1" max="4.6" step="0.0001"></div>
+      <div class="row"><label for="freq">Частота</label><output id="o-freq"></output>
+        <input type="range" id="freq" min="0" max="3.5" step="0.0001"></div>
+      <div class="row"><label for="extra">Доп. потери: поляризация, стены, лес</label><output id="o-extra"></output>
+        <input type="range" id="extra" min="0" max="40" step="1"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Приём</legend>
+      <div class="row"><label for="gRx">Усиление приёмной антенны (в главном лепестке)</label><output id="o-gRx"></output>
+        <input type="range" id="gRx" min="-5" max="20" step="0.5"></div>
+      <div class="row"><label for="thRx">Угол прихода волны от главного лепестка</label><output id="o-thRx"></output>
+        <input type="range" id="thRx" min="0" max="180" step="1" value="0"></div>
+      <p class="small dim" style="margin:2px 0 0">Приёмная антенна тоже ничего не усиливает: P = S·A<sub>эфф</sub>,
+      A<sub>эфф</sub> = Gλ²/4π. Усиление — это большая площадь сбора в своём направлении: сейчас
+      <span data-live="aeff_eff"></span>.</p>
+      <div class="row"><label for="rxPol">Поляризация приёмной антенны</label>
+        <select id="rxPol"><option value="v" selected>вертикальная</option><option value="h">горизонтальная</option><option value="c">круговая</option></select></div>
+      <p class="small dim" style="margin:2px 0 0">Поляризации должны совпадать: скрещенные линейные (вертикальная против
+      горизонтальной) теряют 20 dB и больше, круговая против линейной — 3 dB (так у «Метеора»).</p>
+      <div class="row check"><input type="checkbox" id="lnaOn"><label for="lnaOn">МШУ (LNA) у антенны</label></div>
+      <div class="row"><label for="gLna">Усиление МШУ</label><output id="o-gLna"></output>
+        <input type="range" id="gLna" min="0" max="30" step="0.5"></div>
+      <div class="row"><label for="rxType">Фидер к приёмнику</label>
+        <select id="rxType"><option value="RG-174">RG-174 (тонкий)</option><option value="RG316">RG316 (тонкий, тефлон)</option><option value="RG-58">RG-58</option><option value="RG-6">RG-6 (75 Ом)</option><option value="RG-213">RG-213 (толстый)</option><option value="LMR-400">LMR-400</option></select>
+        </div>
+      <div class="row"><label for="rxLen">Длина кабеля</label><output id="o-rxLen"></output>
+        <input type="range" id="rxLen" min="0" max="100" step="1"></div>
+      <details class="more">
+        <summary>Ещё параметры</summary>
+        <div class="row"><label for="bw">Полоса канала</label>
+          <select id="bw"><option value="12500">NFM 12,5 кГц</option><option value="120000">LRPT 120 кГц</option><option value="200000">WFM 200 кГц</option><option value="2000000">ADS-B 2 МГц</option></select></div>
+        <div class="row"><label for="nfRx">Коэфф. шума приёмника</label><output id="o-nfRx"></output>
+          <input type="range" id="nfRx" min="2" max="10" step="0.5"></div>
+        <div class="row"><label for="nfLna">Коэфф. шума МШУ</label><output id="o-nfLna"></output>
+          <input type="range" id="nfLna" min="0.3" max="3" step="0.1"></div>
+        <div class="row"><label for="conn">Разъёмов на каждой стороне (по 0,2 dB)</label><output id="o-conn"></output>
+          <input type="range" id="conn" min="0" max="6" step="1"></div>
+      </details>
+    </fieldset>
+  </form>
+
+  <div class="card">
+    <div class="verdict">
+      <div class="kpi" id="k-in"><div class="k">На входе приёмника</div><div class="v" data-live="rxin_dbm">—</div><div class="small dim" data-live="rxin_units"></div></div>
+      <div class="kpi" id="k-snr"><div class="k">Сигнал/шум в канале</div><div class="v" data-live="snr">—</div><div class="small dim" data-live="snr_text"></div></div>
+      <div class="kpi"><div class="k">Потери в эфире</div><div class="v" data-live="fspl">—</div><div class="small dim" data-live="air_units"></div></div>
+    </div>
+    <div class="diagram-wrap"><svg id="budgetSvg" viewBox="0 0 860 370" role="img" aria-label="Диаграмма уровня сигнала вдоль тракта"></svg></div>
+    <div class="legend small">
+      <span><i class="sw up"></i><b>dB</b> — относительное изменение мощности (+ рост, − падение)</span>
+      <span><b>dBm</b> — абсолютная мощность: 0 dBm = 1 мВт</span>
+      <span><b>dBi</b> — усиление антенны относительно изотропной: перераспределение по направлениям, не энергия</span>
+      <span><b>dBFS</b> — относительно полной шкалы АЦП в программе SDR</span>
+      <span><i class="sw eq"></i>пунктирный кружок — ЭИИМ, эквивалент «излучено» в сторону приёмника</span>
+    </div>
+    <p class="small dim" id="presetNote"></p>
+    <div class="tw fit" id="budgetWrap"><table class="t" id="budgetTable">
+      <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c3"><col class="c3"></colgroup>
+      <thead><tr><th>Точка тракта</th><th>Изменение / пояснение</th><th class="n">dBm</th><th class="n">Мощность</th><th class="n">U на 50 Ом</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="small dim">Формулы: P(мВт) = 10<sup>dBm/10</sup>; U = √(P·R), R = 50 Ом;
+    FSPL = 20·lg d + 20·lg f + 32,44 (d в км, f в МГц); шум = −174 + КШ + 10·lg B (dBm).
+    Эфир считается свободным пространством — земля, дома и лес добавляют свои потери (ползунок «Доп. потери»).</p>
+  </div>
+</div>
+
+<h3 id="rssi">Что покажет приёмник: RSSI, S-метр, dBFS и запас</h3>
+<div class="card" id="rssiBox">
+  <div class="verdict">
+    <div class="kpi"><div class="k">RSSI: показание (сигнал + шум)</div><div class="v" data-live="rssi">—</div><div class="small dim" data-live="rssi_sub"></div></div>
+    <div class="kpi"><div class="k">RSSI шума</div><div class="v" data-live="rssi_noise">—</div><div class="small dim" data-live="rssi_noise_sub"></div></div>
+    <div class="kpi"><div class="k">S-метр</div><div class="v" data-live="smeter">—</div><div class="small dim" data-live="smeter_sub"></div></div>
+    <div class="kpi" id="k-margin"><div class="k">Запас по связи</div><div class="v" data-live="margin">—</div><div class="small dim" data-live="margin_sub"></div></div>
+  </div>
+  <svg id="smeterSvg" viewBox="0 0 760 94" role="img" aria-label="Шкала S-метра с отметками сигнала и шума" style="width:100%;height:auto;display:block"></svg>
+  <div class="cols" style="margin-top:8px">
+    <div>
+      <div class="row"><label for="rqMode">Вид связи (требуемое С/Ш)</label>
+        <select id="rqMode"><option value="nfm">NFM речь — ≈ 12 dB С/Ш в канале</option><option value="wfm">WFM моно — 20 dB</option><option value="dmr">DMR — 5–7 dB</option><option value="lrpt">LRPT QPSK — 5–8 dB</option><option value="adsb">ADS-B — 10 dB</option></select></div>
+      <div class="row"><label for="tGain">Усиление тюнера (условно 0…49 dB)</label><output id="o-tGain"></output>
+        <input type="range" id="tGain" min="0" max="49" step="1" value="30"></div>
+      <div class="facts">
+        <div class="fact"><div class="k">Сигнал на шкале SDR</div><div class="v" data-live="dbfs">—</div></div>
+        <div class="fact"><div class="k">Шум на шкале SDR</div><div class="v" data-live="dbfs_noise">—</div></div>
+        <div class="fact"><div class="k">Полная шкала АЦП</div><div class="v" data-live="dbfs_full">—</div></div>
+        <div class="fact"><div class="k">Шум квантования 8 бит в канале</div><div class="v" data-live="dbfs_q">—</div></div>
+      </div>
+      <p class="small" id="dbfs_state"></p>
+    </div>
+    <div class="small">
+      <p><b>RSSI</b> (received signal strength indicator) — мощность в полосе канала на входе приёмника, то, что
+      приёмник реально измеряет. Если канал уже сигнала (WFM в канале NFM), RSSI меньше полной мощности на входе.
+      Шум в той же полосе — «RSSI шума»; разница между сигналом и шумом — отношение сигнал/шум. Приёмник измеряет
+      сумму сигнала и шума — её и показывает плитка, поэтому слабый сигнал не опускает показания ниже шума.</p>
+      <p><b>S-метр</b> (шкала IARU): по 6 dB на балл; S9 = −73 dBm (50 мкВ на 50 Ом) ниже 30 МГц и −93 dBm (5 мкВ)
+      выше 30 МГц; сильнее S9 пишут «S9+20 dB».</p>
+      <p><b>dBFS</b> — уровень относительно полной шкалы АЦП, его и показывает программа SDR: dBFS ≈ dBm + усиление
+      тракта − уровень полной шкалы. Без калибровки это <b>не dBm</b>: полная шкала зависит от приёмника, усиления
+      и частоты. Абсолютный уровень получают калибровкой — подают генератор известного уровня и вводят поправку
+      (в режиме «Радио» SDR4NOOB: карточка «Источник» → «Поправка S-метра» → «Калибровать…»; без калибровки
+      dBm и баллы S там оцениваются по усилению тюнера с той же условной полной шкалой −10 dBm). Здесь полная шкала −10 dBm при усилении 0 dB взята <b>условно, у каждого
+      приёмника своя</b>. Выше −1…0 dBFS — клиппинг.</p>
+      <p>Шум квантования посчитан для 8-битного АЦП с f<sub>д</sub> = 2,4 МГц (как у RTL-SDR):
+      −(6,02·N + 1,76) − 10·lg(f<sub>д</sub> / B) — у комплексного IQ шум квантования распределён по всей полосе f<sub>д</sub>. Шум антенны должен быть выше него, иначе слабые сигналы
+      теряются в шуме АЦП.</p>
+      <p><b>Запас</b> = RSSI сигнала − (шум в полосе + требуемое С/Ш): больше 10 dB — надёжно, 3–10 dB — на грани, меньше 3 dB
+      — связь будет рваться.</p>
+    </div>
+  </div>
+</div>
+
+<h2 id="blocks">Подробно по блокам</h2>
+
+<div class="group-title tx">Передатчик</div>
+
+<details class="blk tx" id="b-src">
+  <summary><span class="t">Источник</span><span class="s">голос, музыка или данные</span><span class="lvl" data-live="exc_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Всё начинается с <b>сообщения</b>: голоса в микрофоне, музыки из студии или потока данных (картинки со спутника,
+      координаты самолёта). Микрофон даёт всего <b>единицы милливольт</b>, микрофонный усилитель поднимает их до
+      «линейного» уровня — около 0,775 В.</p>
+      <p>Дальше сообщение попадает в <b>возбудитель</b> — маломощный генератор несущей с модулятором. На его выходе
+      обычно около <b>1 мВт</b>: это 0 dBm, или 0,22 В на нагрузке 50 Ом. С этой точки начинается расчёт: уровень возбудителя задаётся ползунком (−20…+20 dBm), а усиление усилителя мощности (УМ) = мощность передатчика − уровень возбудителя. Цепочка: микрофон (милливольты) → микрофонный усилитель (≈ 0,775 В) → модулятор → возбудитель (≈ 1 мВт) → УМ (ватты).</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Микрофон</div><div class="v">1–10 мВ</div></div>
+        <div class="fact"><div class="k">Линейный уровень</div><div class="v">0,775 В (0 dBu)</div></div>
+        <div class="fact"><div class="k">Выход возбудителя</div><div class="v" data-live="exc_full"></div></div>
+      </div>
+      <p>Если тракт цифровой (DMR, спутник, ADS-B), звук сначала <a href="#b-adc">оцифровывают</a>, а данные уже
+      цифровые — их сразу кодируют и передают символами.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-src" height="200" data-demo="src" aria-label="Звуковой сигнал и поток данных"></canvas>
+      <div class="ctrls"><span class="seg" id="srcMode"><button type="button" class="on" data-v="voice">Голос</button><button type="button" data-v="data">Данные</button></span></div>
+      <p class="cap">Голос — непрерывное колебание; данные — последовательность нулей и единиц.</p>
+    </div>
+  </div>
+</details>
+
+<details class="blk tx" id="b-adc">
+  <summary><span class="t">Оцифровка (АЦП)</span><span class="s">дискретизация и квантование — только в цифровом тракте</span></summary>
+  <div class="body cols">
+    <div>
+      <p><b>Аналого-цифровой преобразователь</b> делает две вещи:</p>
+      <ul class="tight">
+        <li><b>Дискретизация</b> — измеряет напряжение через равные промежутки времени, f<sub>д</sub> раз в секунду.
+        По теореме Котельникова (Найквиста) частота дискретизации должна быть больше <b>удвоенной</b> высшей частоты
+        сигнала, иначе высокие частоты «подменяются» низкими (<b>наложение спектров</b>, алиасинг).</li>
+        <li><b>Квантование</b> — округляет каждое измерение до одного из 2<sup>N</sup> уровней. Ошибка округления —
+        это шум квантования; потолок отношения сигнал/шум ≈ 6,02·N + 1,76 dB.</li>
+      </ul>
+      <p>Голос в рации DMR оцифровывается с f<sub>д</sub> = 8 кГц и 16 бит (128 кбит/с), а потом
+      <a href="#b-decoder">вокодер</a> сжимает его до 2,45 кбит/с. Музыка на CD — 44,1 кГц и 16 бит.</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Найквист: до</div><div class="v" id="adcNyq"></div></div>
+        <div class="fact"><div class="k">Уровней</div><div class="v" id="adcLev"></div></div>
+        <div class="fact"><div class="k">С/Ш квантования</div><div class="v" id="adcSnr"></div></div>
+        <div class="fact"><div class="k">Поток</div><div class="v" id="adcRate"></div></div>
+        <div class="fact"><div class="k">Где встречается</div><div class="v" id="adcEx"></div></div>
+      </div>
+      <h3>Сколько бит нужно</h3>
+      <div class="tw"><table class="t" id="adcTable">
+        <thead><tr><th>Бит</th><th>Уровней</th><th>ДД ≈ 6,02·N + 1,76</th><th>Пример</th></tr></thead>
+        <tbody>
+          <tr data-bits="8"><td class="n">8</td><td class="n">256</td><td class="n">≈ 50 dB</td><td>RTL-SDR, HackRF</td></tr>
+          <tr data-bits="12"><td class="n">12</td><td class="n">4 096</td><td class="n">≈ 74 dB</td><td>Airspy R2/Mini, LimeSDR, PlutoSDR</td></tr>
+          <tr data-bits="14"><td class="n">14</td><td class="n">16 384</td><td class="n">≈ 86 dB</td><td>SDRplay RSP1A/RSPdx (14 бит при дискретизации до ~6 МГц, выше — 12/10/8 бит)</td></tr>
+          <tr data-bits="16"><td class="n">16</td><td class="n">65 536</td><td class="n">≈ 98 dB</td><td>профессиональные SDR и КВ-приёмники, CD</td></tr>
+          <tr data-bits="24"><td class="n">24</td><td class="n">16,8 млн</td><td class="n">≈ 146 dB</td><td>звуковые карты, SDR через звуковой тракт</td></tr>
+          <tr data-bits="32"><td class="n">32</td><td class="n">4,3 млрд</td><td class="n">≈ 194 dB</td><td>формат чисел в программе, не АЦП</td></tr>
+        </tbody>
+      </table></div>
+      <p>Честно о больших числах. <b>24 бита</b> — реальные АЦП звуковых карт и некоторых SDR, которые оцифровывают
+      сигнал через звуковой тракт (например, КВ-приёмники с выходом ПЧ на звуковую карту). Но 146 dB на практике
+      недостижимы: шум аналоговой части (усилителей, опорного напряжения) съедает младшие разряды, и
+      <b>эффективная разрядность (ENOB)</b> хорошей 24-битной карты — около 18–21 бита (110–125 dB). <b>32 бита</b> в
+      радио — это обычно формат хранения и вычислений: программа держит отсчёты в int32 или float32, чтобы не терять
+      точность при фильтрации и БПФ. Самих 32-битных АЦП для радиочастот не бывает: шум резистора при комнатной
+      температуре уже выше младшего разряда.</p>
+      <p>Для сравнения SDR-приёмников: RTL-SDR и HackRF — 8 бит, Airspy — 12, SDRplay — 14, профессиональные — 16.
+      Сужение полосы после АЦП добавляет «эффективных» бит: в узком канале 8-битный приёмник ведёт себя как
+      12–13-битный.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-adc" height="240" data-demo="adc" aria-label="Дискретизация и квантование"></canvas>
+      <div class="ctrls">
+        <div class="row"><label for="adcFs">Частота дискретизации</label><output id="o-adcFs"></output>
+          <input type="range" id="adcFs" min="2" max="48" step="1" value="16"></div>
+        <div class="row"><label for="adcBits">Разрядность</label><output id="o-adcBits"></output>
+          <input type="range" id="adcBits" min="0" max="11" step="1" value="2"></div>
+      </div>
+      <p class="cap">Сигнал — смесь тонов 1 и 3 кГц. Точки — отсчёты, ступеньки — квантованный сигнал, внизу — коды
+      первых отсчётов. Опустите f<sub>д</sub> ниже 6 кГц — появится наложение. С 8 бит и выше ступеньки уже не
+      различить глазом — разница только в уровне шума квантования.</p>
+      <p class="mono small" id="adcCodes"></p>
+    </div>
+  </div>
+</details>
+
+<details class="blk tx" id="b-mod">
+  <summary><span class="t">Модуляция</span><span class="s">как сообщение «садится» на несущую</span></summary>
+  <div class="body cols">
+    <div>
+      <p>Сам по себе звук в эфир не уходит: антенна размером в метр излучает частоты в десятки и сотни мегагерц.
+      Поэтому сообщение «сажают» на высокочастотную <b>несущую</b> — меняют один из её параметров:</p>
+      <ul class="tight">
+        <li><b>AM</b> (амплитудная) — громкость звука меняет <b>размах</b> несущей. Полоса = 2 × F<sub>max</sub>
+        (для авиасвязи около 6–8 кГц).</li>
+        <li><b>FM</b> (частотная) — звук меняет <b>частоту</b> несущей на ±девиацию. Полоса по Карсону
+        ≈ 2·(Δf + F<sub>max</sub>): NFM ±2,5 кГц → канал 12,5 кГц (≈ 11 кГц по Карсону), ±5 кГц → канал 25 кГц (≈ 16 кГц), вещание
+        ±75 кГц → около 200 кГц.</li>
+        <li><b>FSK</b> — цифра частотой: «0» и «1» — две разные частоты. DMR использует 4FSK: четыре частоты, по 2 бита
+        на символ.</li>
+        <li><b>QPSK</b> — цифра фазой: четыре фазы 45°, 135°, 225°, 315°, по 2 бита на символ (спутник «Метеор», LRPT).</li>
+      </ul>
+      <p class="note">Аналоговая модуляция плавно повторяет форму звука. Цифровая — переключает несущую между
+      несколькими фиксированными состояниями (символами), а приёмник должен лишь угадать, какое из них было.
+      Отсюда и разное поведение при шуме — см. <a href="#avd">сравнение</a>.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-mod" height="280" data-demo="mod" aria-label="Модулированная несущая"></canvas>
+      <div class="ctrls">
+        <span class="seg" id="modMode"><button type="button" class="on" data-v="am">AM</button><button type="button" data-v="fm">FM</button><button type="button" data-v="fsk">FSK</button><button type="button" data-v="qpsk">QPSK</button></span>
+        <div class="row"><label for="modDepth" id="modDepthLbl">Глубина</label><output id="o-modDepth"></output>
+          <input type="range" id="modDepth" min="0" max="100" step="1" value="70"></div>
+      </div>
+      <p class="cap" id="modCap"></p>
+    </div>
+  </div>
+</details>
+
+<details class="blk tx" id="b-pa">
+  <summary><span class="t">Усилитель мощности</span><span class="s">от милливатт до ватт и киловатт</span><span class="lvl" data-live="pa_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Возбудитель выдаёт милливатты, а в антенну нужно подать ватты. <b>Усилитель мощности</b> (УМ, PA)
+      поднимает уровень, не меняя формы сигнала. Усиление в децибелах просто прибавляется к уровню в dBm.</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Вход</div><div class="v" data-live="exc_full"></div></div>
+        <div class="fact"><div class="k">Усиление</div><div class="v" data-live="pa_gain"></div></div>
+        <div class="fact"><div class="k">Выход</div><div class="v" data-live="pa_full"></div></div>
+      </div>
+      <p>Десятки децибел дают несколько каскадов. КПД УМ — 30–70 %: остальное уходит в тепло, поэтому у
+      вещательного передатчика на 10 кВт есть система охлаждения. Для FM и FSK подходят экономичные нелинейные
+      усилители (класс C): им важна только частота. AM, SSB и QPSK требуют <b>линейного</b> усилителя, иначе
+      сигнал искажается и «расползается» по соседним каналам.</p>
+    </div>
+    <div class="tw">
+      <table class="t">
+        <thead><tr><th>Передатчик</th><th>Мощность</th><th>dBm</th><th>U на 50 Ом</th></tr></thead>
+        <tbody>
+          <tr><td>Bluetooth, класс 2</td><td class="n">2,5 мВт</td><td class="n">4</td><td class="n">0,35 В</td></tr>
+          <tr><td>Рация PMR446</td><td class="n">0,5 Вт</td><td class="n">27</td><td class="n">5 В</td></tr>
+          <tr><td>Спутник «Метеор-М», LRPT</td><td class="n">≈ 5 Вт</td><td class="n">37</td><td class="n">16 В</td></tr>
+          <tr><td>Автомобильная рация</td><td class="n">25–50 Вт</td><td class="n">44–47</td><td class="n">35–50 В</td></tr>
+          <tr><td>Ответчик самолёта (1090 МГц)</td><td class="n">125–500 Вт</td><td class="n">51–57</td><td class="n">80–160 В</td></tr>
+          <tr><td>FM-вещание, крупный город</td><td class="n">10 кВт</td><td class="n">70</td><td class="n">707 В</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</details>
+
+<details class="blk tx" id="b-txfeed">
+  <summary><span class="t">Фидер передатчика</span><span class="s">кабель от усилителя до антенны</span><span class="lvl" data-live="txloss_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Коаксиальный кабель теряет часть мощности: ток греет медь (потери растут как √f), а переменное поле —
+      диэлектрик (растут как f). Поэтому на высоких частотах и в длинном кабеле теряется больше.</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Кабель</div><div class="v" data-live="tx_cable"></div></div>
+        <div class="fact"><div class="k">Потери</div><div class="v" data-live="txloss"></div></div>
+        <div class="fact"><div class="k">Дошло до антенны</div><div class="v" data-live="txfeed_full"></div></div>
+      </div>
+      <p>Потери −3 dB — это половина мощности, −10 dB — десятая часть. Подробнее о кабелях — в блоке
+      <a href="#b-rxfeed">фидера приёмника</a>.</p>
+    </div>
+    <div class="tw"><table class="t" id="cableTable1"></table></div>
+  </div>
+</details>
+
+<details class="blk tx" id="b-txant">
+  <summary><span class="t">Передающая антенна</span><span class="s">направленность, усиление в dBi и ЭИИМ</span><span class="lvl" data-live="eirp_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Антенна превращает ток в кабеле в электромагнитную волну. Сама она мощность не добавляет:
+      <b>усиление антенны</b> (dBi) показывает, во сколько раз она сильнее излучает в главном направлении,
+      чем воображаемая изотропная антенна, светящая во все стороны одинаково. Энергия, отнятая у «ненужных»
+      направлений, уходит в «нужное».</p>
+      <p>Сравните фонарик с рефлектором и голую лампочку той же мощности. Лампочка светит во все стороны
+      одинаково; фонарик собирает тот же свет в узкий луч — в луче ярко, сбоку темно. Ватт от рефлектора не
+      прибавилось. Так и антенна: <b>полная излучаемая мощность</b> не зависит от усиления, она равна мощности
+      на входе антенны, умноженной на КПД:</p>
+      <p class="formula">P<sub>изл</sub> = P<sub>перед</sub> − потери фидера − потери в антенне</p>
+      <p>Потери в самой антенне связаны с её усилением в этой модели: у полноразмерного диполя и направленных антенн
+      КПД ≈ 100 %, а усиление ниже 1,76 dBi у всенаправленной антенны означает укороченный штырь — часть мощности
+      греет антенну (потери 1,76 − G dB; у штыря рации реально 3–6 dB). Если сложить излучение по всей сфере, получится всегда одно и то же: среднее по сфере усиление
+      равно КПД, ∮ G(θ, φ) dΩ = 4π·η. Поднять лепесток в одном направлении можно только за счёт других.</p>
+      <p><b>ЭИИМ</b> (эквивалентная изотропно излучаемая мощность, EIRP) — <b>эквивалентная</b> мощность в
+      направлении главного лепестка: сколько пришлось бы подать на изотропную антенну, чтобы в этом направлении
+      получилось то же поле. Это не дополнительная энергия: антенна перераспределяет ту же мощность по
+      направлениям. Для расчёта линии берётся усиление <b>в сторону приёмника</b> G(θ) — оно меньше, если
+      приёмник не в лепестке.</p>
+      <p class="formula">ЭИИМ(θ) = P<sub>изл</sub> + D(θ) = P<sub>вх</sub> + G(θ), где G = КПД·D</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Полная излучаемая мощность</div><div class="v" data-live="prad_full"></div></div>
+        <div class="fact"><div class="k">Усиление в сторону приёмника</div><div class="v" data-live="gtx_eff"></div></div>
+        <div class="fact"><div class="k">ЭИИМ в сторону приёмника (эквивалент)</div><div class="v" data-live="eirp_full"></div></div>
+        <div class="fact"><div class="k">ЭИМ (от диполя)</div><div class="v" data-live="erp"></div></div>
+        <div class="fact"><div class="k">Длина волны</div><div class="v" data-live="lambda"></div></div>
+      </div>
+      <h3>От чего зависит диаграмма</h3>
+      <ul class="tight">
+        <li><b>Тип и геометрия антенны.</b> Вертикальный штырь или диполь излучает «бубликом»: во все стороны
+        по горизонту одинаково, вверх и вниз вдоль своей оси — почти ничего. Изотропная антенна (сфера) —
+        воображаемый эталон. Яги светит лучом вдоль своей стрелы.</li>
+        <li><b>G = КПД · D.</b> D (направленность) — во сколько раз в главном направлении плотнее, чем в среднем по
+        сфере; КПД — какая доля мощности вообще излучилась. Среднее по сфере G равно КПД при любой форме.</li>
+        <li><b>У всенаправленных антенн</b> рост усиления — это сжатие излучения к горизонту: «бублик»
+        сплющивается, вертикальный лепесток сужается (по −3 dB: у диполя ≈ 79°, у коллинеара 3 dBi ≈ 61°, 6 dBi ≈ 27°, 9 dBi ≈ 13°).
+        По горизонту такая антенна по-прежнему одинакова во все стороны, а вверх (на самолёт над головой или
+        спутник в зените) — слабее. Мощности не прибавилось.</li>
+        <li><b>У Яги</b> рост усиления — сужение луча сразу в обеих плоскостях: 10 dBi ≈ 60°, 15 dBi ≈ 32°, 20 dBi ≈ 17°.
+        Цена — точное наведение: мимо луча усиление падает на 15–20 dB.</li>
+        <li>Поэтому усиление антенны — не «добавка мощности», а выбор, <b>куда</b> её направить.</li>
+      </ul>
+      <h3>Волновой канал (Яги) и коллинеар — не одно и то же</h3>
+      <div class="antcmp">
+        <figure>
+          <svg viewBox="0 0 160 70" aria-hidden="true"><line x1="10" y1="35" x2="150" y2="35" class="boom"/>
+            <line x1="22" y1="8" x2="22" y2="62" class="el r"/><line x1="52" y1="12" x2="52" y2="58" class="el a"/>
+            <line x1="82" y1="16" x2="82" y2="54" class="el d"/><line x1="108" y1="18" x2="108" y2="52" class="el d"/>
+            <line x1="132" y1="20" x2="132" y2="50" class="el d"/><path d="M142 35 l12 0 m-5 -4 l5 4 l-5 4" class="arr"/></svg>
+          <figcaption><b>Волновой канал (Яги — Уда)</b>: горизонтальная штанга, на ней рефлектор, активный вибратор и
+          директоры. Направленная: луч вдоль штанги, сзади и сбоку слабо.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 160 70" aria-hidden="true"><line x1="80" y1="4" x2="80" y2="66" class="boom"/>
+            <line x1="80" y1="6" x2="80" y2="24" class="el a"/><line x1="80" y1="27" x2="80" y2="45" class="el a"/>
+            <line x1="80" y1="48" x2="80" y2="66" class="el a"/><ellipse cx="80" cy="35" rx="62" ry="9" class="lobe"/></svg>
+          <figcaption><b>Коллинеар</b>: несколько полуволновых вибраторов друг над другом на одной вертикали, питаются
+          синфазно. Всенаправленный по азимуту, «бублик» прижат к горизонту.</figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 160 70" aria-hidden="true"><line x1="10" y1="33" x2="150" y2="33" class="boom"/>
+            <line x1="10" y1="37" x2="150" y2="37" class="boom"/>
+            <line x1="22" y1="4" x2="22" y2="66" class="el a"/><line x1="46" y1="9" x2="46" y2="61" class="el a"/>
+            <line x1="68" y1="14" x2="68" y2="56" class="el a"/><line x1="88" y1="18" x2="88" y2="52" class="el a"/>
+            <line x1="106" y1="22" x2="106" y2="48" class="el a"/><line x1="122" y1="25" x2="122" y2="45" class="el a"/>
+            <path d="M22 33 L46 37 L68 33 L88 37 L106 33 L122 37" class="lobe"/>
+            <path d="M136 35 l12 0 m-5 -4 l5 4 l-5 4" class="arr"/></svg>
+          <figcaption><b>Логопериодическая (LPDA)</b>: вибраторы растущей длины на двух собирающих линиях, питание
+          перекрещивается от вибратора к вибратору. Направленная, но луч шире, чем у Яги той же длины (5–8 dBi,
+          задний лепесток −15…−20 dB). Главное — широкополосность: усиление почти одинаково, например, в 100–1300 МГц,
+          а Яги настроена на одну полосу.</figcaption>
+        </figure>
+      </div>
+      <ul class="tight">
+        <li>Полуволновый диполь — 2,15 dBi; штырь рации — от −5 до 0 dBi; Яги из 5–7 элементов — 9–11 dBi;
+        вещательная антенная решётка — 6–10 dBi.</li>
+        <li>dBd отсчитывают от диполя: 0 dBd = 2,15 dBi. ЭИМ (ERP) = ЭИИМ − 2,15 dB.</li>
+      </ul>
+    </div>
+    <div class="demo">
+      <div class="ctrls" style="margin:0 0 8px">
+        <span class="seg" id="patType"><button type="button" data-v="iso">Изотропная</button><button type="button" class="on" data-v="dipole">Штырь / диполь</button><button type="button" data-v="colinear">Коллинеар</button><button type="button" data-v="yagi">Яги (волновой канал)</button><button type="button" data-v="lpda">Логопериодическая (LPDA)</button></span>
+        <span class="seg" id="patPol"><button type="button" class="on" data-v="v">Вертикальная поляризация</button><button type="button" data-v="h">Горизонтальная</button></span>
+        <span class="seg" id="patView"><button type="button" class="on" data-v="3d">3D</button><button type="button" data-v="v">Вертикальное сечение (вид сбоку)</button><button type="button" data-v="h">Горизонтальное сечение (вид сверху)</button></span>
+      </div>
+      <canvas id="cv-pattern" height="320" data-demo="pattern" aria-label="Диаграмма направленности передающей антенны"></canvas>
+      <p class="cap">Диаграмма направленности передающей антенны: тот же тип и то же усиление, что в расчёте
+      (меняйте ползунок усиления — фигура плавно перестраивается). Масштаб в dBi, пунктирный круг — изотропная
+      антенна (0 dBi). Синий луч — направление на приёмник (ползунок угла). Ширина главного лепестка по −3 dB:
+      <b id="patBw">—</b>.</p>
+      <p class="cap" id="patNote"></p>
+      <p class="cap"><b>Поляризация</b> — куда смотрят вибраторы. Сечение вдоль вибраторов называют <b>E-плоскостью</b>,
+      поперёк — <b>H-плоскостью</b>; у Яги и LPDA лепесток в E-плоскости уже. При вертикальной поляризации вид сбоку —
+      E-плоскость, вид сверху — H; при горизонтальной наоборот (фигура поворачивается вместе с антенной, интеграл по
+      сфере не меняется). Антенна приёмника должна иметь ту же поляризацию: скрещенные — потери 20+ dB, круговая
+      против линейной — 3 dB.</p>
+    </div>
+  </div>
+</details>
+
+<div class="group-title air">Эфир</div>
+
+<details class="blk air" id="b-air">
+  <summary><span class="t">Потери в свободном пространстве</span><span class="s">FSPL: чем дальше и выше частота, тем слабее</span><span class="lvl" data-live="air_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Волна расходится сферой: на вдвое большем расстоянии та же мощность размазана по вчетверо большей
+      площади (−6 dB). Приёмная антенна «вырезает» из сферы кусочек, а его площадь у антенны с тем же
+      усилением пропорциональна λ², поэтому на высоких частотах потери тоже больше.</p>
+      <p class="formula">FSPL (dB) = 20·lg d<sub>км</sub> + 20·lg f<sub>МГц</sub> + 32,44</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Расстояние</div><div class="v" data-live="dist"></div></div>
+        <div class="fact"><div class="k">Потери FSPL</div><div class="v" data-live="fspl"></div></div>
+        <div class="fact"><div class="k">Напряжённость поля</div><div class="v" data-live="efield"></div></div>
+        <div class="fact"><div class="k">Время в пути</div><div class="v" data-live="delay"></div></div>
+      </div>
+      <ul class="tight">
+        <li>Напряжённость поля: E = √(30·ЭИИМ<sub>Вт</sub>) / d<sub>м</sub> (В/м). В dBµV/m её указывают в
+        нормах на вещание.</li>
+        <li>Реальность хуже свободного пространства: дома, лес и рельеф отнимают ещё 10–40 dB, а на УКВ дальность
+        ограничивает горизонт: ≈ 4,1·(√h<sub>1</sub> + √h<sub>2</sub>) км (высоты в метрах).</li>
+        <li>КВ (до 30 МГц) отражаются ионосферой и уходят за горизонт — там эта формула не работает.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="demo"><canvas id="cv-air" height="150" data-demo="air" aria-label="Расходящаяся волна"></canvas></div>
+      <div class="demo" style="margin-top:10px"><canvas id="cv-airchart" height="220" data-demo="airchart" aria-label="Уровень от расстояния"></canvas>
+        <p class="cap">Уровень у приёмной антенны в зависимости от расстояния (логарифмическая шкала). Точка — текущий
+        пример, пунктир — шум приёмника в канале.</p></div>
+    </div>
+  </div>
+</details>
+
+<div class="group-title rx">Приём</div>
+
+<details class="blk rx" id="b-rxant">
+  <summary><span class="t">Приёмная антенна</span><span class="s">как поле наводит напряжение</span><span class="lvl" data-live="rxant_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Электрическое поле волны толкает свободные электроны в проводнике антенны то в одну, то в другую
+      сторону — с частотой сигнала. На концах антенны набегают заряды, и между её половинами возникает
+      <b>переменное напряжение</b>. Чем длиннее антенна (до полуволны) и чем сильнее поле, тем оно больше.</p>
+      <p><b>ЭДС</b> — напряжение холостого хода, без нагрузки. Когда к антенне подключён согласованный кабель и
+      приёмник, половина ЭДС падает на сопротивлении излучения самой антенны, и на нагрузке остаётся
+      <b>половина</b>. ЭДС здесь посчитана для полуволнового диполя (2,15 dBi) и не зависит от ползунка усиления;
+      мощность в кабель («Отдаёт в кабель») и напряжение на 50 Ом считаются уже с учётом усиления антенны.</p>
+      <p class="formula">U<sub>хх</sub> = E · l<sub>д</sub>,   l<sub>д</sub> = λ/π для полуволнового диполя</p>
+      <p class="formula">A<sub>эфф</sub> = G·λ² / 4π,   P = S · A<sub>эфф</sub></p>
+      <div class="facts">
+        <div class="fact"><div class="k">Поле E</div><div class="v" data-live="efield"></div></div>
+        <div class="fact"><div class="k">Действующая длина</div><div class="v" data-live="leff"></div></div>
+        <div class="fact"><div class="k">ЭДС полуволнового диполя (холостой ход)</div><div class="v" data-live="uoc"></div></div>
+        <div class="fact"><div class="k">На согласованной нагрузке (половина)</div><div class="v" data-live="uoc_half"></div></div>
+        <div class="fact"><div class="k">Эфф. площадь</div><div class="v" data-live="aeff"></div></div>
+        <div class="fact"><div class="k">Отдаёт в кабель</div><div class="v" data-live="rxant_full"></div></div>
+      </div>
+      <p>Усиление приёмной антенны в dBi прибавляется к уровню так же, как у передающей: направленная антенна
+      «собирает» волну с большей площади. Поляризация должна совпадать: вертикальная антенна почти не
+      принимает горизонтальную волну (до −20 dB), а линейная антенна на круговой поляризации спутника теряет 3 dB.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-rxant" height="260" data-demo="rxant" aria-label="Волна наводит напряжение в диполе"></canvas>
+      <p class="cap">Стрелки — электрическое поле бегущей волны. В диполе электроны движутся вдоль провода,
+      справа — напряжение на выходе антенны.</p>
+    </div>
+  </div>
+</details>
+
+<details class="blk rx" id="b-lna">
+  <summary><span class="t">Малошумящий усилитель (МШУ, LNA)</span><span class="s">нужен только на участке антенна → приёмник</span><span class="lvl" data-live="lna_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>МШУ не делает сигнал «лучше», чем он пришёл в антенну: он усиливает и сигнал, и шум, который уже есть.
+      Его задача — <b>перекрыть потери фидера и собственный шум приёмника</b> на участке между антенной и
+      приёмником. Если его нет, слабый сигнал сначала теряет децибелы в кабеле, а потом тонет в шуме
+      тюнера (коэффициент шума недорогих SDR — 3–6 dB; например, у RTL-SDR 4–6 dB).</p>
+      <p>Поэтому МШУ ставят <b>у самой антенны</b>, до кабеля. По формуле Фрииса шум системы определяет первый
+      каскад: после усиления на 20 dB потери в кабеле и шум приёмника почти перестают влиять.</p>
+      <p class="formula">F = F<sub>1</sub> + (F<sub>2</sub> − 1)/G<sub>1</sub> + (F<sub>3</sub> − 1)/(G<sub>1</sub>·G<sub>2</sub>) + …</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Усиление</div><div class="v" data-live="lna_gain"></div></div>
+        <div class="fact"><div class="k">Напряжение</div><div class="v" data-live="lna_volt"></div></div>
+        <div class="fact"><div class="k">После МШУ</div><div class="v" data-live="lna_full"></div></div>
+      </div>
+      <ul class="tight">
+        <li>+20 dB по мощности — это в 100 раз по мощности и в 10 раз по напряжению.</li>
+        <li>Питание МШУ обычно идёт по тому же кабелю (bias-T: например, 4,5 В у RTL-SDR Blog V4, есть у SDRplay, Airspy и HackRF).</li>
+        <li>Лишнее усиление вредно: сильные станции перегружают тюнер. Если сигнал и так сильный — МШУ не нужен.</li>
+        <li>На 137 МГц и ниже часто главнее шум самого эфира (галактика, город), а не приёмника — тогда МШУ даёт меньше,
+        чем обещает формула.</li>
+      </ul>
+    </div>
+    <div class="demo">
+      <h3 style="margin-top:0">Отношение сигнал/шум в канале</h3>
+      <div class="bars" id="lnaBars"></div>
+      <p class="cap">Полоска — уровень сигнала над шумом (штриховка — шум системы, приведённый к выходу
+      антенны). Тот же сигнал, тот же кабель, разное место МШУ.</p>
+    </div>
+  </div>
+</details>
+
+<details class="blk rx" id="b-rxfeed">
+  <summary><span class="t">Фидер к приёмнику</span><span class="s">потери в кабеле и разъёмах</span><span class="lvl" data-live="rxloss_short"></span></summary>
+  <div class="body cols">
+    <div>
+      <p>Каждый метр кабеля и каждый разъём отнимают часть сигнала. Таблица справа — типичные потери на 10 м
+      (на 100 м — в 10 раз больше).</p>
+      <div class="facts">
+        <div class="fact"><div class="k">Кабель</div><div class="v" data-live="rx_cable"></div></div>
+        <div class="fact"><div class="k">Потери</div><div class="v" data-live="rxloss"></div></div>
+        <div class="fact"><div class="k">На входе приёмника</div><div class="v" data-live="rxin_full"></div></div>
+      </div>
+      <ul class="tight">
+        <li><b>RG-58</b> — тонкий 50 Ом, удобен до 2–3 м; на 1 ГГц теряет около 0,5 dB на метр.</li>
+        <li><b>RG-6</b> — телевизионный 75 Ом, дешёвый и неплохой; рассогласование 50/75 Ом стоит всего ≈ 0,2 dB.</li>
+        <li><b>LMR-400</b> — толстый 50 Ом, для мачты и длинных трасс.</li>
+        <li><b>Разъёмы и переходники</b> — 0,1–0,3 dB каждый; китайские переходники SMA–BNC–N бывают и по 1 dB.</li>
+        <li><b>Влага</b> внутри кабеля и окисленные разъёмы увеличивают потери в разы. Наружные разъёмы
+        заматывают изолентой поверх герметика; «петля» кабеля перед входом в дом не даёт воде течь по нему.</li>
+      </ul>
+    </div>
+    <div class="tw"><table class="t" id="cableTable2"></table></div>
+  </div>
+</details>
+
+<div class="group-title sdr">Внутри приёмника</div>
+
+<details class="blk sdr" id="b-rxin">
+  <summary><span class="t">Вход и полосовой фильтр</span><span class="s">что пропускать, а что отсечь</span></summary>
+  <div class="body cols">
+    <div>
+      <p>На вход приёмника приходит всё сразу: FM-вещание, сотовая связь, ТВ, телефон соседа. Полосовой
+      фильтр пропускает только нужный диапазон, чтобы мощные станции вне его не перегружали первый усилитель.
+      В хороших приёмниках стоит набор переключаемых фильтров (преселектор): у SDRplay RSPdx и Airspy HF+ они
+      встроены, у профессиональных КВ-приёмников — десяток полос. Например, в RTL-SDR входные фильтры тюнера
+      довольно широкие, и при сильных помехах добавляют внешний — например, режекторный на 88–108 МГц.</p>
+      <ul class="tight">
+        <li>У каждого приёмника есть предел входного уровня. Например, в RTL-SDR порча наступает около +10 dBm,
+        а перегрузка — уже с −30…−20 dBm; у приёмников с 12–16-битным АЦП и преселектором запас на 20–30 dB больше.</li>
+        <li>Самые слабые сигналы, которые ещё слышно, — около −120…−130 dBm (доли микровольта) в узком канале;
+        точнее зависит от коэффициента шума и полосы.</li>
+      </ul>
+    </div>
+    <div class="demo"><canvas id="cv-filter" height="180" data-demo="filter" aria-label="Полосовой фильтр"></canvas>
+      <p class="cap">Пунктир — АЧХ полосового фильтра. Внутри полосы — нужные сигналы, снаружи — подавленные.</p></div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-tuner">
+  <summary><span class="t">Тюнер и смеситель</span><span class="s">усиление и перенос на промежуточную частоту</span></summary>
+  <div class="body">
+    <p>Тюнер — аналоговая часть приёмника: малошумящий усилитель, фильтры, смеситель и усилитель ПЧ. Смеситель
+    умножает сигнал на колебание гетеродина и переносит выбранный кусок эфира на <b>промежуточную частоту</b>
+    (ПЧ) или сразу в «ноль» (прямое преобразование, ZIF). Дальше с этим куском работает АЦП.</p>
+    <ul class="tight">
+      <li><b>Например, в RTL-SDR</b>: тюнер R820T/R828D с «низкой ПЧ» около 3,57 МГц; при настройке на 137,9 МГц
+      гетеродин стоит на 141,47 МГц. Усиление — 29 ступеней, примерно от 0 до 50 dB. Диапазон R820T — 24–1766 МГц,
+      R828D в RTL-SDR Blog V4 — от 0,5 МГц благодаря встроенному конвертеру КВ.</li>
+      <li><b>Airspy R2/Mini</b>: тот же класс тюнера R820T2, но с 12-битным АЦП на 20 МГц; <b>SDRplay RSP</b> —
+      собственный тюнер MSi001 с прямым преобразованием и 14-битным АЦП; <b>HackRF</b> — широкополосный смеситель до
+      6 ГГц.</li>
+      <li>Существуют и <b>приёмники прямой оцифровки</b> (direct sampling): на КВ АЦП оцифровывает весь эфир сразу,
+      без смесителя (например, KiwiSDR, Red Pitaya, профессиональные КВ-приёмники).</li>
+    </ul>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-rtladc">
+  <summary><span class="t">АЦП приёмника</span><span class="s">N бит, миллионы отсчётов в секунду</span></summary>
+  <div class="body">
+    <p>АЦП оцифровывает ПЧ или сигналы I и Q с разрядностью N бит. От разрядности зависит динамический диапазон:
+    если в полосе есть очень сильная станция, слабые рядом с ней теряются в шуме квантования. Принцип тот же, что в
+    <a href="#b-adc">демонстрации АЦП</a> выше, только частота в тысячи раз выше.</p>
+    <div class="tw"><table class="t">
+      <thead><tr><th>Приёмник (пример)</th><th>АЦП</th><th>ДД ≈</th><th>Полоса обзора</th></tr></thead>
+      <tbody>
+        <tr><td>RTL-SDR (RTL2832U)</td><td class="n">8 бит, 28,8 МГц</td><td class="n">50 dB</td><td class="n">до 2,4–3,2 МГц</td></tr>
+        <tr><td>HackRF One</td><td class="n">8 бит</td><td class="n">50 dB</td><td class="n">до 20 МГц</td></tr>
+        <tr><td>Airspy R2</td><td class="n">12 бит</td><td class="n">74 dB</td><td class="n">10 МГц</td></tr>
+        <tr><td>SDRplay RSP1A/RSPdx</td><td class="n">14 бит до ~6 МГц, выше 12/10/8</td><td class="n">86 dB</td><td class="n">до 10 МГц</td></tr>
+        <tr><td>Профессиональные SDR</td><td class="n">16 бит</td><td class="n">98 dB</td><td class="n">десятки МГц</td></tr>
+        <tr><td>Звуковая карта (КВ через ПЧ/звук)</td><td class="n">16–24 бит</td><td class="n">98–146 dB (реально 110–125)</td><td class="n">48–192 кГц</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-ddc">
+  <summary><span class="t">Цифровой смеситель, IQ и децимация</span><span class="s">поток пар I/Q в компьютер</span></summary>
+  <div class="body cols">
+    <div>
+      <p>Цифровой смеситель (в самом приёмнике или уже в программе) умножает отсчёты на cos и sin частоты ПЧ.
+      Получаются две последовательности: <b>I</b> (синфазная) и <b>Q</b> (квадратурная). Пара (I, Q) — это
+      комплексное число: его длина — амплитуда сигнала, угол — фаза. Нужная частота теперь стоит в нуле, частоты
+      выше настройки вращают вектор IQ против часовой стрелки, ниже — по часовой.</p>
+      <p>Затем <b>децимация</b>: фильтр нижних частот и прореживание до нужной <b>полосы обзора</b>. Каждое сужение
+      полосы в 10 раз даёт около 10 dB выигрыша по шуму. Например, в RTL-SDR частота падает с 28,8 до 2,4 МГц, и по
+      USB уходят 2,4 млн пар по 8 бит (4,8 МБ/с); Airspy R2 отдаёт 10 млн пар по 12 бит, HackRF — до 20 млн пар.</p>
+    </div>
+    <div class="demo"><canvas id="cv-iq" height="200" data-demo="iq" aria-label="Вектор IQ"></canvas>
+      <div class="ctrls"><div class="row"><label for="iqOff">Сигнал относительно настройки</label><output id="o-iqOff"></output>
+        <input type="range" id="iqOff" min="-3" max="3" step="0.5" value="1"></div></div>
+      <p class="cap">Слева — вектор IQ на плоскости, справа — I (сплошная) и Q (пунктир) во времени.</p></div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-fft">
+  <summary><span class="t">Спектр и водопад</span><span class="s">как из IQ получается картинка</span></summary>
+  <div class="body">
+    <p>Программа берёт блок из N отсчётов IQ (в демо f<sub>д</sub> = 2,4 МГц, как у RTL-SDR; N на выбор), умножает на «окно» (сглаживает края блока),
+    выполняет <b>быстрое преобразование Фурье</b> и получает N чисел — сколько энергии в каждой узкой полосе
+    («бине») шириной f<sub>д</sub>/N. Логарифм модуля (dB) по всем бинам — это <b>строка спектра</b>. Новые строки
+    раз в долю секунды добавляются сверху и окрашиваются по уровню — это <b>водопад</b>: по горизонтали частота,
+    по вертикали время, цвет — сила сигнала.</p>
+    <div class="demo">
+      <canvas id="cv-fft" height="420" data-demo="fft" aria-label="IQ, спектр и водопад"></canvas>
+      <div class="ctrls"><span class="seg" id="fftN"><button type="button" data-v="256">N = 256</button><button type="button" class="on" data-v="512">N = 512</button><button type="button" data-v="1024">N = 1024</button><button type="button" data-v="2048">N = 2048</button></span>
+      <span class="small dim" id="fftInfo"></span></div>
+      <p class="cap">Слева — сырые отсчёты I и Q текущего блока: глазом в них ничего не видно. Справа — их спектр
+      и водопад: слева несущая (CW), в центре всплески FSK, правее широкая FM-станция и узкая AM. Щёлкните по
+      спектру, чтобы выбрать канал.</p>
+    </div>
+    <h3 id="rbw">Полоса разрешения (RBW)</h3>
+    <div class="cols">
+      <div>
+        <p><b>RBW</b> (resolution bandwidth, полоса разрешения) — ширина «окошка», через которое анализатор спектра
+        смотрит на каждую точку частоты. Каждая точка спектра — это мощность, попавшая в полосу шириной RBW.</p>
+        <ul class="tight">
+          <li>В программном анализаторе (БПФ) <span class="formula">RBW ≈ f<sub>д</sub> / N × k<sub>окна</sub></span>,
+          у окна Ханна k ≈ 1,5. В SDR4NOOB и SDR# это настройка «Разрешение» (размер БПФ).</li>
+          <li><b>Пол шума зависит от RBW:</b> шум в бине = −174 + 10·lg(RBW, Гц) + КШ (dBm). Сузили RBW вдвое
+          (N ×2) — пол опустился на 3 dB, слабые узкие сигналы «вылезли» из шума. Поэтому сравнивать уровни
+          шума на разных экранах можно только при одинаковом RBW.</li>
+          <li><b>Близкие сигналы</b> различимы, если между ними больше пары RBW. Цена узкого RBW — длинный блок, то
+          есть медленнее обновление и «смазанные» быстрые сигналы.</li>
+          <li><b>Широкий сигнал размазывается</b> по многим бинам: его уровень на экране ниже полной мощности на
+          10·lg(B<sub>сигнала</sub> / RBW). Узкая несущая, наоборот, целиком в одном бине и не зависит от RBW.</li>
+          <li>Отсюда «−120 dBm» у «Метеора»: около −100 dBm полной мощности в полосе 120 кГц при RBW ≈ 1–2 кГц
+          выглядят как −117…−121 dBm в бине.</li>
+          <li><b>Аппаратный анализатор спектра</b> делает то же самое настоящим фильтром ПЧ шириной RBW (ручка
+          «RBW») и сглаживает показания видеофильтром <b>VBW</b> — он уменьшает «шерсть» шума, но не опускает его
+          средний уровень.</li>
+        </ul>
+      </div>
+      <div class="facts">
+        <div class="fact"><div class="k">Текущий RBW</div><div class="v" id="rbwVal"></div></div>
+        <div class="fact"><div class="k">Пол шума (−174 + 10lg RBW + КШ)</div><div class="v" id="rbwFloor"></div></div>
+        <div class="fact"><div class="k">Сдвиг пола шума</div><div class="v" id="rbwShift"></div></div>
+        <div class="fact"><div class="k">«Метеор» −100 dBm / 120 кГц</div><div class="v" id="rbwLrpt"></div></div>
+      </div>
+    </div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-chan">
+  <summary><span class="t">Фильтр канала</span><span class="s">из всей полосы обзора оставить одну станцию</span></summary>
+  <div class="body">
+    <p>Спектр показывает всю полосу сразу, а слушать нужно одну станцию. Программа сдвигает выбранную частоту в
+    ноль (умножает IQ на e<sup>−j2πf·t</sup>), пропускает через фильтр нижних частот шириной в канал
+    (12,5 кГц для NFM, 200 кГц для WFM) и снова прореживает. В SDR4NOOB это делает VFO: щелчок по спектру или
+    водопаду. Всё, что вне фильтра, в демодулятор не попадает — поэтому соседние станции не мешают.</p>
+    <p>Текущий выбранный канал в демонстрации водопада: <b id="chanSel">FM-станция</b>.</p>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-demod">
+  <summary><span class="t">Демодулятор</span><span class="s">AM — огибающая, FM — скорость вращения фазы</span></summary>
+  <div class="body cols">
+    <div>
+      <p>После фильтра канала остаётся поток IQ одной станции. Демодулятор достаёт из него исходный звук:</p>
+      <ul class="tight">
+        <li><b>AM</b>: звук — это длина вектора IQ, <span class="mono">a = √(I² + Q²)</span>. Остаётся вычесть
+        постоянную составляющую (саму несущую).</li>
+        <li><b>FM</b>: звук — это скорость вращения вектора, то есть производная фазы:
+        <span class="mono">Δφ = arg(z<sub>n</sub> · z̄<sub>n−1</sub>)</span>. Длина вектора не важна, поэтому FM
+        не боится помех по амплитуде.</li>
+        <li><b>SSB</b> и <b>CW</b> — сдвиг частоты и выбор одной боковой полосы (здесь не показаны).</li>
+      </ul>
+      <p>Для цифры демодулятор тоже нужен: FSK демодулируют как FM, а потом решают, какой символ был; QPSK —
+      по углу вектора IQ.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-demod" height="300" data-demo="demod" aria-label="Демодуляция AM и FM"></canvas>
+      <div class="ctrls"><span class="seg" id="demodMode"><button type="button" class="on" data-v="am">AM</button><button type="button" data-v="fm">FM</button></span>
+        <div class="row"><label for="demodNoise">Шум</label><output id="o-demodNoise"></output>
+          <input type="range" id="demodNoise" min="0" max="40" step="1" value="5"></div></div>
+      <p class="cap">Слева — вектор IQ; справа сверху — I и Q, ниже — длина (AM) или фаза (FM), внизу — звук
+      на выходе (пунктир — исходный звук передатчика).</p>
+    </div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-decoder">
+  <summary><span class="t">Декодер</span><span class="s">только для цифры: символы → биты → кадры → звук</span></summary>
+  <div class="body cols">
+    <div>
+      <p>На примере <b>DMR</b> (цифровые рации, есть в режиме «Радио» SDR4NOOB):</p>
+      <ol class="tight">
+        <li><b>Символы.</b> 4FSK: четыре отклонения частоты ±648 и ±1944 Гц, 4800 символов в секунду.</li>
+        <li><b>Биты.</b> Каждый символ — два бита: +3 → 01, +1 → 00, −1 → 10, −3 → 11. Получается 9600 бит/с.</li>
+        <li><b>Кадры.</b> Пакет длится 27,5 мс: 108 бит голоса, 48 бит синхрослова (по нему декодер находит начало),
+        ещё 108 бит голоса. Два таймслота по 30 мс чередуются — две независимые беседы на одной частоте.</li>
+        <li><b>Исправление ошибок.</b> Кодирование с избыточностью позволяет исправить часть битых бит; если ошибок
+        слишком много, кадр выбрасывается.</li>
+        <li><b>Вокодер.</b> 216 бит голоса = 3 кадра AMBE+2 по 72 бита; каждый кадр — 20 мс речи. Вокодер
+        синтезирует по ним звук с частотой 8 кГц.</li>
+      </ol>
+      <p>Другие цифровые сигналы устроены похоже: у «Метеора» QPSK → кадры CCSDS → сжатые JPEG-полосы снимка; у
+      ADS-B — бит длится 1 мкс (импульс 0,5 мкс в первой или второй половине, PPM) → 112 бит → координаты и высота самолёта.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-dmr" height="250" data-demo="dmr" aria-label="Символы DMR и биты"></canvas>
+      <p class="cap">Сверху символы 4FSK и их пары бит (оранжевые — синхрослово), снизу — где в пакете
+      находится текущий символ. Таймслот 30 мс: 264 бита = 132 символа (27,5 мс) и ещё 2,5 мс: у рации это защитный промежуток, у
+      ретранслятора на этом месте идёт CACH — 24 бита служебного канала.</p>
+    </div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-decrypt">
+  <summary><span class="t">Дешифратор</span><span class="s">только если сигнал зашифрован</span></summary>
+  <div class="body">
+    <p>Некоторые цифровые системы шифруют голос: биты после декодера смешиваются с ключом (в DMR — Basic Privacy,
+    ARC4, AES-256). Без ключа на выходе вокодера получается неразборчивое бульканье или тишина.</p>
+    <p class="note warn"><b>Зашифрованные каналы SDR4NOOB не расшифровывает</b> — и не будет. Расшифровывать чужие
+    переговоры незаконно; ключ можно использовать только в собственной системе (своих рациях), где он у вас
+    есть по праву. Открытые каналы слушать можно, но разглашать услышанное служебное — нельзя
+    (см. <a href="../legal.html">«Закон и этика эфира»</a>).</p>
+    <h3>Как работает законная расшифровка: свой сеанс, общий ключ</h3>
+    <p>Пример штатного сеанса: своя DMR-сеть или учебная пара раций. У обоих абонентов заранее, по защищённому
+    каналу, записан <b>один и тот же ключ</b> (в DMR — ARC4 или AES-256). Передатчик и приёмник из ключа и
+    счётчика кадра (IV) вырабатывают одинаковую <b>гамму</b> — псевдослучайную последовательность бит. Передатчик
+    складывает данные с гаммой по модулю 2 (XOR), приёмник делает то же самое — и XOR с той же гаммой возвращает
+    исходные биты. Посторонний приёмник без ключа получает другую гамму и видит шум. Так устроены AES-CTR и
+    другие потоковые режимы; ниже — расчёт прямо в браузере.</p>
+    <div class="demo">
+      <div class="cin">
+        <div><label for="cMsg">Открытые данные (кадр или текст)</label><input type="text" id="cMsg" maxlength="40" value="Приём, база! 73"></div>
+        <div><label for="cKey">Ключ передатчика</label><input type="text" id="cKey" maxlength="32" value="наш-общий-ключ"></div>
+        <div><label for="cKeyRx">Ключ в своём приёмнике</label><input type="text" id="cKeyRx" maxlength="32" value="наш-общий-ключ"></div>
+        <div><label for="cIv">IV / номер кадра</label><input type="text" id="cIv" maxlength="12" value="1042"></div>
+      </div>
+      <div class="ctrls"><span class="seg" id="cryptModeSeg"><button type="button" class="on" data-v="edu">Учебная схема</button><button type="button" data-v="aes">AES-256-CTR</button></span></div>
+      <p class="cap" id="cryptMode"></p>
+      <div class="crypt" id="cryptRows" aria-live="polite"></div>
+      <p class="cap">Показаны первые 8 байт в битах и все байты в шестнадцатеричном виде. Измените одну букву ключа
+      в «своём приёмнике» — расшифровка превратится в мусор. Номер кадра меняет гамму, поэтому одинаковые
+      фразы в эфире выглядят по-разному.</p>
+    </div>
+    <p class="note warn">Расшифровывать можно только <b>свои</b> системы и сеансы, где ключ у вас есть законно.
+    Перехват и расшифровка чужой защищённой связи (подбор ключей, «взлом» ARC4) незаконны. SDR4NOOB зашифрованные
+    сигналы не расшифровывает.</p>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-audio">
+  <summary><span class="t">Звук</span><span class="s">спектр звуковых частот, ЦАП, динамик</span></summary>
+  <div class="body cols">
+    <div>
+      <p>Демодулятор (или вокодер) выдаёт отсчёты звука. Перед выводом их фильтруют по полосе и приводят к частоте
+      звуковой карты (обычно 48 кГц, 16 бит). <b>ЦАП</b> звуковой карты превращает числа обратно в напряжение,
+      усилитель раскачивает динамик или наушники.</p>
+      <ul class="tight">
+        <li><b>WFM-вещание</b>: звук до 15 кГц, стерео (поднесущая 38 кГц и пилот-тон 19 кГц в сигнал MPX до звука не
+        доходят).</li>
+        <li><b>NFM и рации</b>: 300–3000 Гц — для речи хватает.</li>
+        <li><b>AM-авиация</b>: 300–2500 Гц.</li>
+        <li><b>DMR</b>: вокодер синтезирует речь в полосе до 4 кГц.</li>
+      </ul>
+    </div>
+    <div class="demo">
+      <canvas id="cv-audio" height="220" data-demo="audio" aria-label="Спектр звука"></canvas>
+      <div class="ctrls"><span class="seg" id="audioMode"><button type="button" class="on" data-v="wfm">WFM 15 кГц</button><button type="button" data-v="nfm">NFM 3 кГц</button></span></div>
+      <p class="cap">Спектр звука на выходе демодулятора: тёмная зона — то, что срезает фильтр.</p>
+    </div>
+  </div>
+</details>
+
+<details class="blk sdr" id="b-div">
+  <summary><span class="t">Две антенны: разнесённый приём</span><span class="s">сумматор, переключатель или выбор лучшей</span></summary>
+  <div class="body cols">
+    <div>
+      <p>Отражённые от домов волны складываются то в фазе, то в противофазе, и сигнал «замирает» (фединг).
+      Если поставить две антенны на расстоянии от половины длины волны, провалы у них случаются в разное время.
+      Сигналы объединяют <b>до демодулятора</b>:</p>
+      <ul class="tight">
+        <li><b>Выбор лучшей</b> (selection) — в каждый момент берётся антенна с бо́льшим уровнем.</li>
+        <li><b>Переключатель</b> (switch-and-stay) — работаем с одной, пока уровень не упадёт ниже порога,
+        потом переключаемся. Нужен один приёмник — так делают в автомобильных магнитолах.</li>
+        <li><b>Сложение в фазе</b> (сумматор, MRC) — сигналы выравнивают по фазе и складывают с весами: С/Ш
+        суммы равно сумме С/Ш антенн. Нужны два синхронных приёмника с общим генератором (например, KrakenSDR — пять RTL-SDR на одной опоре — или двухканальный SDRplay RSPduo).</li>
+      </ul>
+      <p>Без выравнивания фазы простое сложение двух антенн через тройник даёт свои провалы — так делать не надо.</p>
+    </div>
+    <div class="demo">
+      <canvas id="cv-div" height="240" data-demo="div" aria-label="Фединг на двух антеннах"></canvas>
+      <div class="ctrls"><span class="seg" id="divMode"><button type="button" class="on" data-v="sel">Выбор лучшей</button><button type="button" data-v="sw">Переключатель</button><button type="button" data-v="mrc">Сложение</button></span></div>
+      <p class="cap" id="divCap"></p>
+    </div>
+  </div>
+</details>
+
+<h2 id="avd">Аналог и цифра при шуме</h2>
+<div class="card">
+  <p>Одна и та же фраза передана аналоговой FM и цифровой 2FSK. Сдвигайте отношение сигнал/шум: аналог
+  начинает шипеть постепенно, а цифра звучит чисто до порога — и затем пропадает целиком
+  (<b>эффект обрыва</b>, cliff effect). Ниже порога кадры отбрасываются, звук рвётся.</p>
+  <div class="row" style="max-width:640px"><label for="avdSnr">Сигнал/шум</label><output id="o-avdSnr"></output>
+    <input type="range" id="avdSnr" min="-5" max="35" step="0.5" value="20"></div>
+  <div class="ctrls" style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px">
+    <button type="button" class="btn" id="avdFromBudget">Взять С/Ш из расчёта</button>
+    <button type="button" class="btn" id="playAnalog">Послушать аналог</button>
+    <button type="button" class="btn" id="playDigital">Послушать цифру</button>
+  </div>
+  <div class="avd">
+    <div class="lane demo">
+      <h3>Аналог (FM)</h3>
+      <canvas id="cv-avdA" height="200" data-demo="avdA" aria-label="Аналоговый сигнал с шумом"></canvas>
+      <div class="meter"><i id="mA"></i></div><p class="cap" id="capA"></p>
+    </div>
+    <div class="lane demo">
+      <h3>Цифра (2FSK + вокодер)</h3>
+      <canvas id="cv-avdD" height="200" data-demo="avdD" aria-label="Цифровой сигнал с шумом"></canvas>
+      <div class="meter"><i id="mD"></i></div><p class="cap" id="capD"></p>
+    </div>
+  </div>
+  <div class="demo" style="margin-top:12px"><canvas id="cv-avdCurve" height="200" data-demo="avdCurve" aria-label="Качество от С/Ш"></canvas>
+    <p class="cap">Качество звука в зависимости от С/Ш. Цифровая кривая — доля целых кадров по 100 бит при
+    вероятности ошибки бита BER = ½·erfc(√(С/Ш/2)).</p></div>
+</div>
+
+<h2 id="formulas">Формулы на одной странице</h2>
+<p class="small dim">Каждая формула — ссылка на объяснение; наведите или коснитесь, чтобы увидеть подсказку.</p>
+<div class="card">
+  <ul class="tight">
+    <li>Мощность из dBm: <a class="term mono" data-term="f-p" href="../decibels.html#dbm">P(мВт) = 10^(dBm/10)</a>; обратно: <a class="term mono" data-term="f-dbm" href="../decibels.html#dbm">dBm = 10·lg P(мВт)</a>.</li>
+    <li>Напряжение на нагрузке: <a class="term mono" data-term="f-u" href="../decibels.html#dbm">U = √(P·R)</a>, R = 50 Ом (у ТВ-техники — 75 Ом). −107 dBm ≈ 1 мкВ на 50 Ом, 0 dBµV = −107 dBm.</li>
+    <li>Децибелы складываются: <a class="term mono" data-term="f-sum" href="../decibels.html#db">P<sub>вых</sub>(dBm) = P<sub>вх</sub>(dBm) + G(dB) − L(dB)</a>.
+    +3 dB — вдвое по мощности, +6 dB — вдвое по напряжению, +10 dB — в 10 раз по мощности.</li>
+    <li>Длина волны: <a class="term mono" data-term="f-lambda" href="../antennas.html#lambda">λ(м) = 300 / f(МГц)</a>.</li>
+    <li>Потери в свободном пространстве: <a class="term mono" data-term="f-fspl" href="#b-air">FSPL = 20·lg d(км) + 20·lg f(МГц) + 32,44</a>.</li>
+    <li>Излучаемая мощность: <a class="term mono" data-term="f-prad" href="#b-txant">P<sub>изл</sub> = P<sub>перед</sub> − потери фидера − потери в антенне</a>; ЭИИМ — эквивалент в направлении на приёмник: <a class="term mono" data-term="f-eirp" href="#b-txant">ЭИИМ(θ) = P<sub>вх</sub> + G(θ) = P<sub>изл</sub> + D(θ)</a> (G — усиление с учётом КПД, D — направленность).</li>
+    <li>Поле: <a class="term mono" data-term="f-field" href="#b-air">E(В/м) = √(30·ЭИИМ(Вт)) / d(м)</a>; ЭДС полуволнового диполя <a class="term mono" data-term="f-emf" href="#b-rxant">U = E·λ/π</a>.</li>
+    <li>Шум в полосе B: <a class="term mono" data-term="f-noise" href="#b-lna">N(dBm) = −174 + КШ + 10·lg B(Гц)</a>.</li>
+    <li>Котельников–Найквист: <a class="term mono" data-term="f-nyq" href="#b-adc">f<sub>д</sub> &gt; 2·F<sub>max</sub></a>; С/Ш квантования ≈ <a class="term mono" data-term="f-qsnr" href="#b-adc">6,02·N + 1,76 dB</a>.</li>
+    <li>Полоса FM (Карсон): <a class="term mono" data-term="f-carson" href="#b-mod">B ≈ 2·(Δf + F<sub>max</sub>)</a>; полоса AM: <a class="term mono" data-term="f-am" href="#b-mod">2·F<sub>max</sub></a>.</li>
+  </ul>
+</div>
+
+<footer>
+  <p>SDR4NOOB — «Всё в одном для начинающего радиолюбителя». Страница работает без интернета; цифры —
+  оценки для свободного пространства, в реальном эфире бывает на десятки децибел хуже.
+  <a href="../pipeline.html">Вернуться к руководству</a>.</p>
+</footer>
+</main>
+
+<script src="terms.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

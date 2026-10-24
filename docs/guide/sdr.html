@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.2.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -35,7 +35,7 @@
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
 <div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
-<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html" aria-current="page" class="cur">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html">Путь радиосигнала</a></li><li><a href="../guide/sdr.html" aria-current="page" class="cur">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
 <div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
@@ -46,7 +46,7 @@
 <h2 id="what">Что такое SDR<a class="anchor" href="#what" aria-label="Ссылка на этот раздел">#</a></h2>
 <p><b>SDR</b> (Software Defined Radio, программно-определяемое радио) — приёмник, в котором железо только
 переносит кусок эфира на низкую частоту и оцифровывает его, а всё остальное — фильтры, демодуляция,
-декодирование — делает программа. Поэтому один и тот же донгл за пару секунд превращается из FM-приёмника
+декодирование — делает программа. Поэтому один и тот же приёмник (например, недорогой донгл RTL-SDR) за пару секунд превращается из FM-приёмника
 в декодер самолётов или метеоспутника.</p>
 <p><figure class="diagram"><picture><source srcset="img/sdr-chain-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/sdr-chain.svg" alt="Схема" width="720" height="180" loading="lazy"></picture></figure></p>
 <p>Донгл отдаёт в компьютер поток <b>I/Q-отсчётов</b> — пар чисел, которые описывают и амплитуду, и фазу
@@ -58,26 +58,28 @@
 записывает его числом. <b>Разрядность</b> — сколько бит в этом числе. От неё зависит
 <b>динамический диапазон</b>: насколько слабый сигнал можно услышать рядом с сильным, пока сильный ещё не
 «упирается» в максимум шкалы.</p>
-<p>Теоретический предел: <b>ДД ≈ 6,02·N + 1,76 дБ</b>, где N — число бит.</p>
+<p>Теоретический предел: <b>ДД ≈ 6,02·N + 1,76 dB</b>, где N — число бит.</p>
 <div class="tw"><table class="t">
 <tr><th>Разрядность</th><th>Уровней</th><th>ДД (теория)</th><th>Примеры</th></tr>
-<tr><td>8 бит</td><td>256</td><td>≈ 50 дБ</td><td>RTL-SDR, HackRF</td></tr>
-<tr><td>12 бит</td><td>4 096</td><td>≈ 74 дБ</td><td>Airspy R2/Mini, LimeSDR, PlutoSDR</td></tr>
-<tr><td>14 бит</td><td>16 384</td><td>≈ 86 дБ</td><td>SDRplay RSP1A/RSPdx</td></tr>
-<tr><td>16 бит</td><td>65 536</td><td>≈ 98 дБ</td><td>профессиональные КВ-приёмники</td></tr>
+<tr><td>8 бит</td><td>256</td><td>≈ 50 dB</td><td>RTL-SDR, HackRF</td></tr>
+<tr><td>12 бит</td><td>4 096</td><td>≈ 74 dB</td><td>Airspy R2/Mini, LimeSDR, PlutoSDR</td></tr>
+<tr><td>14 бит</td><td>16 384</td><td>≈ 86 dB</td><td>SDRplay RSP1A/RSPdx</td></tr>
+<tr><td>16 бит</td><td>65 536</td><td>≈ 98 dB</td><td>профессиональные КВ-приёмники</td></tr>
 </table></div>
-<p>На практике всё лучше, чем в таблице: RTL2832U оцифровывает с частотой 28,8 МГц, а потом
-<b>децимирует</b> (прореживает с фильтрацией) до 2,4 МГц и ещё сильнее в канале демодулятора. Каждое сужение
-полосы в 10 раз даёт ~10 дБ <b>выигрыша обработки</b>. Поэтому в узком канале NFM 8-битный донгл ведёт себя
+<p>На практике всё лучше, чем в таблице: приёмник оцифровывает с частотой выше нужной, а потом
+<b>децимирует</b> (прореживает с фильтрацией) до полосы обзора и ещё сильнее в канале демодулятора. Например,
+RTL2832U оцифровывает с частотой 28,8 МГц и децимирует до 2,4 МГц. Каждое сужение
+полосы в 10 раз даёт ~10 dB <b>выигрыша обработки</b>. Поэтому в узком канале NFM 8-битный приёмник ведёт себя
 как 12–13-битный. Но если в полосе есть очень мощная станция, 8 бит всё равно мало — отсюда
 <a href="gain.html#overload">перегрузка</a>.</p>
 
 <h2 id="rate">Частота дискретизации и полоса<a class="anchor" href="#rate" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>Частота дискретизации</b> fs — сколько пар I/Q в секунду отдаёт донгл. Она же — <b>ширина видимого
-спектра</b>: при 2,4 МГц и настройке на 101,0 МГц вы видите 99,8–102,2 МГц.</li>
+<li><b>Частота дискретизации</b> fs — сколько пар I/Q в секунду отдаёт приёмник. Она же — <b>ширина видимого
+спектра</b> (полоса обзора): при 2,4 МГц и настройке на 101,0 МГц вы видите 99,8–102,2 МГц.</li>
 <li>Края полосы (по ~10 % с каждой стороны) заваливаются фильтром — сигналы там слабее.</li>
-<li>RTL2832U допускает 0,225–0,3 и 0,9–3,2 МГц. Устойчиво — <b>до 2,4 МГц</b>; 2,88–3,2 МГц на многих
+<li>Предел у каждого приёмника свой: Airspy R2 — 10 МГц, SDRplay — до 10 МГц, HackRF — до 20 МГц.
+Например, RTL2832U допускает 0,225–0,3 и 0,9–3,2 МГц. Устойчиво — <b>до 2,4 МГц</b>; 2,88–3,2 МГц на многих
 компьютерах теряют отсчёты (щелчки в звуке, обрывы декодеров).</li>
 <li>В SDR4NOOB полоса выбирается полем <b>«Полоса»</b> (Радио, ТВ) или <b>«Дискретизация»</b> (Спутники, ADS-B).
 Шире — больше видно, но больше нагрузка на процессор и больше шансов, что в полосу попадёт мешающая станция.</li>
@@ -85,14 +87,14 @@
 
 <h2 id="nf">Коэффициент шума и чувствительность<a class="anchor" href="#nf" aria-label="Ссылка на этот раздел">#</a></h2>
 <p>Любой усилитель добавляет свой шум. <b>Коэффициент шума</b> (КШ, NF) показывает, во сколько раз
-(в дБ) ухудшается <a href="decibels.html#snr">отношение сигнал/шум</a> при прохождении через приёмник.
-Идеал — 0 дБ. У тюнеров R820T/R828D на УКВ — около 3,5–4 дБ, к краям диапазона хуже.</p>
+(в dB) ухудшается <a href="decibels.html#snr">отношение сигнал/шум</a> при прохождении через приёмник.
+Идеал — 0 dB. У тюнеров R820T/R828D на УКВ — около 3,5–4 dB, к краям диапазона хуже.</p>
 <p>Самый слабый сигнал, который ещё виден, оценивается так:</p>
-<p class="mono">Шум, дБм = −174 + КШ + 10·lg(полоса, Гц)</p>
-<p>Пример: КШ 4 дБ, канал NFM 12,5 кГц → −174 + 4 + 41 = <b>−129 дБм</b> (≈ 0,08 мкВ на 50 Ом).
-Для разборчивой речи сигнал должен быть на ~10 дБ выше, то есть около −119 дБм.</p>
-<p>Кабель <b>до</b> первого усилителя прибавляет свои потери прямо к КШ: 3 дБ потерь в кабеле = КШ хуже на
-3 дБ. Поэтому <a href="antennas.html#lna">МШУ ставят у антенны</a>, а не у компьютера.</p>
+<p class="mono">Шум, dBm = −174 + КШ + 10·lg(полоса, Гц)</p>
+<p>Пример: КШ 4 dB, канал NFM 12,5 кГц → −174 + 4 + 41 = <b>−129 dBm</b> (≈ 0,08 мкВ на 50 Ом).
+Для разборчивой речи сигнал должен быть на ~10 dB выше, то есть около −119 dBm.</p>
+<p>Кабель <b>до</b> первого усилителя прибавляет свои потери прямо к КШ: 3 dB потерь в кабеле = КШ хуже на
+3 dB. Поэтому <a href="antennas.html#lna">МШУ ставят у антенны</a>, а не у компьютера.</p>
 
 <h2 id="tuners">Тюнеры<a class="anchor" href="#tuners" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
@@ -113,7 +115,7 @@
 <tr><td>HackRF One</td><td>1 МГц – 6 ГГц</td><td>до 20 МГц</td><td>8 бит</td><td>да (полудуплекс)</td><td>≈ $330</td></tr>
 <tr><td>Airspy R2</td><td>24–1800 МГц</td><td>10 МГц</td><td>12 бит</td><td>нет</td><td>≈ $170</td></tr>
 <tr><td>Airspy Mini</td><td>24–1700 МГц</td><td>6 МГц</td><td>12 бит</td><td>нет</td><td>≈ $100</td></tr>
-<tr><td>Airspy HF+ Discovery</td><td>0,5 кГц – 31 МГц и 60–260 МГц</td><td>≈ 0,66 МГц</td><td>ДД ≈110 дБ</td><td>нет</td><td>≈ $170</td></tr>
+<tr><td>Airspy HF+ Discovery</td><td>0,5 кГц – 31 МГц и 60–260 МГц</td><td>≈ 0,66 МГц</td><td>ДД ≈110 dB</td><td>нет</td><td>≈ $170</td></tr>
 <tr><td>SDRplay RSP1A / RSP1B</td><td>1 кГц – 2 ГГц</td><td>10 МГц</td><td>14 бит</td><td>нет</td><td>≈ $130</td></tr>
 <tr><td>SDRplay RSPdx-R2</td><td>1 кГц – 2 ГГц, 3 антенных входа</td><td>10 МГц</td><td>14 бит</td><td>нет</td><td>≈ $250</td></tr>
 <tr><td>LimeSDR (USB)</td><td>0,1–3800 МГц</td><td>до 61 МГц</td><td>12 бит</td><td>да (2×2)</td><td>от $300</td></tr>
@@ -152,11 +154,11 @@ Airspy R2/Mini (нужна их DLL), а также сетевой <b>rtl_tcp</b
 В другом USB-порту Windows может считать донгл новым устройством — тогда повторите замену.</div>
 <p>SDR4NOOB содержит свою сборку librtlsdr (с поддержкой V4), ставить SDR# или системные драйверы не нужно.</p>
 <p>См. также: <a href="gain.html">Усиление и АРУ</a>, <a href="troubleshooting.html">Неполадки</a>.</p>
-<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/legal.html"><span>← Назад</span>Закон и этика эфира</a><a class="next" href="../guide/decibels.html"><span>Дальше →</span>Единицы и децибелы</a></nav>
+<nav class="prevnext" aria-label="Соседние страницы"><a class="prev" href="../guide/pipeline.html"><span>← Назад</span>Путь радиосигнала</a><a class="next" href="../guide/decibels.html"><span>Дальше →</span>Единицы и децибелы</a></nav>
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.2.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>

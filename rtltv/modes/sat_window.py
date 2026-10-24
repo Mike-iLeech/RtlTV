@@ -190,7 +190,7 @@ class SatWindow(ModeWindow):
         self.bridge.event.connect(self._on_event)
         self.tleLoaded.connect(self._on_tle)
         self._build()
-        self.engine.level.connect(lambda db, _a, _s: self.l_level.set_value(db, f"{db:.0f} дБ"))
+        self.engine.level.connect(lambda db, _a, _s: self.l_level.set_value(db, f"{db:.0f} dB"))
         self.engine.error.connect(lambda m: self.statusBar().showMessage("Приёмник: " + m, 10000))
         self.engine.opened.connect(lambda info: self.statusBar().showMessage(
             f"Открыт: {info['label']} · тюнер {info['tuner']}", 6000))
@@ -399,7 +399,7 @@ class SatWindow(ModeWindow):
         f.addRow(self.l_dopp)
         self.l_count = wrap_label("")
         f.addRow(self.l_count)
-        self.l_level = LevelMeter(-110, -20, "дБ")
+        self.l_level = LevelMeter(-110, -20, "dB")
         f.addRow("Уровень:", self.l_level)
         self.vol = QSlider(Qt.Horizontal)
         self.vol.setRange(0, 100)
@@ -625,7 +625,7 @@ class SatWindow(ModeWindow):
         self.gain_combo.clear()
         self.gain_combo.addItem("АРУ тюнера", None)
         for gv in self.gains:
-            self.gain_combo.addItem(f"{gv / 10:.1f} дБ".replace(".", ","), gv)
+            self.gain_combo.addItem(f"{gv / 10:.1f} dB".replace(".", ","), gv)
         want = self.s.get("gain", 402)
         best = min(range(1, self.gain_combo.count()), key=lambda i: abs(self.gain_combo.itemData(i) - want)) \
             if want is not None else 0
@@ -1235,7 +1235,7 @@ class SatWindow(ModeWindow):
         sd, clip = st.get("adc_std", 0.0), st.get("adc_clip", 0.0)
         if clip > 0.05 or sd > 45:
             verdict = ("<span style='color:#ff5a4f'><b>перегрузка или сильная помеха</b></span> — снизьте усиление "
-                       "до 25–30 дБ; если шум не уменьшается относительно сигнала, рядом с антенной шумит прибор "
+                       "до 25–30 dB; если шум не уменьшается относительно сигнала, рядом с антенной шумит прибор "
                        "(LED-лампы, блоки питания, ПК)")
         elif sd > 25:
             verdict = "<span style='color:#e8a33a'>много шума</span> — можно снизить усиление"
@@ -1255,7 +1255,7 @@ class SatWindow(ModeWindow):
             resid = st["residual_hz"] - st["doppler"] - (w.sig - w.center)
             self.l_info.setText(
                 f"Доплер {st['doppler'] / 1e3:+.2f} кГц, остаток {resid:+.0f} Гц. "
-                f"SNR ≈ {st['snr_db']:.1f} дБ, пакетов {st['packets']}, строк {st['lines']}. "
+                f"SNR ≈ {st['snr_db']:.1f} dB, пакетов {st['packets']}, строк {st['lines']}. "
                 f"Каналы: {', '.join(str(a - 63) for a in st['channels']) or '—'}. "
                 f"Загрузка DSP {st['busy'] * 100:.0f} %"
                 + (f", пропущено блоков {st['dropped']}" if st["dropped"] else "") + ".<br>" + self._adc_text(st))
@@ -1271,8 +1271,8 @@ class SatWindow(ModeWindow):
         else:
             self.l_sync.setText("нет декодера")
             self.l_info.setText(
-                f"Доплер {st['doppler'] / 1e3:+.2f} кГц. Уровень в полосе {st.get('level_db', 0):.1f} дБ, "
-                f"над шумом ≈ {st['snr_db']:.1f} дБ. Идёт {_fmt_dt(st['elapsed'])}"
+                f"Доплер {st['doppler'] / 1e3:+.2f} кГц. Уровень в полосе {st.get('level_db', 0):.1f} dB, "
+                f"над шумом ≈ {st['snr_db']:.1f} dB. Идёт {_fmt_dt(st['elapsed'])}"
                 + (f", запись IQ: {os.path.basename(self.rx['rec'])}" if self.rx.get("rec") else "")
                 + f". Загрузка DSP {st['busy'] * 100:.0f} %.<br>" + self._adc_text(st))
 
@@ -1642,7 +1642,7 @@ class SatWindow(ModeWindow):
         sync = "есть" if st["sync"] else ("поиск" if st["frames"] == 0 else "потеряна")
         self.e_info.setText(
             f"Синхронизация кадров: <b>{sync}</b>. Остаток частоты {st['residual_hz'] - (w.sig - w.center):+.0f} Гц, "
-            f"SNR ≈ {st['snr_db']:.1f} дБ. Пакетов {st['packets']}, файлов {st['files']}, ошибок CRC "
+            f"SNR ≈ {st['snr_db']:.1f} dB. Пакетов {st['packets']}, файлов {st['files']}, ошибок CRC "
             f"{st['crc_bad']}, снимков {st['images']}. Загрузка DSP {st['busy'] * 100:.0f} %.")
         if st["imgver"] != self._e_ver and time.time() - getattr(self, "_e_t", 0) > 3.0 \
                 and self.tabs.currentIndex() == TAB_ELEKTRO:

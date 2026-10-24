@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440">
+  <rect x="0" y="0" width="760" height="440" fill="{{panel}}"/>
+
+  <!-- передатчик -->
+  <text x="18" y="24" font-family="Segoe UI" font-size="13" font-weight="bold" fill="#d9822b">Передатчик</text>
+  <g font-family="Segoe UI" text-anchor="middle">
+    <rect x="18" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
+    <text x="70" y="56" font-size="13" fill="{{fg}}">Источник</text>
+    <text x="70" y="74" font-size="11" fill="{{dim}}">звук / данные</text>
+    <rect x="142" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b" stroke-dasharray="5,3"/>
+    <text x="194" y="56" font-size="13" fill="{{fg}}">АЦП</text>
+    <text x="194" y="74" font-size="11" fill="{{dim}}">если цифра</text>
+    <rect x="266" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
+    <text x="318" y="56" font-size="13" fill="{{fg}}">Модулятор</text>
+    <text x="318" y="74" font-size="11" fill="{{dim}}">AM, FM, FSK, QPSK</text>
+    <rect x="390" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
+    <text x="442" y="56" font-size="13" fill="{{fg}}">Усилитель</text>
+    <text x="442" y="74" font-size="11" fill="{{dim}}">мощности</text>
+    <rect x="514" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
+    <text x="566" y="56" font-size="13" fill="{{fg}}">Фидер</text>
+    <text x="566" y="74" font-size="11" fill="{{dim}}">потери, dB</text>
+    <rect x="638" y="34" width="104" height="52" rx="6" fill="{{panel2}}" stroke="#d9822b"/>
+    <text x="690" y="56" font-size="13" fill="{{fg}}">Антенна</text>
+    <text x="690" y="74" font-size="11" fill="{{dim}}">лишь направляет</text>
+    <!-- уровни: рация PMR 0,5 Вт -->
+    <text x="70" y="102" font-size="11" fill="{{accent}}">0 dBm · 1 мВт</text>
+    <text x="442" y="102" font-size="11" fill="{{accent}}">27 dBm · 0,5 Вт</text>
+    <text x="566" y="102" font-size="11" fill="{{accent}}">27 dBm</text>
+    <text x="690" y="102" font-size="11" fill="{{accent}}">0,33 Вт · ЭИИМ 0,5</text>
+  </g>
+  <g stroke="{{dim}}" stroke-width="1.5">
+    <line x1="122" y1="60" x2="140" y2="60"/>
+    <line x1="246" y1="60" x2="264" y2="60"/>
+    <line x1="370" y1="60" x2="388" y2="60"/>
+    <line x1="494" y1="60" x2="512" y2="60"/>
+    <line x1="618" y1="60" x2="636" y2="60"/>
+  </g>
+
+  <!-- эфир и приём -->
+  <path d="M690,108 C690,122 690,122 676,122 L84,122 C70,122 70,122 70,134" fill="none" stroke="{{line}}" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="380" y="117" font-family="Segoe UI" font-size="11" fill="{{line}}" text-anchor="middle">радиоволна</text>
+  <text x="18" y="150" font-family="Segoe UI" font-size="13" font-weight="bold" fill="{{line}}">Эфир и приём</text>
+  <g font-family="Segoe UI" text-anchor="middle">
+    <rect x="20" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{line}}"/>
+    <text x="84" y="180" font-size="13" fill="{{fg}}">Эфир</text>
+    <text x="84" y="198" font-size="11" fill="{{dim}}">FSPL, −dB</text>
+    <rect x="168" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="232" y="180" font-size="13" fill="{{fg}}">Антенна</text>
+    <text x="232" y="198" font-size="11" fill="{{dim}}">поле → напряжение</text>
+    <rect x="316" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}" stroke-dasharray="5,3"/>
+    <text x="380" y="180" font-size="13" fill="{{fg}}">МШУ (LNA)</text>
+    <text x="380" y="198" font-size="11" fill="{{dim}}">у антенны, +20 dB</text>
+    <rect x="464" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="528" y="180" font-size="13" fill="{{fg}}">Фидер</text>
+    <text x="528" y="198" font-size="11" fill="{{dim}}">кабель, разъёмы</text>
+    <rect x="612" y="158" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="676" y="180" font-size="13" fill="{{fg}}">Приёмник</text>
+    <text x="676" y="198" font-size="11" fill="{{dim}}">SDR, напр. RTL-SDR</text>
+    <text x="84" y="226" font-size="11" fill="{{accent}}">−91 dB за 2 км</text>
+    <text x="232" y="226" font-size="11" fill="{{accent}}">−64 dBm · 134 мкВ</text>
+    <text x="380" y="226" font-size="11" fill="{{accent}}">не нужен</text>
+    <text x="528" y="226" font-size="11" fill="{{accent}}">−0,9 dB</text>
+    <text x="676" y="226" font-size="11" fill="{{accent}}">−65 dBm · 121 мкВ</text>
+  </g>
+  <g stroke="{{dim}}" stroke-width="1.5">
+    <line x1="148" y1="184" x2="166" y2="184"/>
+    <line x1="296" y1="184" x2="314" y2="184"/>
+    <line x1="444" y1="184" x2="462" y2="184"/>
+    <line x1="592" y1="184" x2="610" y2="184"/>
+  </g>
+
+  <!-- внутри приёмника -->
+  <path d="M676,232 C676,244 676,244 662,244 L98,244 C84,244 84,244 84,254" fill="none" stroke="{{dim}}" stroke-width="1.5"/>
+  <text x="18" y="244" font-family="Segoe UI" font-size="13" font-weight="bold" fill="{{fg}}">Внутри</text>
+  <g font-family="Segoe UI" text-anchor="middle">
+    <rect x="20" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
+    <text x="84" y="278" font-size="13" fill="{{fg}}">Фильтр</text>
+    <text x="84" y="296" font-size="11" fill="{{dim}}">полосовой</text>
+    <rect x="168" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
+    <text x="232" y="278" font-size="13" fill="{{fg}}">Тюнер, смеситель</text>
+    <text x="232" y="296" font-size="11" fill="{{dim}}">усиление, ПЧ или ноль</text>
+    <rect x="316" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
+    <text x="380" y="278" font-size="13" fill="{{fg}}">АЦП N бит</text>
+    <text x="380" y="296" font-size="11" fill="{{dim}}">8–16 бит</text>
+    <rect x="464" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{grid}}"/>
+    <text x="528" y="278" font-size="13" fill="{{fg}}">IQ, децимация</text>
+    <text x="528" y="296" font-size="11" fill="{{dim}}">полоса обзора</text>
+    <rect x="612" y="256" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="676" y="278" font-size="13" fill="{{fg}}">БПФ</text>
+    <text x="676" y="296" font-size="11" fill="{{dim}}">спектр и водопад</text>
+
+    <rect x="20" y="346" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="84" y="368" font-size="13" fill="{{fg}}">Фильтр канала</text>
+    <text x="84" y="386" font-size="11" fill="{{dim}}">одна станция</text>
+    <rect x="168" y="346" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="232" y="368" font-size="13" fill="{{fg}}">Демодулятор</text>
+    <text x="232" y="386" font-size="11" fill="{{dim}}">AM, FM, SSB</text>
+    <rect x="316" y="346" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}" stroke-dasharray="5,3"/>
+    <text x="380" y="368" font-size="13" fill="{{fg}}">Декодер</text>
+    <text x="380" y="386" font-size="11" fill="{{dim}}">если цифра</text>
+    <rect x="464" y="346" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}" stroke-dasharray="5,3"/>
+    <text x="528" y="368" font-size="13" fill="{{fg}}">Дешифратор</text>
+    <text x="528" y="386" font-size="11" fill="{{dim}}">если шифр</text>
+    <rect x="612" y="346" width="128" height="52" rx="6" fill="{{panel2}}" stroke="{{accent}}"/>
+    <text x="676" y="368" font-size="13" fill="{{fg}}">Звук</text>
+    <text x="676" y="386" font-size="11" fill="{{dim}}">ЦАП, динамик</text>
+  </g>
+  <g stroke="{{dim}}" stroke-width="1.5">
+    <line x1="148" y1="282" x2="166" y2="282"/>
+    <line x1="296" y1="282" x2="314" y2="282"/>
+    <line x1="444" y1="282" x2="462" y2="282"/>
+    <line x1="592" y1="282" x2="610" y2="282"/>
+    <line x1="148" y1="372" x2="166" y2="372"/>
+    <line x1="296" y1="372" x2="314" y2="372"/>
+    <line x1="444" y1="372" x2="462" y2="372"/>
+    <line x1="592" y1="372" x2="610" y2="372"/>
+  </g>
+  <path d="M676,308 L676,322 C676,328 676,328 670,328 L90,328 C84,328 84,328 84,344" fill="none" stroke="{{dim}}" stroke-width="1.5"/>
+  <text x="380" y="323" font-family="Segoe UI" font-size="11" fill="{{dim}}" text-anchor="middle">дальше — программа на компьютере</text>
+  <text x="380" y="426" font-family="Segoe UI" font-size="12" fill="{{fg}}" text-anchor="middle">Пунктир — блоки, которые есть не всегда. Уровни — пример: рация PMR 0,5 Вт за 2 км.</text>
+  <polygon points="133,56 140,60 133,64" fill="{{dim}}"/>
+  <polygon points="257,56 264,60 257,64" fill="{{dim}}"/>
+  <polygon points="381,56 388,60 381,64" fill="{{dim}}"/>
+  <polygon points="505,56 512,60 505,64" fill="{{dim}}"/>
+  <polygon points="629,56 636,60 629,64" fill="{{dim}}"/>
+  <polygon points="159,180 166,184 159,188" fill="{{dim}}"/>
+  <polygon points="307,180 314,184 307,188" fill="{{dim}}"/>
+  <polygon points="455,180 462,184 455,188" fill="{{dim}}"/>
+  <polygon points="603,180 610,184 603,188" fill="{{dim}}"/>
+  <polygon points="159,278 166,282 159,286" fill="{{dim}}"/>
+  <polygon points="307,278 314,282 307,286" fill="{{dim}}"/>
+  <polygon points="455,278 462,282 455,286" fill="{{dim}}"/>
+  <polygon points="603,278 610,282 603,286" fill="{{dim}}"/>
+  <polygon points="159,368 166,372 159,376" fill="{{dim}}"/>
+  <polygon points="307,368 314,372 307,376" fill="{{dim}}"/>
+  <polygon points="455,368 462,372 455,376" fill="{{dim}}"/>
+  <polygon points="603,368 610,372 603,376" fill="{{dim}}"/>
+  <polygon points="66,127 70,134 74,127" fill="{{dim}}"/>
+  <polygon points="80,247 84,254 88,247" fill="{{dim}}"/>
+  <polygon points="80,337 84,344 88,337" fill="{{dim}}"/>
+</svg>

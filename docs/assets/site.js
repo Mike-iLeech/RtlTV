@@ -18,6 +18,16 @@
   function norm(s) { return s.toLowerCase().replace(/ё/g, "е"); }
   function esc(s) { return s.replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; }); }
   function words(q) { return norm(q).split(/\s+/).filter(function (w) { return w.length > 0; }); }
+  // единицы на сайте по-английски (dBm), но искать можно и «дБм» — и наоборот
+  var DBP = [["дбмкв", "dbµv"], ["дбfs", "dbfs"], ["дбм", "dbm"], ["дбi", "dbi"], ["дбd", "dbd"], ["дбc", "dbc"], ["дб", "db"]];
+  function variants(w) {
+    var a = w, b = w, out = [w];
+    DBP.forEach(function (p) { a = a.split(p[0]).join(p[1]); });
+    DBP.forEach(function (p) { b = b.split(p[1]).join(p[0]); });
+    [a, b].forEach(function (v) { if (out.indexOf(v) < 0) out.push(v); });
+    return out;
+  }
+  function hit(low, w) { var vs = variants(w); for (var i = 0; i < vs.length; i++) { if (low.indexOf(vs[i]) >= 0) return vs[i]; } return null; }
 
   function search(q) {
     var ws = words(q), out = [], idx = window.SDR4NOOB_SEARCH || [];
@@ -25,11 +35,12 @@
     idx.forEach(function (p) {
       var low = p.n || (p.n = norm(p.x)), tl = norm(p.t), score = 0;
       for (var i = 0; i < ws.length; i++) {
-        var inText = low.indexOf(ws[i]) >= 0, inTitle = tl.indexOf(ws[i]) >= 0;
-        if (!inText && !inTitle) return;
-        score += (inTitle ? 20 : 0) + low.split(ws[i]).length - 1;
+        var vt = hit(low, ws[i]), vh = hit(tl, ws[i]);
+        if (!vt && !vh) return;
+        score += (vh ? 20 : 0) + (vt ? low.split(vt).length - 1 : 0);
       }
-      var at = low.indexOf(ws[0]), a = Math.max(0, at - 50), b = Math.min(p.x.length, at + ws[0].length + 110);
+      var w0 = hit(low, ws[0]) || ws[0];
+      var at = low.indexOf(w0), a = Math.max(0, at - 50), b = Math.min(p.x.length, at + w0.length + 110);
       var snip = at < 0 ? p.x.slice(0, 150) : (a ? "…" : "") + p.x.slice(a, b) + (b < p.x.length ? "…" : "");
       out.push({p: p, s: score, snip: snip});
     });
@@ -37,8 +48,9 @@
     return out.slice(0, 15);
   }
 
-  function highlight(text, ws) {
-    var h = esc(text);
+  function highlight(text, ws0) {
+    var h = esc(text), ws = [];
+    ws0.forEach(function (w) { variants(w).forEach(function (v) { if (ws.indexOf(v) < 0) ws.push(v); }); });
     ws.forEach(function (w) {
       if (w.length < 2) return;
       var re = new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/е/g, "[её]") + ")", "gi");
@@ -89,7 +101,8 @@
   // переход из поиска: подсветить найденные слова на странице и прокрутить к первому
   var m = /[?&]q=([^&#]*)/.exec(location.search);
   if (m) {
-    var q = decodeURIComponent(m[1].replace(/\+/g, " ")), ws = words(q).filter(function (w) { return w.length > 1; });
+    var q = decodeURIComponent(m[1].replace(/\+/g, " ")), ws = [];
+    words(q).filter(function (w) { return w.length > 1; }).forEach(function (w) { ws = ws.concat(variants(w)); });
     if (input) input.value = q;
     var main = document.getElementById("content"), first = null;
     if (main && ws.length) {

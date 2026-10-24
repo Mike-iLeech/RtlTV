@@ -190,12 +190,12 @@ class SpectrumView(QWidget):
         self.zoom = 1.0
         self.zoom_center = None
         self.full_span = None       # (f0, f1) всей полосы до масштабирования
-        self.wf_offset = 0.0        # яркость водопада: сдвиг нижней границы, дБ
+        self.wf_offset = 0.0        # яркость водопада: сдвиг нижней границы, dB
         self.wf_contrast = 1.0      # контраст водопада: во сколько раз уже диапазон, чем у спектра
         self.wf_speed = 1.0         # строк водопада на кадр спектра (0,5 — каждый второй кадр)
         self._wf_acc = 0.0
         self.split = 0.55           # доля высоты под спектр (при включённом водопаде)
-        self.range_db = 0.0         # высота шкалы спектра, дБ (0 — подбирать автоматически)
+        self.range_db = 0.0         # высота шкалы спектра, dB (0 — подбирать автоматически)
         self.show_alloc = False     # подписывать сверху, кто занимает видимый диапазон (bandplan)
         # лупа водопада: масштаб по горизонтали/вертикали и центр (доля ширины; строк истории от верха)
         self.wf_zx, self.wf_zy = 1.0, 1.0
@@ -298,7 +298,7 @@ class SpectrumView(QWidget):
         self.update()
 
     def _update_range(self, smooth=True):
-        """Границы шкалы дБ. В авто сглаживается только уровень шума (иначе шкала «плывёт» за ползунком);
+        """Границы шкалы dB. В авто сглаживается только уровень шума (иначе шкала «плывёт» за ползунком);
         высота шкалы «Диапазон» и ручные границы применяются сразу."""
         if self.auto_range and self.avg is not None:
             lo = float(np.percentile(self.avg, 3)) - 6
@@ -839,7 +839,7 @@ class FreqDisplay(QWidget):
 
 
 class LevelMeter(QWidget):
-    def __init__(self, lo=0.0, hi=40.0, unit="дБ"):
+    def __init__(self, lo=0.0, hi=40.0, unit="dB"):
         super().__init__()
         self.lo, self.hi, self.unit = lo, hi, unit
         self.value = lo
@@ -934,15 +934,15 @@ class SpectrumControls(QWidget):
         row2 = QHBoxLayout()
         self.cb_auto = QCheckBox("Шкала авто")
         self.cb_auto.setChecked(bool(self.st["auto"]))
-        self.cb_auto.setToolTip("Автоподбор шкалы дБ. Снимите, чтобы задать границы вручную (контраст водопада).")
+        self.cb_auto.setToolTip("Автоподбор шкалы dB. Снимите, чтобы задать границы вручную (контраст водопада).")
         self.lo = QSpinBox()
         self.lo.setRange(-160, 40)
         self.lo.setValue(int(self.st["lo"]))
-        self.lo.setSuffix(" дБ")
+        self.lo.setSuffix(" dB")
         self.hi = QSpinBox()
         self.hi.setRange(-150, 60)
         self.hi.setValue(int(self.st["hi"]))
-        self.hi.setSuffix(" дБ")
+        self.hi.setSuffix(" dB")
         row2.addWidget(self.cb_auto)
         row2.addWidget(self.lo)
         row2.addWidget(self.hi)
@@ -952,9 +952,9 @@ class SpectrumControls(QWidget):
         checks = [self.cb_peak, self.cb_wf, self.cb_auto]
         if extended:
             self.range = QSlider(Qt.Horizontal)
-            self.range.setRange(0, 150)   # 0 — авто; 1…9 трактуются как 10 дБ
+            self.range.setRange(0, 150)   # 0 — авто; 1…9 трактуются как 10 dB
             self.range.setValue(int(self.st["range"]))
-            self.range.setToolTip("Высота шкалы спектра в дБ (как Range в SDR#): меньше — сигналы выше и заметнее, "
+            self.range.setToolTip("Высота шкалы спектра в dB (как Range в SDR#): меньше — сигналы выше и заметнее, "
                                   "больше — помещаются и слабые, и сильные. Крайнее левое положение — автоматически.")
             f.addRow("Диапазон шкалы:", self.range)
             sliders.append(self.range)

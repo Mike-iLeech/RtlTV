@@ -10,7 +10,7 @@
   <text x="30" y="94" font-family="Segoe UI" font-size="11" fill="{{dim}}" text-anchor="end">−40</text>
   <text x="30" y="144" font-family="Segoe UI" font-size="11" fill="{{dim}}" text-anchor="end">−60</text>
   <text x="30" y="194" font-family="Segoe UI" font-size="11" fill="{{dim}}" text-anchor="end">−80</text>
-  <!-- спектр: шум ~ -70 дБ (y=165), края заваливаются -->
+  <!-- спектр: шум ~ -70 dB (y=165), края заваливаются -->
   <polyline fill="none" stroke="{{line}}" stroke-width="2" points="
     40,190 60,178 80,168 100,166 120,164 140,166 160,163 170,165 180,163
     185,120 190,95 195,85 200,82 205,84 210,80 215,86 220,95 225,120 230,163
@@ -28,7 +28,7 @@
   <text x="660" y="58" font-family="Segoe UI" font-size="12" fill="{{fg}}" text-anchor="middle">узкая несущая/помеха</text>
   <text x="470" y="182" font-family="Segoe UI" font-size="11" fill="{{dim}}" text-anchor="middle">шумовая дорожка</text>
   <text x="65" y="215" font-family="Segoe UI" font-size="11" fill="{{dim}}">завал края</text>
-  <text x="390" y="20" font-family="Segoe UI" font-size="13" fill="{{line}}" text-anchor="middle">Что видно на спектре донгла (дБ относительно шкалы АЦП)</text>
+  <text x="390" y="20" font-family="Segoe UI" font-size="13" fill="{{line}}" text-anchor="middle">Что видно на спектре донгла (dB относительно шкалы АЦП)</text>
   <!-- стрелка зеркала -->
   <path d="M 215 230 Q 390 250 573 230" fill="none" stroke="{{accent}}" stroke-dasharray="5,4"/>
   <text x="390" y="243" font-family="Segoe UI" font-size="11" fill="{{accent}}" text-anchor="middle">симметрично относительно центра</text>

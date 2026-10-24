@@ -647,7 +647,7 @@ class Demodulator:
         return out
 
     def feed(self, iq, known=()):
-        """→ список (frame_bytes, icao_или_None, сигнал_дБFS, исправлено_бит)."""
+        """→ список (frame_bytes, icao_или_None, сигнал_dBFS, исправлено_бит)."""
         mag = np.abs(iq).astype(np.float32, copy=False)
         mag = self._resample(mag)
         m = np.concatenate([self.tail, mag]) if self.tail.size else mag
@@ -1010,7 +1010,7 @@ class Tracker:
 
 
 def level_state(st):
-    """«перегрузка» — сильные кадры выше −3 дБFS или отсечки АЦП; «мало» — кадры слабее −30 дБFS."""
+    """«перегрузка» — сильные кадры выше −3 dBFS или отсечки АЦП; «мало» — кадры слабее −30 dBFS."""
     if st["clip"] > 1e-4 or (st["frames_max"] is not None and st["frames_max"] > -3.0):
         return "перегрузка"
     if st["frames_p90"] is None or st["frames_p90"] < -30.0:
@@ -1110,7 +1110,7 @@ class AdsbProcessor(threading.Thread):
         return out
 
     def level_stats(self):
-        """Сводка уровней с прошлого вызова: пик АЦП, доля отсечек, шум, уровни кадров (дБ полной шкалы)."""
+        """Сводка уровней с прошлого вызова: пик АЦП, доля отсечек, шум, уровни кадров (dB полной шкалы)."""
         if not self.lv_samples and getattr(self, "_lv_last", None):
             return self._lv_last  # с прошлого вызова блоков не было — отдаём прежнюю сводку
         fr = sorted(self.lv_frames)
@@ -1345,7 +1345,7 @@ class DemoSource(SourceBase):
             p.step(dt, self.home)
             mute = pi == 0 and self.silent and self.silent[0] <= t0 < self.silent[1]
             d = max(distance_km(self.home[0], self.home[1], p.lat, p.lon), 3.0)
-            amp = min(0.45, 0.6 * 45.0 / d)  # ближние борта ~−5 дБFS: демо показывает «норму», а не перегрузку
+            amp = min(0.45, 0.6 * 45.0 / d)  # ближние борта ~−5 dBFS: демо показывает «норму», а не перегрузку
             for kind, per in self.PERIODS.items():
                 tn = p.next.get(kind)
                 if tn is None:

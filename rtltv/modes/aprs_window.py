@@ -269,7 +269,7 @@ class AprsWindow(ModeWindow):
         self._build()
         e = self.engine
         e.spectrum.connect(self._on_spectrum)
-        e.level.connect(lambda db, _a, _s: self.lvl.set_value(db, f"{db:.0f} дБ"))
+        e.level.connect(lambda db, _a, _s: self.lvl.set_value(db, f"{db:.0f} dB"))
         e.error.connect(lambda m: self.statusBar().showMessage("Ошибка: " + m, 8000))
         self.t_pump = QTimer(self)
         self.t_pump.timeout.connect(self._pump)
@@ -416,7 +416,7 @@ class AprsWindow(ModeWindow):
         self.vol.valueChanged.connect(lambda v: setattr(self.engine.audio, "volume", v / 100))
         self.engine.audio.volume = self.s["volume"] / 100
         f.addRow("Громкость:", self.vol)
-        self.lvl = LevelMeter(-110, -10, "дБ")
+        self.lvl = LevelMeter(-110, -10, "dB")
         f.addRow("Сигнал:", self.lvl)
         self.dcd = self._label("—")
         f.addRow("Декодер:", self.dcd)
@@ -542,7 +542,7 @@ class AprsWindow(ModeWindow):
 
     def _gain(self):
         t = self._gain_tenths()
-        self.gain_lbl.setText(f"{t / 10:.1f} дБ")
+        self.gain_lbl.setText(f"{t / 10:.1f} dB")
         self.engine.cmd("gain", t)
 
     def _preset_key(self):

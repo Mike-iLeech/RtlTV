@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.1.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.2.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -35,7 +35,7 @@
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
 <div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
-<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html" aria-current="page" class="cur">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html">Путь радиосигнала</a></li><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html" aria-current="page" class="cur">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
 <div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
@@ -47,7 +47,7 @@
 
 <h2 id="read">Как читать<a class="anchor" href="#read" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>Спектр</b> (верх): по горизонтали — частота, по вертикали — уровень в дБ. Нижний «ковёр» —
+<li><b>Спектр</b> (верх): по горизонтали — частота, по вертикали — уровень в dB. Нижний «ковёр» —
 <b>шумовая дорожка</b>, всё, что торчит над ней, — сигналы.</li>
 <li><b>Водопад</b> (низ): та же частота по горизонтали, а время течёт сверху вниз; яркость — уровень.
 Водопад показывает то, что спектр «забывает»: короткие вспышки раций, ритм DMR, сползание спутника.</li>
@@ -62,13 +62,13 @@
 <p>Спектр строится <b>быстрым преобразованием Фурье</b> (БПФ, FFT): полоса делится на N «корзинок» (бинов).
 Ширина бина = частота дискретизации / N.</p>
 <div class="tw"><table class="t">
-<tr><th>«Разрешение» (точек)</th><th>Бин при полосе 2,4 МГц</th><th>Когда</th></tr>
+<tr><th>«Разрешение» (точек)</th><th>Бин при полосе 2,4 МГц (например, RTL-SDR)</th><th>Когда</th></tr>
 <tr><td>1024</td><td>2,34 кГц</td><td>обзор, слабый ПК</td></tr>
 <tr><td>4096</td><td>586 Гц</td><td>по умолчанию: рации, FM, авиа</td></tr>
 <tr><td>16384</td><td>146 Гц</td><td>CW, SSB, узкие несущие, поиск слабых сигналов</td></tr>
 </table></div>
 <p>Чем уже бин, тем <b>ниже шумовая дорожка</b> на экране (в каждом бине меньше шума): ×4 точек — дорожка на
-6 дБ ниже, и узкая несущая выделяется сильнее. Широкий сигнал (FM) при этом не становится «выше» —
+6 dB ниже, и узкая несущая выделяется сильнее. Широкий сигнал (FM) при этом не становится «выше» —
 он просто распределяется на больше бинов. Поэтому уровень шума на экране зависит от настроек, а ОСШ
 сравнивают в одной и той же полосе.</p>
 
@@ -77,28 +77,28 @@
 <li><b>«Усреднение»</b> сглаживает шум: линия спокойнее, слабые постоянные сигналы виднее, но короткие вспышки
 сглаживаются. Для поиска слабого «Метеора» — побольше, для раций — поменьше.</li>
 <li><b>«Обновление»</b> — сколько раз в секунду перерисовывается картинка (5–30 /с). Меньше — меньше нагрузка на ПК.</li>
-<li><a id="scale"></a><b>«Шкала авто»</b> подбирает пределы дБ сама. Снимите галочку и задайте границы вручную,
+<li><a id="scale"></a><b>«Шкала авто»</b> подбирает пределы dB сама. Снимите галочку и задайте границы вручную,
 чтобы настроить <b>контраст водопада</b>: нижнюю границу — чуть ниже шумовой дорожки, верхнюю — чуть выше
 самых интересных сигналов.</li>
 <li>Эти настройки — в карточке <b>«Спектр и водопад»</b> окна режима.</li>
 </ul>
 
 <h2 id="dc">DC-пик в центре<a class="anchor" href="#dc" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Ровно в центре полосы (на частоте, куда настроен донгл) часто виден узкий пик — <b>постоянная
+<p>Ровно в центре полосы (на частоте, куда настроен приёмник) часто виден узкий пик — <b>постоянная
 составляющая</b> (DC) от смещений в АЦП и тракте I/Q. Это не сигнал. SDR4NOOB по возможности ставит центр полосы
 в стороне от слушаемой частоты (кнопка <b>«Центрировать спектр на VFO»</b> сдвигает центр чуть ниже VFO),
 чтобы пик не попадал в демодулятор. Сканер DMR сдвигает окна на полшага сетки по той же причине.</p>
 
 <h2 id="mirror">Зеркальные пики<a class="anchor" href="#mirror" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Если каналы I и Q донгла чуть-чуть не равны по усилению или фазе, мощный сигнал на расстоянии +Δ от центра
-даёт слабую <b>копию на −Δ</b>, симметрично относительно центра. Обычно копия на 30–50 дБ слабее оригинала,
+<p>Если каналы I и Q приёмника чуть-чуть не равны по усилению или фазе, мощный сигнал на расстоянии +Δ от центра
+даёт слабую <b>копию на −Δ</b>, симметрично относительно центра. Обычно копия на 30–50 dB слабее оригинала,
 заметна только у очень сильных станций. Отличие от настоящего сигнала — см. ниже.</p>
 
 <h2 id="real">Как отличить сигнал от помехи<a class="anchor" href="#real" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Проверка</th><th>Настоящий сигнал</th><th>Ложный</th></tr>
 <tr><td>Сдвиньте центр полосы (перестройтесь на 200–500 кГц и вернитесь VFO)</td><td>остаётся на своей частоте</td><td>зеркала и DC-пик «едут» вместе с центром</td></tr>
-<tr><td>Уменьшите усиление на 10 дБ</td><td>ослабевает на ~10 дБ</td><td>интермодуляция ослабевает на ~30 дБ, перегрузочные полосы исчезают</td></tr>
+<tr><td>Уменьшите усиление на 10 dB</td><td>ослабевает на ~10 dB</td><td>интермодуляция ослабевает на ~30 dB, перегрузочные полосы исчезают</td></tr>
 <tr><td>Снимите антенну</td><td>пропадает</td><td>помеха от ПК/USB остаётся (наводится на сам донгл)</td></tr>
 <tr><td>Выключите подозрительный прибор (лампа, зарядка)</td><td>не меняется</td><td>«гребёнка» исчезает</td></tr>
 <tr><td>Вид на водопаде</td><td>модуляция «живая»: речь, пакеты, ритм</td><td>ровные линии через одинаковый шаг, постоянная «гребёнка» — бытовая электроника</td></tr>
@@ -122,7 +122,7 @@
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.1.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.2.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>

@@ -25,7 +25,7 @@
   <line x1="398" y1="85" x2="510" y2="85" stroke="#5d6878" stroke-width="1"/>
   <text x="326" y="78" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">λ/4</text>
   <text x="454" y="78" font-family="Segoe UI" font-size="12" fill="#1d2430" text-anchor="middle">λ/4</text>
-  <text x="390" y="140" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">≈73 Ом, 2,15 дБi</text>
+  <text x="390" y="140" font-family="Segoe UI" font-size="12" fill="#5d6878" text-anchor="middle">≈73 Ом, 2,15 dBi</text>
 
   <!-- V-диполь -->
   <text x="650" y="24" font-family="Segoe UI" font-size="14" fill="#0a66c2" text-anchor="middle">V-диполь, 120°</text>
