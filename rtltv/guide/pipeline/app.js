@@ -713,6 +713,12 @@
     ctx.textBaseline = "alphabetic";
     ctx.fillText(s, x, y);
   }
+  function textBg(ctx, s, x, y, col, align, font, bg) {  // подпись на подложке: читается поверх графика
+    ctx.font = font || FONT;
+    var tw = ctx.measureText(s).width, x0 = align === "right" ? x - tw : align === "center" ? x - tw / 2 : x;
+    ctx.fillStyle = alpha(bg || C.panel2, 0.82); ctx.fillRect(x0 - 3, y - 11, tw + 6, 15);
+    text(ctx, s, x, y, col, align, font);
+  }
   function line(ctx, pts, col, lw, dash) {
     ctx.beginPath();
     for (var i = 0; i < pts.length; i++) { if (i) { ctx.lineTo(pts[i][0], pts[i][1]); } else { ctx.moveTo(pts[i][0], pts[i][1]); } }
@@ -1890,60 +1896,70 @@
 
   /* ------------------------------------------------------------------ 7. входной фильтр */
   // вход приёмника: эфир полон сигналов; полосовой фильтр 130–150 МГц пропускает свою полосу, остальное гасит
-  var FLT = { on: true };
-  var FLT_SIGS = [  // частота, МГц; уровень, dBm; имя; ширина, МГц; мигание (0 — ровно, 1 — всплески)
-    [98, -18, "FM-вещание", 20, 0], [137.9, -100, "Метеор", 0.12, 0], [145.5, -80, "2 м", 0.1, 0.4],
-    [200, -38, "DAB/ТВ", 8, 0], [560, -30, "ТВ DVB-T2", 8, 0], [900, -24, "сотовая GSM", 10, 1], [800, -34, "LTE", 10, 0.6]
+  var FLT = { on: true, k: 1, lt: -1 };  // k — плавное включение фильтра (0…1), чтобы было видно, как гаснут сигналы
+  var FLT_SIGS = [  // частота, МГц; уровень, dBm; имя; ширина, МГц; мигание (0 — ровно, 1 — всплески); подпись: -1 слева, 1 справа
+    [98, -18, "FM-вещание", 20, 0, 0], [137.9, -100, "Метеор", 0.12, 0, -1], [145.5, -80, "2 м", 0.1, 0.4, 1],
+    [200, -38, "DAB/ТВ", 8, 0, 0], [560, -30, "ТВ DVB-T2", 8, 0, 0], [800, -34, "LTE", 10, 0.6, -1], [900, -24, "сотовая GSM", 10, 1, 1]
   ];
-  function fltPass(f) { var x = (f - 140) / 12; return 10 * LOG10(1 / (1 + Math.pow(x, 8))); }  // АЧХ, dB
+  function fltPass(f) { var x = (f - 140) / 12; return 10 * LOG10(1 / (1 + Math.pow(x, 8))); }  // АЧХ, dB (4-го порядка)
   demo("filter", true, function (d) {
-    var ctx = d.ctx, w = d.w, h = d.h, L0 = 46, R0 = w - 10, B0 = h - 26, T0 = 26, t = d.t;
-    var lf = function (f) { return Math.log(f); }, f0 = 50, f1 = 1000;
+    var ctx = d.ctx, w = d.w, h = d.h, L0 = 46, R0 = w - 10, B0 = h - 26, narrow = w < 560, T0 = narrow ? 44 : 30, t = d.t, F10 = "10px 'Segoe UI', sans-serif";
+    if (FLT.lt >= 0) { FLT.k += ((FLT.on ? 1 : 0) - FLT.k) * Math.min(1, Math.max(0, t - FLT.lt) * 4); }
+    FLT.lt = t;
+    var k = FLT.k, lf = function (f) { return Math.log(f); }, f0 = 50, f1 = 1000;
     var X = function (f) { return L0 + (R0 - L0) * (lf(f) - lf(f0)) / (lf(f1) - lf(f0)); };
     var lo = -120, hi = 0, Y = function (db) { return B0 - (B0 - T0) * (Math.max(lo, Math.min(hi, db)) - lo) / (hi - lo); };
     [-100, -60, -30, 0].forEach(function (g) {
       hline(ctx, L0, R0, Y(g), alpha(C.grid, 0.9));
-      text(ctx, num(g, 0), L0 - 4, Y(g) + 4, C.dim, "right", "10px 'Segoe UI', sans-serif");
+      text(ctx, num(g, 0), L0 - 4, Y(g) + 4, C.dim, "right", F10);
     });
-    text(ctx, "dBm", 4, T0 - 8, C.dim, "left", "10px 'Segoe UI', sans-serif");
-    // полоса фильтра и его АЧХ
-    ctx.fillStyle = alpha(C.good, FLT.on ? 0.12 : 0.04); ctx.fillRect(X(128), T0, X(152) - X(128), B0 - T0);
-    if (FLT.on) {
+    text(ctx, "dBm", 4, T0 - 10, C.dim, "left", F10);
+    // полоса фильтра и его АЧХ (в dB, та же шкала: 0 dB — верхняя линия)
+    ctx.fillStyle = alpha(C.good, 0.04 + 0.1 * k); ctx.fillRect(X(128), T0, X(152) - X(128), B0 - T0);
+    if (k > 0.02) {
+      ctx.globalAlpha = k;
       plot(ctx, L0, R0, 300, function (x) {
         var f = Math.exp(lf(f0) + (x - L0) / (R0 - L0) * (lf(f1) - lf(f0)));
-        return Y(hi + fltPass(f) * 1.2);  // АЧХ поверх спектра: 0 dB наверху
+        return Y(hi + fltPass(f));
       }, C.good, 1.5, [5, 4]);
+      textBg(ctx, "АЧХ фильтра", X(157), Y(-5), C.good, "left", F10);
+      ctx.globalAlpha = 1;
     }
-    var total = 0;
+    var total = 0, sumIn = 0;
     FLT_SIGS.forEach(function (s, i) {
       var lvl = s[1] + (s[4] ? s[4] * 18 * (hash(Math.floor(t * 6) * 13 + i) - 0.7) : 0);   // всплески
-      var att = FLT.on ? fltPass(s[0]) : 0, shown = lvl + att;
-      total += Math.pow(10, shown / 10);
-      var xa = X(s[0] - s[3] / 2), xb = Math.max(xa + 3, X(s[0] + s[3] / 2));
-      if (FLT.on && att < -3) { ctx.fillStyle = alpha(C.dim, 0.25); ctx.fillRect(xa, Y(lvl), xb - xa, B0 - Y(lvl)); }
-      ctx.fillStyle = att < -3 ? alpha(C.sdr, 0.5) : C.sdr;
+      var att = k * fltPass(s[0]), shown = lvl + att, cut = att < -3;
+      total += Math.pow(10, shown / 10); sumIn += Math.pow(10, lvl / 10);
+      var xc = X(s[0]), xa = Math.min(X(s[0] - s[3] / 2), xc - 2.5), xb = Math.max(X(s[0] + s[3] / 2), xc + 2.5);
+      if (cut) { ctx.fillStyle = alpha(C.dim, 0.22); ctx.fillRect(xa, Y(lvl), xb - xa, B0 - Y(lvl)); }
+      ctx.fillStyle = cut ? alpha(C.sdr, 0.55) : C.sdr;
       ctx.fillRect(xa, Y(shown), xb - xa, B0 - Y(shown));
-      text(ctx, s[2], (xa + xb) / 2, Math.min(Y(Math.max(lvl, shown)) - 4 - (i % 2) * 12, B0 - 4), att < -3 ? C.dim : C.fg, "center", "10px 'Segoe UI', sans-serif");
+      var lx = s[5] < 0 ? xa - 3 : s[5] > 0 ? xb + 3 : xc, la = s[5] < 0 ? "right" : s[5] > 0 ? "left" : "center";
+      ctx.font = F10;
+      if (la === "left" && lx + ctx.measureText(s[2]).width > R0) { lx = xa - 3; la = "right"; }  // не вылезать за край
+      text(ctx, s[2], lx, Math.min(Y(Math.max(lvl, shown)) - 4, B0 - 4), cut ? C.dim : C.fg, la, F10);
     });
-    var totDb = 10 * LOG10(total), over = totDb > -30;
-    // интермодуляция: при перегрузке в полосе появляются «призраки» — продукты сильных станций
-    if (over) {
-      [136, 141.2, 148.6].forEach(function (f, i) {
+    var totDb = 10 * LOG10(total), over = totDb > -30, ov = Math.max(0, Math.min(1, (totDb + 30) / 10));
+    // интермодуляция: при перегрузке в полосе появляются «призраки» — продукты смешения сильных станций
+    if (ov > 0) {
+      [133.5, 141.2, 148.6].forEach(function (f, i) {
         var g = -62 - i * 6 + 6 * Math.sin(t * 3 + i);
-        ctx.fillStyle = alpha(C.bad, 0.85); ctx.fillRect(X(f) - 2, Y(g), 4, B0 - Y(g));
+        ctx.fillStyle = alpha(C.bad, 0.85 * ov); ctx.fillRect(X(f) - 2, Y(g), 4, B0 - Y(g));
       });
+      ctx.globalAlpha = ov;
+      text(ctx, "«призраки»", X(141.2), Y(-50), C.bad, "center", F10);
+      ctx.globalAlpha = 1;
     }
     // индикатор АЦП
     var ind = (over ? "ПЕРЕГРУЗКА АЦП: " : "АЦП в норме: ") + fmtDbm(totDb, 0) + " на входе";
+    var ttl = FLT.on ? "фильтр 130–150 МГц включён" : "без фильтра: весь эфир на входе";
     ctx.font = "600 10.5px 'Segoe UI', sans-serif";
-    var iw = ctx.measureText(ind).width + 12, bx = R0 - iw, by = T0 - 20;
-    ctx.font = "600 11px 'Segoe UI', sans-serif";
-    if (L0 + ctx.measureText(FLT.on ? "фильтр 130–150 МГц включён" : "без фильтра; красные — «призраки» интермодуляции").width + 10 > bx) { by = T0 + 2; }
+    var iw = ctx.measureText(ind).width + 12, bx = R0 - iw, by = 4;
+    var tY = narrow ? 34 : 16;
     ctx.fillStyle = over ? alpha(C.bad, 0.2) : alpha(C.good, 0.15); ctx.fillRect(bx, by, iw, 16);
     text(ctx, ind, bx + iw / 2, by + 12, over ? C.bad : C.good, "center", "600 10.5px 'Segoe UI', sans-serif");
-    text(ctx, FLT.on ? "фильтр 130–150 МГц включён" : "без фильтра; красные — «призраки» интермодуляции", L0, T0 - 8,
-      over ? C.bad : C.fg, "left", "600 11px 'Segoe UI', sans-serif");
-    [50, 100, 200, 500, 1000].forEach(function (f, i, a) { text(ctx, f + (f === 1000 ? " МГц" : ""), X(f), h - 8, C.dim, i === 0 ? "left" : i === a.length - 1 ? "right" : "center", "10px 'Segoe UI', sans-serif"); });
+    textBg(ctx, ttl, L0, tY, over ? C.bad : C.fg, "left", "600 11px 'Segoe UI', sans-serif");
+    [50, 100, 200, 500, 1000].forEach(function (f, i, a) { text(ctx, f + (f === 1000 ? " МГц" : ""), X(f), h - 8, C.dim, i === 0 ? "left" : i === a.length - 1 ? "right" : "center", F10); });
   });
   // звук «с фильтром / без фильтра» — упрощённая модель: без фильтра в канал пролезают продукты сильных станций
   function filterPlay(withFilter) {
@@ -2201,11 +2217,12 @@
       line(ctx, pts, C.sdr, 1.5);
       var floorDb = -174 + nf + 10 * LOG10(rbw);
       hline(ctx, L0, R0, Y(floorDb), C.warn, [4, 4]);
-      text(ctx, "RBW " + num(rbw / 1000, 0) + " кГц · пол шума " + fmtDbm(floorDb, 0), L0 + 4, top + 13, C.fg, "left", "600 11px 'Segoe UI', sans-serif");
+      var dFl = pi ? " (на " + num(10 * LOG10(rbws[pi - 1] / rbw), 1) + " dB ниже = 10·lg(" + num(rbws[pi - 1] / 1000, 0) + "/" + num(rbw / 1000, 0) + "))" : "";
+      textBg(ctx, "RBW " + num(rbw / 1000, 0) + " кГц · пол шума " + fmtDbm(floorDb, 0) + (w > 560 ? dFl : ""), L0 + 4, top + 13, C.fg, "left", "600 11px 'Segoe UI', sans-serif");
       var cwPeak = Math.max.apply(null, peaks.slice(0, 300)), wideTop = peaks[Math.round(600 * (wide[0] + span) / (2 * span))];
       var sep = rbw <= 5e3;
-      text(ctx, (sep ? "две несущие разделились: " : "несущие слились: ") + fmtDbm(cwPeak, 0), L0 + 4, top + 27, sep ? C.good : C.bad, "left", FS11);
-      text(ctx, "широкий: " + fmtDbm(wideTop, 0) + " в RBW (всего −100 dBm)", R0 - 4, top + 13, C.tx, "right", FS11);
+      textBg(ctx, (sep ? "две несущие разделились: " : "несущие слились: ") + fmtDbm(cwPeak, 0), L0 + 4, top + 27, sep ? C.good : C.bad, "left", FS11);
+      textBg(ctx, "широкий: " + fmtDbm(wideTop, 0) + " в RBW (всего −100 dBm)", R0 - 4, top + (w > 560 ? 27 : 13), C.tx, "right", FS11);
     });
     [-150, -100, -50, 0, 50, 100, 150].forEach(function (k, i, arr) {
       text(ctx, (k > 0 ? "+" : "") + k + (k === 150 ? " кГц" : ""), L0 + (R0 - L0) * (k + 150) / 300, h - 6, C.dim,
