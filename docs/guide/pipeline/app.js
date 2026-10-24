@@ -105,7 +105,14 @@
     adsb: { txAnt: "dipole", pTx: 54, txType: "RG-58", txLen: 3, gTx: 0, dist: 100, freq: 1090, extra: 0, gRx: 3, lnaOn: false,
       gLna: 20, rxType: "RG-58", rxLen: 3, bw: 2000000, sigBw: 2000000, rq: "adsb", tGain: 49, nfRx: 4.5, nfLna: 0.8, conn: 2,
       note: "Ответчик самолёта: импульсы 250 Вт на 1090 МГц. За 100 км на коллинеарную антенну 3 dBi; на 1 ГГц " +
-        "тонкий RG-58 уже заметно теряет — попробуйте 20 м кабеля без МШУ и с ним." }
+        "тонкий RG-58 уже заметно теряет — попробуйте 20 м кабеля без МШУ и с ним." },
+    lora: { txAnt: "dipole", pTx: 20, txType: "RG-58", txLen: 0, gTx: 2, dist: 5, freq: 868.9, extra: 10, gRx: 2, lnaOn: false,
+      gLna: 20, rxType: "RG-58", rxLen: 2, bw: 125000, sigBw: 125000, rq: "lora12", tGain: 40, nfRx: 4.5, nfLna: 0.8, conn: 1,
+      note: "LoRa: 0,1 Вт (20 dBm) на 868,9 МГц (российский план RU864: безлицензионные полосы 864–865 и 868,7–869,2 МГц, " +
+        "без лицензии там разрешено около 25 мВт = 14 dBm — 0,1 Вт здесь для примера расчёта), антенны ≈ 2 dBi, 5 км, " +
+        "10 dB на дома и деревья. Модуляция CSS — растянутые по частоте «чирпы» в полосе 125 кГц. Приёмник ловит их " +
+        "даже ниже шума: требуемое С/Ш при SF12 около −20 dB, при SF7 около −7,5 dB. Чем больше SF, тем ниже порог, " +
+        "но тем медленнее передача (SF12 в 125 кГц — около 250 бит/с)." }
   };
 
   var IDS = ["pTx", "txType", "txLen", "gTx", "dist", "freq", "extra", "gRx", "lnaOn", "gLna", "rxType", "rxLen",
@@ -133,7 +140,9 @@
   /* RSSI, S-метр, dBFS и запас по связи */
   var REQ = {  // требуемое С/Ш (dB) для вида модуляции
     nfm: [12, "NFM речь: ≈ 12 dB С/Ш в канале (с запасом выше порога FM; 12 dB SINAD после демодулятора — уже при 5–8 dB)"], wfm: [20, "WFM моно без шипения: ≈ 20 dB"],
-    dmr: [6, "DMR: ≈ 5–7 dB"], lrpt: [6.5, "LRPT QPSK: ≈ 5–8 dB"], adsb: [10, "ADS-B: ≈ 10 dB"]
+    dmr: [6, "DMR: ≈ 5–7 dB"], lrpt: [6.5, "LRPT QPSK: ≈ 5–8 dB"], adsb: [10, "ADS-B: ≈ 10 dB"],
+    lora7: [-7.5, "LoRa SF7: принимает при С/Ш до −7,5 dB — ниже шума за счёт растяжения спектра"],
+    lora12: [-20, "LoRa SF12: принимает при С/Ш до −20 dB — ниже шума, но очень медленно"]
   };
   var FS_DBM = -10;  // условно: полная шкала АЦП на входе при усилении тюнера 0 dB
   function sUnits(dbm) {
@@ -705,6 +714,12 @@
     ctx.textBaseline = "alphabetic";
     ctx.fillText(s, x, y);
   }
+  function textBg(ctx, s, x, y, col, align, font, bg) {  // подпись на подложке: читается поверх графика
+    ctx.font = font || FONT;
+    var tw = ctx.measureText(s).width, x0 = align === "right" ? x - tw : align === "center" ? x - tw / 2 : x;
+    ctx.fillStyle = alpha(bg || C.panel2, 0.82); ctx.fillRect(x0 - 3, y - 11, tw + 6, 15);
+    text(ctx, s, x, y, col, align, font);
+  }
   function line(ctx, pts, col, lw, dash) {
     ctx.beginPath();
     for (var i = 0; i < pts.length; i++) { if (i) { ctx.lineTo(pts[i][0], pts[i][1]); } else { ctx.moveTo(pts[i][0], pts[i][1]); } }
@@ -740,6 +755,7 @@
     spare = m * Math.sin(TAU * v);
     return m * Math.cos(TAU * v);
   }
+  function erf(x) { return 1 - erfc(x); }
   function erfc(x) {  // Абрамовиц–Стиган 7.1.26
     var z = Math.abs(x), t = 1 / (1 + 0.3275911 * z);
     var y = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-z * z);
@@ -788,7 +804,36 @@
   });
 
   /* ------------------------------------------------------------------ 2. АЦП */
-  function adcSig(t) { return 0.6 * Math.sin(TAU * 1000 * t) + 0.35 * Math.sin(TAU * 3000 * t + 0.5); }
+  function adcTones(t) { return 0.6 * Math.sin(TAU * 1000 * t) + 0.35 * Math.sin(TAU * 3000 * t + 0.5); }
+  // «Музыка (синтез)»: 4,8 с, свой фрагмент без внешних файлов — аккорды пилой, бас квадратом, мелодия, хай-хэт.
+  // Частичные тоны складываются до 16 кГц, поэтому в оригинале есть и низы, и верхи — их и «съедает» оцифровка.
+  var MUS = (function () {
+    var hz = function (n) { return 440 * Math.pow(2, (n - 69) / 12); };
+    var chords = [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]];       // Am F C G
+    var mel = [76, 74, 72, 69, 72, 74, 76, 79, 77, 76, 72, 69, 67, 69, 72, 74];  // по восьмым
+    return { hz: hz, chords: chords, mel: mel, beat: 0.6, len: 4.8 };
+  })();
+  function harm(f, t, n, roll, odd) {  // аддитивная пила/квадрат до 16 кГц
+    var v = 0;
+    for (var k = 1; k <= n && k * f < 16000; k += odd ? 2 : 1) { v += Math.sin(TAU * k * f * t) / Math.pow(k, roll); }
+    return v;
+  }
+  function adcMusic(t) {
+    t = ((t % MUS.len) + MUS.len) % MUS.len;
+    var b = MUS.beat, bar = Math.floor(t / (2 * b)) % 4, tb = t % b, te = t % (b / 2), v = 0;
+    MUS.chords[bar].forEach(function (n) { v += 0.05 * harm(MUS.hz(n), t, 10, 1.2, false); });         // аккорд-пэд
+    v += 0.16 * Math.exp(-tb * 4) * harm(MUS.hz(MUS.chords[bar][0] - 12), t, 7, 1, true);             // бас
+    var mn = MUS.mel[Math.floor(t / (b / 2)) % MUS.mel.length];
+    v += 0.11 * Math.min(1, te * 60) * Math.exp(-te * 3) * harm(MUS.hz(mn), t, 9, 1, false);           // мелодия
+    var ni = Math.floor(t * 96000), nz = (hash(ni) - hash(ni - 1));                                    // хай-хэт: шум ВЧ
+    v += 0.22 * Math.exp(-te * 45) * nz;
+    return v * 2;  // почти полная шкала: так честнее видны ступеньки квантования
+  }
+  var ADC_SRC = "tones";
+  // для картинки: у музыки — окно 5 мс через 28 мс после удара хай-хэта (видны и низы, и «шум» верхов)
+  function adcSig(t) { return ADC_SRC === "music" ? adcMusic(t + 1.228) : adcTones(t); }
+  function adcSpan() { return ADC_SRC === "music" ? 0.005 : 0.002; }
+  function adcSrcAt(t) { return ADC_SRC === "music" ? adcMusic(t) : adcTones(t); }        // для звука
   // ползунок разрядности — номер в этом списке
   var ADC_BITS = [1, 2, 3, 4, 5, 6, 8, 12, 14, 16, 24, 32];
   var ADC_EX = {
@@ -812,9 +857,12 @@
     var s = adcState();
     document.getElementById("o-adcFs").textContent = num(s.fs / 1000, 0) + " кГц";
     document.getElementById("o-adcBits").textContent = s.bits + " бит · ДД ≈ " + num(6.02 * s.bits + 1.76, 0) + " dB";
-    var nyq = s.fs / 2;
-    document.getElementById("adcNyq").textContent = num(nyq / 1000, 1) + " кГц" + (nyq <= 3000 ? " — тон 3 кГц искажён!" : "");
-    document.getElementById("adcNyq").style.color = nyq <= 3000 ? C.bad : "";
+    var nyq = s.fs / 2, mus = ADC_SRC === "music", bad = mus ? nyq < 16000 : nyq <= 3000;
+    document.getElementById("adcNyq").textContent = num(nyq / 1000, 1) + " кГц" +
+      (bad ? (mus ? " — верхи музыки (до 16 кГц) отразятся вниз!" : " — тон 3 кГц искажён!") : "");
+    document.getElementById("adcNyq").style.color = bad ? C.bad : "";
+    $$("#b-adc [data-src]").forEach(function (el) { el.hidden = el.getAttribute("data-src") !== ADC_SRC; });
+    adcSrNote(actx ? actx.sampleRate : 0, s.fs);
     document.getElementById("adcLev").textContent = num(s.L, 0);
     document.getElementById("adcSnr").textContent = "≈ " + num(6.02 * s.bits + 1.76, 1) + " dB";
     document.getElementById("adcRate").textContent = num(s.fs * s.bits / 1000, 0) + " кбит/с";
@@ -835,7 +883,7 @@
   }
   demo("adc", false, function (d) {
     var ctx = d.ctx, w = d.w, h = d.h, s = adcState();
-    var L0 = 12, R0 = w - 10, T0 = 14, B0 = h - 24, span = 0.002;  // 2 мс
+    var L0 = 12, R0 = w - 10, T0 = 14, B0 = h - 24, span = adcSpan();  // 2 мс (тоны) или 5 мс (музыка)
     var X = function (t) { return L0 + (R0 - L0) * t / span; };
     var Y = function (v) { return (T0 + B0) / 2 - (B0 - T0) / 2 * v / 1.05; };
     // сетка уровней квантования: если шаг меньше 4 px, рисуем каждый k-й уровень (k — степень двойки)
@@ -865,7 +913,8 @@
       pts.push([x0, Y(v)], [x1, Y(v)]);
     }
     line(ctx, pts, C.accent, 2);
-    for (n = 0; n <= ns; n++) {
+    var stems = (R0 - L0) / ns >= 3;  // при густых отсчётах (96 кГц на 5 мс) рисуем только ступеньки
+    for (n = 0; n <= ns && stems; n++) {
       var xx = X(n / s.fs);
       line(ctx, [[xx, Y(0)], [xx, Y(adcSig(n / s.fs))]], alpha(C.accent, 0.45), 1);
       ctx.beginPath();
@@ -876,7 +925,7 @@
     text(ctx, "аналог", L0, h - 8, C.dim);
     text(ctx, "▬ квантованный", L0 + 56, h - 8, C.accent);
     text(ctx, "‒ ‒ что восстановит приёмник", L0 + 160, h - 8, C.tx);
-    text(ctx, "2 мс", R0, h - 8, C.dim, "right");
+    text(ctx, num(span * 1000, 0) + " мс", R0, h - 8, C.dim, "right");
     text(ctx, gridTxt, L0 + 2, T0 - 2, C.dim, "left", "11px 'Segoe UI', sans-serif");
     // лупа: один отсчёт крупно — видно уровни квантования и ошибку округления (при 6 бит и больше)
     if (s.bits >= 6) {
@@ -916,9 +965,10 @@
   function modMsgFmInt(u) { return -modVol() * Math.cos(TAU * modFa() * u) / (TAU * modFa()); }
   function modUpdate() {
     var v = Number(document.getElementById("modDepth").value), analog = modMode === "am" || modMode === "fm";
-    var lbl = { am: "", fm: "", fsk: "Разнос частот", qpsk: "Символов на экране" }[modMode];
+    var lbl = { am: "", fm: "", fsk: "Разнос частот", qpsk: "Символов на экране", css: "Символов на экране" }[modMode];
     document.getElementById("modDepthLbl").textContent = lbl;
-    document.getElementById("o-modDepth").textContent = modMode === "qpsk" ? String(Math.round(4 + v / 10)) : v + " %";
+    document.getElementById("o-modDepth").textContent = modMode === "qpsk" ? String(Math.round(4 + v / 10)) :
+      modMode === "css" ? String(2 + Math.round(v / 100 * 3)) : v + " %";
     $$(".mod-analog").forEach(function (el) { el.hidden = !analog; });
     $$(".mod-digital").forEach(function (el) { el.hidden = analog; });
     var vol = modVol(), fa = modFa();
@@ -933,7 +983,11 @@
         "гуще, минус — реже. Громкость задаёт, насколько далеко уходит частота (девиацию), частота звука — как быстро " +
         "частота несущей качается туда-сюда.",
       fsk: "Ноль — одна частота, единица — другая. Переход без скачка фазы (непрерывная фаза), чтобы сигнал не был широким.",
-      qpsk: "Каждые 2 бита — одна из четырёх фаз. Справа созвездие: точка текущего символа (по линии посередине)."
+      qpsk: "Каждые 2 бита — одна из четырёх фаз. Справа созвездие: точка текущего символа (по линии посередине).",
+      css: "LoRa (CSS): каждый символ — «чирп», частота которого линейно бежит по всей полосе 125 кГц. Данные — в сдвиге " +
+        "начала чирпа (сверху — частота во времени, пила начинается с разной высоты). Приёмник «сворачивает» чирп обратно " +
+        "в одну частоту, поэтому принимает даже ниже шума: SF7 — до −7,5 dB, SF12 — до −20 dB, но чем больше SF, тем длиннее " +
+        "чирп и медленнее передача."
     }[modMode];
     if (DEMOS.modsch) { DEMOS.modsch.dirty = true; }
   }
@@ -946,7 +1000,7 @@
     var U = function (x) { return (x - L0) / (R0 - L0) + d.t * speed; };
     hline(ctx, L0, R0, topY, C.grid);
     hline(ctx, L0, R0, rfY, C.grid);
-    text(ctx, modMode === "am" || modMode === "fm" ? "звук (мгновенное напряжение микрофона)" : "биты", L0, 13, C.dim);
+    text(ctx, modMode === "am" || modMode === "fm" ? "звук (мгновенное напряжение микрофона)" : modMode === "css" ? "частота чирпа во времени" : "биты", L0, 13, C.dim);
     text(ctx, "несущая в эфире", L0, rfY - rfA - 8, C.dim);
     var N = Math.round(R0 - L0) * 2;
     if (modMode === "am") {
@@ -966,6 +1020,29 @@
         if (xq < L0 + 20 || xq > R0 - 20 || modVol() < 0.15) { continue; }
         text(ctx, kk % 2 === 0 ? "чаще" : "реже", xq, rfY + rfA + 14, kk % 2 === 0 ? C.good : C.warn, "center", "11px 'Segoe UI', sans-serif");
       }
+    } else if (modMode === "css") {
+      // чирп: мгновенная частота fc + D·(((τ + a) mod 1) − 0,5) внутри символа; фаза — интеграл этой «пилы»
+      var spc = 2 + Math.round(v * 3), D2 = fc * 1.2, Ls = 1 / spc;
+      var aAt = function (n) { return Math.floor(hash(n + 9090) * 8) / 8; };
+      var Gq = function (x) { return (x - 0.5) * (x - 0.5) / 2; };
+      var gInt = function (tau, a) { return tau + a < 1 ? Gq(tau + a) - Gq(a) : Gq(1) - Gq(a) + Gq(tau + a - 1) - Gq(0); };
+      plot(ctx, L0, R0, N / 2, function (x) {
+        var u = U(x), n = Math.floor(u * spc), tau = u * spc - n, a = aAt(n);
+        return topY - topA * 1.6 * (((tau + a) % 1) - 0.5);
+      }, C.tx, 1.8);
+      plot(ctx, L0, R0, N, function (x) {
+        var u = U(x), n = Math.floor(u * spc), tau = u * spc - n;
+        return rfY - rfA * Math.cos(TAU * fc * u + TAU * D2 * Ls * gInt(tau, aAt(n)));
+      }, C.accent, 1.4);
+      var uc0 = U(L0);
+      for (var nc = Math.floor(uc0 * spc); nc / spc < U(R0); nc++) {
+        var xs0 = L0 + (nc / spc - uc0) * (R0 - L0), xe0 = xs0 + (R0 - L0) / spc;
+        if (xs0 > L0) { line(ctx, [[xs0, topY - topA - 6], [xs0, rfY + rfA]], alpha(C.grid, 0.9), 1); }
+        if (xe0 - L0 > 40 && R0 - xs0 > 40) {
+          text(ctx, "символ " + Math.round(aAt(nc) * 8), (Math.max(L0, xs0) + Math.min(R0, xe0)) / 2, topY - topA * 0.8 - 6, C.fg, "center", "11px 'Segoe UI', sans-serif");
+        }
+      }
+      text(ctx, "частота ↑", R0, topY - topA - 4, C.dim, "right", "10px 'Segoe UI', sans-serif");
     } else if (modMode === "fsk") {
       var bps = 6, sh = 0.15 + v * 0.45, bits = [];
       plot(ctx, L0, R0, N, function (x) {
@@ -1013,7 +1090,8 @@
 
   // схема модулятора: условные обозначения, «осциллограммы» на проводах и бегущие точки тока
   demo("modsch", true, function (d) {
-    var ctx = d.ctx, w = d.w, h = d.h, t = d.t, fm = modMode === "fm" || modMode === "fsk", dig = modMode === "fsk" || modMode === "qpsk";
+    var ctx = d.ctx, w = d.w, h = d.h, t = d.t, fm = modMode === "fm" || modMode === "fsk" || modMode === "css",
+      dig = modMode === "fsk" || modMode === "qpsk" || modMode === "css";
     var S1 = Math.min(1, w / 640), yA = h * 0.3, yC = h * 0.74, F11 = "11px 'Segoe UI', sans-serif";
     var xs = function (f) { return 14 + (w - 28) * f; };
     var wire = function (pts, phase) {  // провод и бегущие по нему точки
@@ -1102,7 +1180,7 @@
       text(ctx, "генератор, управляемый", modx, vy + 38, C.dim, "center", F11);
       text(ctx, "напряжением", modx, vy + 51, C.dim, "center", F11);
       wire([[modx + 30, vy], [pax - 14, vy]], 30);
-      scope((modx + pax) / 2 + 6, vy, out, C.accent, modMode === "fsk" ? "FSK" : "FM");
+      scope((modx + pax) / 2 + 6, vy, out, C.accent, modMode === "fsk" ? "FSK" : modMode === "css" ? "чирпы CSS" : "FM");
     }
     var py0 = fm ? (yA + yC) / 2 + 10 : (yA + yC) / 2;
     tri(pax, py0, "усилитель мощности", false);
@@ -1110,7 +1188,8 @@
     line(ctx, [[antx, py0 - 30], [antx - 10, py0 - 46]], C.fg, 2); line(ctx, [[antx, py0 - 30], [antx + 10, py0 - 46]], C.fg, 2);
     line(ctx, [[antx, py0 - 30], [antx, py0 - 48]], C.fg, 2);
     text(ctx, "антенна", antx, py0 + 18, C.dim, "center", F11);
-    text(ctx, fm ? "Частотная модуляция: звук управляет частотой генератора (VCO)" :
+    text(ctx, modMode === "css" ? "LoRa (CSS): данные задают сдвиг чирпа, генератор (VCO) качает частоту по всей полосе" :
+      fm ? "Частотная модуляция: звук управляет частотой генератора (VCO)" :
       (modMode === "qpsk" ? "Фазовая модуляция: биты задают фазу несущей в I/Q-смесителе" : "Амплитудная модуляция: (1 + m·звук) умножается на несущую"),
       10, 14, C.fg, "left", "600 12px 'Segoe UI', sans-serif");
   });
@@ -1193,6 +1272,166 @@
       }
     }, 2);
   }
+
+  // схема усилителя мощности: возбуждение → согласование → транзистор с питанием через дроссель → П-фильтр → антенна
+  var PA_CLASS = { A: [0.35, "A: ток течёт весь период, усиление линейное, КПД до 50 % (на практике 25–40 %) — годится для любой модуляции."],
+    AB: [0.6, "AB: ток течёт чуть больше половины периода — почти линейно и экономнее, КПД 50–65 % (SSB, AM, QPSK, LTE)."],
+    C: [0.75, "C: ток короткими импульсами меньше полупериода, КПД 70–80 %, но амплитуда искажается — только FM/FSK/LoRa."],
+    E: [0.88, "E: транзистор работает ключом (открыт/закрыт), КПД до 90 %, только постоянная амплитуда (FM, FSK)."] };
+  var PA_DRAIN = {  // форма тока стока за период (u — доля периода), 0…1
+    A: function (u) { return 0.5 + 0.5 * Math.sin(TAU * u); },
+    AB: function (u) { var v = Math.sin(TAU * u); return v > -0.15 ? (v + 0.15) / 1.15 : 0; },
+    C: function (u) { var v = Math.sin(TAU * u); return v > 0.5 ? (v - 0.5) * 2 : 0; },
+    E: function (u) { return (((u % 1) + 1) % 1) < 0.5 ? 1 : 0; }
+  };
+  function paHarm(fn) {  // амплитуды гармоник 1…5 тока стока, dBc (относительно основной)
+    var a = [];
+    for (var k = 1; k <= 5; k++) {
+      var re = 0, im = 0;
+      for (var i = 0; i < 256; i++) { var u = i / 256, v = fn(u); re += v * Math.cos(TAU * k * u); im += v * Math.sin(TAU * k * u); }
+      a.push(Math.hypot(re, im));
+    }
+    return a.map(function (v) { return Math.max(-60, 20 * LOG10(v / a[0] + 1e-9)); });
+  }
+  function paFilt(k) { return k === 1 ? 0 : -10 * LOG10(1 + Math.pow(k / 1.25, 10)); }  // условная АЧХ П-фильтра, dB
+  var paCls = "AB";
+  demo("pasch", true, function (d) {
+    var ctx = d.ctx, w = d.w, t = d.t, F10 = "10px 'Segoe UI', sans-serif", narrow = w < 560;
+    var eta = PA_CLASS[paCls][0], drain = PA_DRAIN[paCls], xs = function (f) { return 12 + (w - 24) * f; };
+    var yM = 132, yD = yM - 34, yG = yM + 40, vccY = 62;
+    var src = xs(0.05), mt = xs(0.2), tr = xs(0.42), cb = xs(0.54), pf = xs(0.72), an = xs(0.95), dx = tr + 10;
+    var dots = function (pts, speed, col) {
+      line(ctx, pts, C.dim, 1.6);
+      var len = 0, sg = [];
+      for (var i = 1; i < pts.length; i++) { var l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); sg.push(l); len += l; }
+      for (var k = 0; k < Math.max(2, Math.floor(len / 22)); k++) {
+        var pos = ((t * 40 * speed) + k * 22) % len, j = 0;
+        while (j < sg.length - 1 && pos > sg[j]) { pos -= sg[j]; j++; }
+        var fr = sg[j] ? pos / sg[j] : 0;
+        ctx.beginPath(); ctx.arc(pts[j][0] + (pts[j + 1][0] - pts[j][0]) * fr, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * fr, 2.2, 0, TAU);
+        ctx.fillStyle = col || C.accent; ctx.fill();
+      }
+    };
+    var scope = function (cx, top, fn, col, lbl, amp) {
+      var bw = Math.min(110, (w - 24) * 0.27), bh = 34;
+      ctx.fillStyle = C.panel; ctx.fillRect(cx - bw / 2, top, bw, bh);
+      ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.strokeRect(cx - bw / 2, top, bw, bh);
+      hline(ctx, cx - bw / 2, cx + bw / 2, top + bh / 2, alpha(C.grid, 0.8));
+      plot(ctx, cx - bw / 2 + 2, cx + bw / 2 - 2, 120, function (x, f) { return top + bh / 2 - fn(f * 3 - t * 0.6) * (bh / 2 - 3) * amp; }, col, 1.4);
+      text(ctx, lbl, cx, top + bh + 11, C.dim, "center", F10);
+    };
+    var coilH = function (x0, x1, y) {  // катушка — полуокружности вдоль провода
+      var n = 4, dd = (x1 - x0) / n;
+      ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6;
+      for (var i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(x0 + dd * (i + 0.5), y, dd / 2, Math.PI, 0); ctx.stroke(); }
+    };
+    var coilV = function (x, y0, y1) {
+      var n = 4, dd = (y1 - y0) / n;
+      ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6;
+      for (var i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(x, y0 + dd * (i + 0.5), dd / 2, -Math.PI / 2, Math.PI / 2); ctx.stroke(); }
+    };
+    var gnd = function (x, y) {
+      line(ctx, [[x - 8, y], [x + 8, y]], C.fg, 1.6); line(ctx, [[x - 5, y + 3], [x + 5, y + 3]], C.fg, 1.4);
+      line(ctx, [[x - 2, y + 6], [x + 2, y + 6]], C.fg, 1.2);
+    };
+    var capG = function (x, y0, y1) {  // конденсатор на землю
+      var ym = (y0 + y1) / 2;
+      line(ctx, [[x, y0], [x, ym - 3]], C.fg, 1.6); line(ctx, [[x - 8, ym - 3], [x + 8, ym - 3]], C.fg, 2);
+      line(ctx, [[x - 8, ym + 3], [x + 8, ym + 3]], C.fg, 2); line(ctx, [[x, ym + 3], [x, y1]], C.fg, 1.6);
+      gnd(x, y1);
+    };
+    var capS = function (x, y) {  // последовательный (разделительный) конденсатор
+      line(ctx, [[x - 3, y - 8], [x - 3, y + 8]], C.fg, 2); line(ctx, [[x + 3, y - 8], [x + 3, y + 8]], C.fg, 2);
+    };
+    var node = function (x, y) { ctx.beginPath(); ctx.arc(x, y, 2.8, 0, TAU); ctx.fillStyle = C.fg; ctx.fill(); };
+    // осциллограммы вверху: вход мал, на стоке — форма класса, после фильтра — чистая большая синусоида
+    scope((src + mt) / 2 + 6, 6, function (u) { return Math.sin(TAU * u); }, C.tx, "вход: мало", 0.22);
+    scope(tr + 4, 6, function (u) { return 2 * drain(u) - 1; }, C.bad, "ток стока, класс " + paCls, 1);
+    scope((pf + an) / 2 - 4, 6, function (u) { return Math.sin(TAU * u); }, C.accent, "выход: много", 1);
+    // источник возбуждения
+    ctx.beginPath(); ctx.arc(src, yM, 12, 0, TAU); ctx.strokeStyle = C.fg; ctx.lineWidth = 1.6; ctx.stroke();
+    plot(ctx, src - 7, src + 7, 20, function (x, f) { return yM - 4 * Math.sin(TAU * f); }, C.fg, 1.3);
+    line(ctx, [[src, yM + 12], [src, yG]], C.fg, 1.6); gnd(src, yG);
+    text(ctx, "возбуждение", src - 10, yG + 20, C.dim, "left", F10);
+    text(ctx, fmtDbm(S.exc || 0, 1), src - 10, yG + 32, C.tx, "left", F10);
+    // согласование (L-цепь): последовательная катушка и конденсатор на землю
+    dots([[src + 12, yM], [mt - 16, yM]], 0.5, C.tx);
+    coilH(mt - 16, mt + 16, yM);
+    capG(mt + 16, yM, yG);
+    text(ctx, "согласование", mt, yM - 12, C.dim, "center", F10);
+    // транзистор (n-канальный MOSFET): затвор слева, сток вверх к дросселю, исток на землю
+    var gx = tr - 14, chx = tr - 6, heat = 1 - eta;  // доля мощности питания в тепло — свечение корпуса
+    ctx.beginPath(); ctx.arc(tr, yM, 24, 0, TAU); ctx.fillStyle = alpha(C.bad, 0.06 + 0.4 * heat); ctx.fill();
+    ctx.strokeStyle = C.fg; ctx.lineWidth = 1.2; ctx.stroke();
+    dots([[mt + 16, yM], [gx, yM]], 0.5, C.tx);
+    line(ctx, [[gx, yM - 12], [gx, yM + 12]], C.fg, 2);
+    [-11, 0, 11].forEach(function (o) { line(ctx, [[chx, yM + o - 5], [chx, yM + o + 5]], C.fg, 2.4); });
+    line(ctx, [[chx, yM - 11], [dx, yM - 11], [dx, yD]], C.fg, 1.6);
+    line(ctx, [[chx, yM + 11], [dx, yM + 11], [dx, yG]], C.fg, 1.6);
+    line(ctx, [[chx, yM], [dx, yM], [dx, yM + 11]], C.fg, 1.6);
+    ctx.beginPath(); ctx.moveTo(chx + 1, yM); ctx.lineTo(chx + 7, yM - 3.5); ctx.lineTo(chx + 7, yM + 3.5); ctx.closePath();
+    ctx.fillStyle = C.fg; ctx.fill();  // стрелка n-канала — к каналу
+    gnd(dx, yG);
+    text(ctx, "транзистор", tr - 26, yG + 20, C.dim, "left", F10);
+    text(ctx, "в тепло " + num(heat * 100, 0) + " %", tr - 26, yG + 32, C.bad, "left", F10);
+    // питание через дроссель: постоянный ток идёт вниз, ВЧ назад в источник не пускается
+    line(ctx, [[dx - 16, vccY], [dx + 16, vccY]], C.fg, 2);
+    text(ctx, "+ питание", dx + 20, vccY + 4, C.fg, "left", F10);
+    coilV(dx, vccY, yD - 4);
+    line(ctx, [[dx, yD - 4], [dx, yD]], C.fg, 1.6);
+    text(ctx, "дроссель", dx - 10, (vccY + yD) / 2 + 4, C.dim, "right", F10);
+    var ia = 0.5 + 0.8 * drain(t * 0.6);  // ток питания пульсирует в такт току стока
+    for (var k2 = 0; k2 < 3; k2++) {
+      var yy = vccY + ((t * 26 * ia + k2 * 12) % (yD - vccY));
+      ctx.beginPath(); ctx.arc(dx, yy, 2.2, 0, TAU); ctx.fillStyle = C.warn; ctx.fill();
+    }
+    node(dx, yD);
+    // сток → разделительный конденсатор → П-фильтр (C–L–C) → антенна
+    var p0 = pf - 26, p1 = pf + 26;
+    dots([[dx, yD], [cb - 3, yD]], 1.3, C.bad);
+    capS(cb, yD);
+    text(ctx, "C разд.", cb, yD - 12, C.dim, "center", F10);
+    dots([[cb + 3, yD], [p0, yD]], 1.3);
+    capG(p0, yD, yG); node(p0, yD);
+    coilH(p0, p1, yD);
+    capG(p1, yD, yG); node(p1, yD);
+    text(ctx, "П-фильтр (ФНЧ)", pf, yG + 20, C.dim, "center", F10);
+    dots([[p1, yD], [an, yD], [an, yD - 22]], 1.3);
+    line(ctx, [[an, yD - 22], [an - 10, yD - 38]], C.fg, 2); line(ctx, [[an, yD - 22], [an + 10, yD - 38]], C.fg, 2);
+    line(ctx, [[an, yD - 22], [an, yD - 40]], C.fg, 2);
+    text(ctx, "антенна", an, yD + 14, C.dim, "center", F10);
+    text(ctx, fmtDbm(S.pTx, 1), an, yD + 26, C.tx, "center", F10);
+    // спектры гармоник: на стоке и после П-фильтра (уровни условные)
+    var hd = paHarm(drain), sy = yG + 56, sh = 40, bwS = Math.min(170, (w - 40) / 2);
+    var spec = function (x0, lbl, att) {
+      text(ctx, lbl, x0, sy - 6, C.dim, "left", F10);
+      hline(ctx, x0, x0 + bwS, sy + sh, C.grid);
+      for (var k = 1; k <= 5; k++) {
+        var db = Math.max(-60, hd[k - 1] + (att ? paFilt(k) : 0)), hh = sh * (1 + db / 60), bx = x0 + (k - 0.5) * bwS / 5;
+        ctx.fillStyle = k === 1 ? C.accent : C.bad; ctx.fillRect(bx - 5, sy + sh - hh, 10, hh);
+        text(ctx, k === 1 ? "f" : k + "f", bx, sy + sh + 11, C.dim, "center", F10);
+        if (k > 1) { text(ctx, db <= -59 ? "<−60" : num(db, 0), bx, sy + sh - hh - 2, C.dim, "center", "9px 'Segoe UI', sans-serif"); }
+      }
+    };
+    spec(12, "гармоники на стоке, dBc", false);
+    spec(narrow ? 28 + bwS : pf - bwS / 2, "после П-фильтра, dBc", true);
+    // мощности и связь с бюджетом
+    var pout = dbmW(S.pTx), pdc = pout / eta, yT = sy + sh + 32, F11b = "600 11px 'Segoe UI', sans-serif";
+    var l1 = "Питание " + fmtW(pdc) + " → в антенну " + fmtW(pout) + " (КПД ≈ " + num(eta * 100, 0) + " %) + в тепло " + fmtW(pdc - pout);
+    var l2 = "Усиление УМ = выход − вход = " + fmtDbm(S.pTx, 1) + " − " + fmtDbm(S.exc || 0, 1) + " = " + fmtDb(S.pTx - (S.exc || 0), 1);
+    ctx.font = F11b;
+    if (ctx.measureText(l1).width > w - 24) {  // узкий экран: строку о мощностях — в две
+      var cut = l1.indexOf(" + в тепло");
+      text(ctx, l1.slice(0, cut), 12, yT, C.fg, "left", F11b);
+      text(ctx, l1.slice(cut + 3), 12, yT + 15, C.fg, "left", F11b);
+      yT += 15;
+    } else { text(ctx, l1, 12, yT, C.fg, "left", F11b); }
+    if (ctx.measureText(l2).width > w - 24) {
+      var c2 = l2.indexOf(" = ", l2.indexOf("вход"));
+      text(ctx, l2.slice(0, c2), 12, yT + 16, C.tx, "left", F11b);
+      text(ctx, l2.slice(c2 + 1), 12, yT + 31, C.tx, "left", F11b);
+    } else { text(ctx, l2, 12, yT + 16, C.tx, "left", F11b); }
+  });
 
   /* ------------------------------------------------------------------ 4. диаграмма направленности */
   function omniM(G) {  // показатель cos^m(угол места) для всенаправленной антенны с КНД G
@@ -1714,23 +1953,91 @@
   });
 
   /* ------------------------------------------------------------------ 7. входной фильтр */
-  demo("filter", false, function (d) {
-    var ctx = d.ctx, w = d.w, h = d.h, L0 = 10, R0 = w - 10, B0 = h - 26, T0 = 18;
-    var f0 = 50, f1 = 250, X = function (f) { return L0 + (R0 - L0) * (f - f0) / (f1 - f0); };
-    var pass = function (f) { var c = 140, bw = 22; var x = (f - c) / bw; return 1 / Math.sqrt(1 + Math.pow(x, 8)); };
-    var sigs = [[95, 0.9, "FM-вещание"], [104, 0.8, ""], [137.9, 0.35, "Метеор"], [145.5, 0.45, "2 м"], [162, 0.5, "служебные"], [210, 0.7, "DAB/ТВ"]];
-    hline(ctx, L0, R0, B0, C.grid);
-    sigs.forEach(function (s, si) {
-      var a = s[1] * pass(s[0]), x = X(s[0]), hh = (B0 - T0) * 0.8;
-      ctx.fillStyle = alpha(C.dim, 0.25);
-      ctx.fillRect(x - 3, B0 - hh * s[1], 6, hh * s[1]);
-      ctx.fillStyle = C.sdr;
-      ctx.fillRect(x - 3, B0 - hh * a, 6, hh * a);
-      if (s[2]) { text(ctx, s[2], x, B0 - hh * Math.max(a, s[1]) - 6 - (si % 2) * 14, a > 0.3 ? C.fg : C.dim, "center", "11px 'Segoe UI', sans-serif"); }
+  // вход приёмника: эфир полон сигналов; полосовой фильтр 130–150 МГц пропускает свою полосу, остальное гасит
+  var FLT = { on: true, k: 1, lt: -1 };  // k — плавное включение фильтра (0…1), чтобы было видно, как гаснут сигналы
+  var FLT_SIGS = [  // частота, МГц; уровень, dBm; имя; ширина, МГц; мигание (0 — ровно, 1 — всплески); подпись: -1 слева, 1 справа
+    [98, -18, "FM-вещание", 20, 0, 0], [137.9, -100, "Метеор", 0.12, 0, -1], [145.5, -80, "2 м", 0.1, 0.4, 1],
+    [200, -38, "DAB/ТВ", 8, 0, 0], [560, -30, "ТВ DVB-T2", 8, 0, 0], [800, -34, "LTE", 10, 0.6, -1], [900, -24, "сотовая GSM", 10, 1, 1]
+  ];
+  function fltPass(f) { var x = (f - 140) / 12; return 10 * LOG10(1 / (1 + Math.pow(x, 8))); }  // АЧХ, dB (4-го порядка)
+  demo("filter", true, function (d) {
+    var ctx = d.ctx, w = d.w, h = d.h, L0 = 46, R0 = w - 10, B0 = h - 26, narrow = w < 560, T0 = narrow ? 44 : 30, t = d.t, F10 = "10px 'Segoe UI', sans-serif";
+    if (FLT.lt >= 0) { FLT.k += ((FLT.on ? 1 : 0) - FLT.k) * Math.min(1, Math.max(0, t - FLT.lt) * 4); }
+    FLT.lt = t;
+    var k = FLT.k, lf = function (f) { return Math.log(f); }, f0 = 50, f1 = 1000;
+    var X = function (f) { return L0 + (R0 - L0) * (lf(f) - lf(f0)) / (lf(f1) - lf(f0)); };
+    var lo = -120, hi = 0, Y = function (db) { return B0 - (B0 - T0) * (Math.max(lo, Math.min(hi, db)) - lo) / (hi - lo); };
+    [-100, -60, -30, 0].forEach(function (g) {
+      hline(ctx, L0, R0, Y(g), alpha(C.grid, 0.9));
+      text(ctx, num(g, 0), L0 - 4, Y(g) + 4, C.dim, "right", F10);
     });
-    plot(ctx, L0, R0, 300, function (x) { var f = f0 + (x - L0) / (R0 - L0) * (f1 - f0); return B0 - (B0 - T0) * 0.92 * pass(f); }, C.sdr, 1.5, [5, 4]);
-    [50, 100, 150, 200, 250].forEach(function (f) { text(ctx, f + " МГц", X(f), h - 8, C.dim, f === 50 ? "left" : f === 250 ? "right" : "center", "11px 'Segoe UI', sans-serif"); });
+    text(ctx, "dBm", 4, T0 - 10, C.dim, "left", F10);
+    // полоса фильтра и его АЧХ (в dB, та же шкала: 0 dB — верхняя линия)
+    ctx.fillStyle = alpha(C.good, 0.04 + 0.1 * k); ctx.fillRect(X(128), T0, X(152) - X(128), B0 - T0);
+    if (k > 0.02) {
+      ctx.globalAlpha = k;
+      plot(ctx, L0, R0, 300, function (x) {
+        var f = Math.exp(lf(f0) + (x - L0) / (R0 - L0) * (lf(f1) - lf(f0)));
+        return Y(hi + fltPass(f));
+      }, C.good, 1.5, [5, 4]);
+      textBg(ctx, "АЧХ фильтра", X(157), Y(-5), C.good, "left", F10);
+      ctx.globalAlpha = 1;
+    }
+    var total = 0, sumIn = 0;
+    FLT_SIGS.forEach(function (s, i) {
+      var lvl = s[1] + (s[4] ? s[4] * 18 * (hash(Math.floor(t * 6) * 13 + i) - 0.7) : 0);   // всплески
+      var att = k * fltPass(s[0]), shown = lvl + att, cut = att < -3;
+      total += Math.pow(10, shown / 10); sumIn += Math.pow(10, lvl / 10);
+      var xc = X(s[0]), xa = Math.min(X(s[0] - s[3] / 2), xc - 2.5), xb = Math.max(X(s[0] + s[3] / 2), xc + 2.5);
+      if (cut) { ctx.fillStyle = alpha(C.dim, 0.22); ctx.fillRect(xa, Y(lvl), xb - xa, B0 - Y(lvl)); }
+      ctx.fillStyle = cut ? alpha(C.sdr, 0.55) : C.sdr;
+      ctx.fillRect(xa, Y(shown), xb - xa, B0 - Y(shown));
+      var lx = s[5] < 0 ? xa - 3 : s[5] > 0 ? xb + 3 : xc, la = s[5] < 0 ? "right" : s[5] > 0 ? "left" : "center";
+      ctx.font = F10;
+      if (la === "left" && lx + ctx.measureText(s[2]).width > R0) { lx = xa - 3; la = "right"; }  // не вылезать за край
+      text(ctx, s[2], lx, Math.min(Y(Math.max(lvl, shown)) - 4, B0 - 4), cut ? C.dim : C.fg, la, F10);
+    });
+    var totDb = 10 * LOG10(total), over = totDb > -30, ov = Math.max(0, Math.min(1, (totDb + 30) / 10));
+    // интермодуляция: при перегрузке в полосе появляются «призраки» — продукты смешения сильных станций
+    if (ov > 0) {
+      [133.5, 141.2, 148.6].forEach(function (f, i) {
+        var g = -62 - i * 6 + 6 * Math.sin(t * 3 + i);
+        ctx.fillStyle = alpha(C.bad, 0.85 * ov); ctx.fillRect(X(f) - 2, Y(g), 4, B0 - Y(g));
+      });
+      ctx.globalAlpha = ov;
+      text(ctx, "«призраки»", X(141.2), Y(-50), C.bad, "center", F10);
+      ctx.globalAlpha = 1;
+    }
+    // индикатор АЦП
+    var ind = (over ? "ПЕРЕГРУЗКА АЦП: " : "АЦП в норме: ") + fmtDbm(totDb, 0) + " на входе";
+    var ttl = FLT.on ? "фильтр 130–150 МГц включён" : "без фильтра: весь эфир на входе";
+    ctx.font = "600 10.5px 'Segoe UI', sans-serif";
+    var iw = ctx.measureText(ind).width + 12, bx = R0 - iw, by = 4;
+    var tY = narrow ? 34 : 16;
+    ctx.fillStyle = over ? alpha(C.bad, 0.2) : alpha(C.good, 0.15); ctx.fillRect(bx, by, iw, 16);
+    text(ctx, ind, bx + iw / 2, by + 12, over ? C.bad : C.good, "center", "600 10.5px 'Segoe UI', sans-serif");
+    textBg(ctx, ttl, L0, tY, over ? C.bad : C.fg, "left", "600 11px 'Segoe UI', sans-serif");
+    [50, 100, 200, 500, 1000].forEach(function (f, i, a) { text(ctx, f + (f === 1000 ? " МГц" : ""), X(f), h - 8, C.dim, i === 0 ? "left" : i === a.length - 1 ? "right" : "center", F10); });
   });
+  // звук «с фильтром / без фильтра» — упрощённая модель: без фильтра в канал пролезают продукты сильных станций
+  function filterPlay(withFilter) {
+    playBuffer(function (x, sr, n) {
+      var notes = [523, 587, 659, 587, 523, 494, 523, 440], seg = 2.5 / notes.length, ph = 0;
+      for (var i = 0; i < n; i++) {
+        var t = i / sr, f = notes[Math.floor(t / seg) % notes.length];
+        ph += TAU * f / sr;
+        var env = Math.min(1, (t % seg) * 30, (seg - (t % seg)) * 30);
+        var v = 0.5 * env * (Math.sin(ph) + 0.3 * Math.sin(2 * ph));
+        if (!withFilter) {
+          var gsm = (Math.floor(t * 217) % 8 === 0) ? 1 : 0;                         // «жужжание» TDMA 217 Гц
+          var im = Math.sin(TAU * 310 * t + 4 * Math.sin(TAU * 1.3 * t)) * Math.sin(TAU * 470 * t + 3 * Math.sin(TAU * 0.7 * t));
+          v += 0.55 * im + 0.5 * gsm * (hash(i) - 0.5) + 0.25 * (hash(i + 99) - 0.5);
+          v = Math.max(-0.6, Math.min(0.6, v * 1.6));                                  // перегруженный АЦП режет пики
+        }
+        x[i] = v * 0.25;
+      }
+    }, 2.5);
+  }
 
   /* ------------------------------------------------------------------ 8. вектор IQ */
   var iqHist = [];
@@ -1934,6 +2241,53 @@
       num(SIGS[best].f * 2400, 0) + " кГц от центра, полоса ≈ " + num(SIGS[best].bw * 2400, 0) + " кГц)";
     d.dirty = true;
   }
+
+  // один и тот же эфир при трёх RBW: свёртка спектральной плотности с гауссовым фильтром (шумовая полоса = RBW)
+  demo("rbwviz", false, function (d) {
+    var ctx = d.ctx, w = d.w, h = d.h, span = 150e3, nf = 4.5, N0 = Math.pow(10, (-174 + nf) / 10);  // мВт/Гц
+    var cws = [[-40e3, -105], [-32e3, -108]], wide = [70e3, 120e3, -100];
+    var wideD = Math.pow(10, wide[2] / 10) / wide[1];
+    var rbws = [30e3, 5e3, 1e3], L0 = 52, R0 = w - 10, ph = (h - 30) / 3, lo = -150, hi = -95;
+    var FS11 = "11px 'Segoe UI', sans-serif";
+    rbws.forEach(function (rbw, pi) {
+      var top = 6 + pi * ph, bot = top + ph - 22;
+      var X = function (f) { return L0 + (R0 - L0) * (f + span) / (2 * span); };
+      var Y = function (dbm) { return bot - (bot - top) * (Math.max(lo, Math.min(hi, dbm)) - lo) / (hi - lo); };
+      ctx.fillStyle = C.panel2; ctx.fillRect(L0, top, R0 - L0, bot - top);
+      [-140, -120, -100].forEach(function (g) {
+        hline(ctx, L0, R0, Y(g), alpha(C.grid, 0.9));
+        text(ctx, num(g, 0), L0 - 4, Y(g) + 4, C.dim, "right", "10px 'Segoe UI', sans-serif");
+      });
+      var pts = [], peaks = [];
+      for (var i = 0; i <= 600; i++) {
+        var f = -span + 2 * span * i / 600, pw = N0 * rbw;  // шум в полосе RBW
+        cws.forEach(function (c) { pw += Math.pow(10, c[1] / 10) * Math.exp(-Math.PI * Math.pow((f - c[0]) / rbw, 2)); });
+        // широкий сигнал: плотность × интеграл гауссова окна по его полосе (точно, через erf)
+        var a1 = wide[0] - wide[1] / 2, b1 = wide[0] + wide[1] / 2, sq = Math.sqrt(Math.PI) / rbw;
+        pw += wideD * rbw / 2 * (erf((b1 - f) * sq) - erf((a1 - f) * sq));
+        var dbm = 10 * LOG10(pw);
+        pts.push([X(f), Y(dbm)]);
+        peaks.push(dbm);
+      }
+      ctx.beginPath(); ctx.moveTo(L0, bot);
+      pts.forEach(function (p) { ctx.lineTo(p[0], p[1]); });
+      ctx.lineTo(R0, bot); ctx.closePath(); ctx.fillStyle = alpha(C.sdr, 0.2); ctx.fill();
+      line(ctx, pts, C.sdr, 1.5);
+      var floorDb = -174 + nf + 10 * LOG10(rbw);
+      hline(ctx, L0, R0, Y(floorDb), C.warn, [4, 4]);
+      var dFl = pi ? " (на " + num(10 * LOG10(rbws[pi - 1] / rbw), 1) + " dB ниже = 10·lg(" + num(rbws[pi - 1] / 1000, 0) + "/" + num(rbw / 1000, 0) + "))" : "";
+      textBg(ctx, "RBW " + num(rbw / 1000, 0) + " кГц · пол шума " + fmtDbm(floorDb, 0) + (w > 560 ? dFl : ""), L0 + 4, top + 13, C.fg, "left", "600 11px 'Segoe UI', sans-serif");
+      var cwPeak = Math.max.apply(null, peaks.slice(0, 300)), wideTop = peaks[Math.round(600 * (wide[0] + span) / (2 * span))];
+      var sep = rbw <= 5e3;
+      textBg(ctx, (sep ? "две несущие разделились: " : "несущие слились: ") + fmtDbm(cwPeak, 0), L0 + 4, top + 27, sep ? C.good : C.bad, "left", FS11);
+      textBg(ctx, "широкий: " + fmtDbm(wideTop, 0) + " в RBW (всего −100 dBm)", R0 - 4, top + (w > 560 ? 27 : 13), C.tx, "right", FS11);
+    });
+    [-150, -100, -50, 0, 50, 100, 150].forEach(function (k, i, arr) {
+      text(ctx, (k > 0 ? "+" : "") + k + (k === 150 ? " кГц" : ""), L0 + (R0 - L0) * (k + 150) / 300, h - 6, C.dim,
+        i === 0 ? "left" : i === arr.length - 1 ? "right" : "center", "10px 'Segoe UI', sans-serif");
+    });
+    text(ctx, "dBm", 6, 16, C.dim, "left", "10px 'Segoe UI', sans-serif");
+  });
 
   /* ------------------------------------------------------------------ 10. демодуляция */
   var demodMode = segBind("demodMode", function (v) { demodMode = v; DM.buf = []; });
@@ -2445,20 +2799,39 @@
   }
   function hideTip() { if (tipEl) { tipEl.hidden = true; } tipFor = null; }
 
+  // подпись о частоте звуковой карты: браузер играет на 44,1/48 кГц, а оцифровка может идти на 96 кГц
+  function adcSrNote(sr, fs) {
+    var note = document.getElementById("adcSrNote");
+    if (!note) { return; }
+    var k = function (v) { return num(v / 1000, 1).replace(/,0$/, ""); };
+    var cap = sr || 48000;
+    note.textContent = (sr ? "Звуковая карта сейчас работает на " + k(sr) + " кГц" :
+      "Звуковая карта обычно работает на 44,1 или 48 кГц") +
+      ": отсчёты с fд " + k(fs) + " кГц при воспроизведении пересчитываются в её частоту" +
+      (fs > cap ? ". Всё, что выше " + k(cap / 2) + " кГц, услышать нельзя: fд 96 кГц даёт запас по полосе, а не разницу на слух." : ".");
+  }
   // звук оцифровки: оригинал или после дискретизации и квантования (только по щелчку, громкость ограничена)
   function adcPlay(kind) {
     var st = adcState(), lin2 = (document.getElementById("adcRecon") || {}).value === "lin";
+    var dur = ADC_SRC === "music" ? MUS.len : 1.5;
     playBuffer(function (x, sr, n) {
+      adcSrNote(sr, st.fs);
+      var q = null;
+      if (kind !== "o") {  // оцифровка: отсчёты на частоте f_д, квантование N бит
+        var ns = Math.ceil(dur * st.fs) + 2;
+        q = new Float32Array(ns);
+        for (var k = 0; k < ns; k++) { q[k] = quant(adcSrcAt(k / st.fs), st.L).v; }
+      }
       for (var i = 0; i < n; i++) {
         var t = i / sr, v;
-        if (kind === "o") { v = adcSig(t); } else {
-          var u = t * st.fs, k = Math.floor(u), q0 = quant(adcSig(k / st.fs), st.L).v;
-          v = lin2 ? q0 + (quant(adcSig((k + 1) / st.fs), st.L).v - q0) * (u - k) : q0;
+        if (kind === "o") { v = adcSrcAt(t); } else {
+          var u = t * st.fs, k0 = Math.min(q.length - 2, Math.floor(u));
+          v = lin2 ? q[k0] + (q[k0 + 1] - q[k0]) * (u - k0) : q[k0];
         }
-        var env = Math.min(1, t * 20, (1.5 - t) * 20);
+        var env = Math.min(1, t * 20, (dur - t) * 20);
         x[i] = Math.max(-1, Math.min(1, v)) * 0.16 * env;
       }
-    }, 1.5);
+    }, dur);
   }
 
   /* ------------------------------------------------------------------ навигация по блокам */
@@ -2522,7 +2895,15 @@
     setPause(paused);
     pb.addEventListener("click", function () { setPause(!paused); });
     ["adcFs", "adcBits"].forEach(function (id) { document.getElementById(id).addEventListener("input", adcUpdate); });
+    if (document.getElementById("adcSrc")) { segBind("adcSrc", function (v) { ADC_SRC = v; adcUpdate(); }); }
     document.getElementById("adcPlayO").addEventListener("click", function () { adcPlay("o"); });
+    if (document.getElementById("paCls")) {
+      segBind("paCls", function (v) { paCls = v; var c = document.getElementById("paClsCap"); if (c) { c.textContent = PA_CLASS[v][1]; } if (DEMOS.pasch) { DEMOS.pasch.dirty = true; } });
+      document.getElementById("paClsCap").textContent = PA_CLASS[paCls][1];
+    }
+    if (document.getElementById("fltOn")) { segBind("fltOn", function (v) { FLT.on = v === "on"; if (paused) { FLT.k = FLT.on ? 1 : 0; } if (DEMOS.filter) { DEMOS.filter.dirty = true; } }); }
+    document.getElementById("fltPlayOff").addEventListener("click", function () { filterPlay(false); });
+    document.getElementById("fltPlayOn").addEventListener("click", function () { filterPlay(true); });
     document.getElementById("adcPlayD").addEventListener("click", function () { adcPlay("d"); });
     document.getElementById("modDepth").addEventListener("input", modUpdate);
     ["modVol", "modFa"].forEach(function (id) { document.getElementById(id).addEventListener("input", modUpdate); });
@@ -2565,7 +2946,7 @@
     if (/[?&]open=all\b/.test(location.search)) { $$("details.blk").forEach(function (det) { det.open = true; }); }
     if (location.hash && /^#b-/.test(location.hash)) { openBlock(location.hash.slice(1), true); }
     requestAnimationFrame(frame);
-    window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss, antShape: antShape, antEff: antEff, modSynth: modSynth, modCorr: modCorr, antTypes: ANT_TYPES, selfTestAnt: selfTestAnt };  // для проверки
+    window.SDR4NOOB_PIPELINE = { calc: calc, state: S, demos: DEMOS, cableLoss: cableLoss, antShape: antShape, antEff: antEff, modSynth: modSynth, modCorr: modCorr, adcMusic: adcMusic, antTypes: ANT_TYPES, selfTestAnt: selfTestAnt };  // для проверки
   }
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", init); } else { init(); }
 })();

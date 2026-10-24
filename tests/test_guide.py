@@ -181,8 +181,8 @@ def test_interactive_page_offline():
     with open(os.path.join(base, "index.html"), encoding="utf-8") as f:
         src = f.read()
     assert '<meta charset="utf-8">' in src and 'name="viewport"' in src
-    assert not re.search(r"""(src|href)=["'](https?:)?//""", src)
-    for ref in re.findall(r"""(?:src|href)=["']([^"'#:]+)["']""", src):
+    assert not re.search(r"""(?<![\w-])(src|href)=["'](https?:)?//""", src)
+    for ref in re.findall(r"""(?<![\w-])(?:src|href)=["']([^"'#:]+)["']""", src):   # не data-src и т. п.
         assert os.path.isfile(os.path.normpath(os.path.join(base, ref))), ref
     for name in ("app.js", "style.css"):
         with open(os.path.join(base, name), encoding="utf-8") as f:
