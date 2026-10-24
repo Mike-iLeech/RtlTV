@@ -215,22 +215,51 @@ def _free_name(path):
 
 # ---------------------------------------------------------------- переезд RtlTV → SDR4NOOB (версия 3.0)
 
+def _merge_move(src, dst):
+    """Перенести содержимое src в dst: то, чего в dst ещё нет, — переносится; папки сливаются;
+    совпадающие файлы не трогаются (новая версия главнее). Возвращает число ошибок (занятые файлы)."""
+    errors = 0
+    os.makedirs(dst, exist_ok=True)
+    for name in os.listdir(src):
+        s, d = os.path.join(src, name), os.path.join(dst, name)
+        try:
+            if not os.path.exists(d):
+                shutil.move(s, d)
+            elif os.path.isdir(s) and os.path.isdir(d):
+                errors += _merge_move(s, d)
+        except OSError:
+            errors += 1
+    return errors
+
+
+MIGRATED_MARK = ".migrated-from-rtltv"
+
+
 def migrate():
-    """Один раз после переименования: служебные файлы %LOCALAPPDATA%\\RtlTV → %LOCALAPPDATA%\\SDR4NOOB
-    (переносятся по одному, папку обновлений не трогаем), а если папка данных не была выбрана явно и
-    в «Документы\\RtlTV» уже что-то есть — продолжаем пользоваться ею, чтобы записи не «пропали»."""
+    """После переименования: служебные файлы %LOCALAPPDATA%\\RtlTV → %LOCALAPPDATA%\\SDR4NOOB (папку
+    обновлений не трогаем). Если часть файлов была занята (например, работала старая версия), перенос
+    повторяется при следующих запусках, пока не пройдёт без ошибок. А если папка данных не была выбрана
+    явно и в «Документы\\RtlTV» уже что-то есть — продолжаем пользоваться ею, чтобы записи не «пропали»."""
     if os.environ.get("RTLTV_NO_MIGRATE"):
         return
-    if not os.path.exists(LOCAL) and os.path.isdir(OLD_LOCAL):
+    if os.path.isdir(OLD_LOCAL) and not os.path.exists(os.path.join(LOCAL, MIGRATED_MARK)):
+        errors = 0
         try:
             os.makedirs(LOCAL, exist_ok=True)
             for name in os.listdir(OLD_LOCAL):
                 if name.lower() == "updates":
                     continue
+                s_, d_ = os.path.join(OLD_LOCAL, name), os.path.join(LOCAL, name)
                 try:
-                    shutil.move(os.path.join(OLD_LOCAL, name), os.path.join(LOCAL, name))
+                    if not os.path.exists(d_):
+                        shutil.move(s_, d_)
+                    elif os.path.isdir(s_) and os.path.isdir(d_):
+                        errors += _merge_move(s_, d_)
                 except OSError:
-                    pass
+                    errors += 1
+            if not errors:
+                with open(os.path.join(LOCAL, MIGRATED_MARK), "w", encoding="utf-8") as f:
+                    f.write("перенос из %LOCALAPPDATA%\\RtlTV завершён\n")
         except OSError:
             pass
     s = _app()
@@ -238,6 +267,5 @@ def migrate():
             and os.listdir(OLD_DEFAULT_DATA):
         s["data_dir"] = OLD_DEFAULT_DATA
         settings.save("app", s)
-
 
 migrate()
