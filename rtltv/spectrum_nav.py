@@ -1,7 +1,7 @@
 """Навигация по спектру: обзорная полоса всего диапазона приёмника и вертикальные ручки справа (как в SDR#)."""
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
-from PySide6.QtWidgets import QLabel, QSlider, QToolTip, QVBoxLayout, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QSlider, QToolTip, QVBoxLayout, QWidget
 
 from . import bandplan
 
@@ -144,38 +144,59 @@ class BandOverview(QWidget):
 
 
 class _VSlider(QWidget):
-    """Вертикальная ручка с подписью сверху и значением снизу; зеркалит обычный QSlider.
-    Подсказка — первая строка tip-а: «Зум — масштаб…», полное описание ниже."""
+    """Ручка-пилюля: скруглённая плашка с подписью сверху, вертикальным ползунком и значением снизу.
+    Зеркалит обычный QSlider панели (двигаешь любой — меняется второй)."""
 
     def __init__(self, title, master, fmt, tip):
         super().__init__()
         self.master = master
         self.fmt = fmt
+        self.colors = dict(bg="#1b2028", grid="#2f3542", fg="#d8dee9", accent="#4fb3ff")
+        self.setAttribute(Qt.WA_StyledBackground, False)
         v = QVBoxLayout(self)
-        v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(2)
-        t = QLabel(title)
-        t.setAlignment(Qt.AlignHCenter)
-        t.setObjectName("dim")
-        f = t.font()
-        f.setPointSizeF(7.5)
-        t.setFont(f)
-        v.addWidget(t)
-        self.setFixedWidth(46)
+        v.setContentsMargins(4, 7, 4, 7)
+        v.setSpacing(3)
+        self.title = QLabel(title)
+        self.title.setAlignment(Qt.AlignHCenter)
+        f = self.title.font()
+        f.setPointSizeF(8)
+        f.setBold(True)
+        self.title.setFont(f)
+        v.addWidget(self.title)
         self.s = QSlider(Qt.Vertical)
         self.s.setRange(master.minimum(), master.maximum())
         self.s.setValue(master.value())
         self.s.setToolTip(tip)
-        t.setToolTip(tip)
-        self.s.setMinimumHeight(60)
+        self.title.setToolTip(tip)
+        self.setToolTip(tip)
+        self.s.setMinimumHeight(48)
         v.addWidget(self.s, 1, Qt.AlignHCenter)
         self.val = QLabel()
         self.val.setAlignment(Qt.AlignHCenter)
-        self.val.setFont(f)
+        fv = self.val.font()
+        fv.setPointSizeF(7.5)
+        self.val.setFont(fv)
         v.addWidget(self.val)
+        self.setFixedWidth(62)
         self.s.valueChanged.connect(self._mine)
         master.valueChanged.connect(self._theirs)
         self._show(master.value())
+
+    def set_theme(self, t):
+        self.colors = dict(bg=t.get("panel", t["bg"]), grid=t["grid"], fg=t["fg"], accent=t.get("accent", "#4fb3ff"))
+        self.title.setStyleSheet(f"color: {self.colors['accent']};")
+        self.update()
+
+    def paintEvent(self, _e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        bg = QColor(self.colors["bg"])
+        bg.setAlpha(235)
+        p.setBrush(bg)
+        p.setPen(QPen(QColor(self.colors["grid"]), 1))
+        r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        rad = min(r.width() / 2, 16.0)
+        p.drawRoundedRect(r, rad, rad)
 
     def _show(self, x):
         self.val.setText(self.fmt(x))
@@ -194,17 +215,21 @@ class _VSlider(QWidget):
 
 
 class SpectrumSideBar(QWidget):
-    """Колонка вертикальных ручек справа от спектра. knobs: [(заголовок, QSlider, формат, подсказка)].
+    """Столбик из ручек-пилюль справа от спектра (одна над другой). knobs: [(заголовок, QSlider, формат, подсказка)].
 
     Каждая ручка — копия существующего регулятора на панели: двигаешь любую — меняется вторая."""
 
     def __init__(self, knobs):
         super().__init__()
-        h = QHBoxLayout(self)
-        h.setContentsMargins(4, 4, 2, 22)
-        h.setSpacing(0)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(5, 4, 4, 4)
+        v.setSpacing(6)
         self.knobs = []
         for title, master, fmt, tip in knobs:
             k = _VSlider(title, master, fmt, tip)
             self.knobs.append(k)
-            h.addWidget(k)
+            v.addWidget(k, 1)
+
+    def set_theme(self, t):
+        for k in self.knobs:
+            k.set_theme(t)
