@@ -7,6 +7,7 @@ import io.github.mikeileech.sdr4noob.sdr.U8
 import io.github.mikeileech.sdr4noob.sdr.UsbReceivers
 import io.github.mikeileech.sdr4noob.update.UpdateCheck
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -61,5 +62,13 @@ class MiscTest {
         assertEquals("https://x/apk", info.apkUrl)
         assertNull(UpdateCheck.parse(json, "9.0.0"))
         assertNull(UpdateCheck.parse("""{"tag_name":"v9.1.0","assets":[{"name":"a-win64.zip"}]}""", "3.3.0"))
+    }
+
+    /** Релиз уже вышел, а APK ещё догружается: такой ответ не кэшируется на сутки. */
+    @Test fun releaseWithoutApkYetIsRecheckedLater() {
+        val noApk = """{"tag_name":"v9.1.0","assets":[{"name":"SDR4NOOB-9.1.0-win64.zip"}]}"""
+        assertTrue(UpdateCheck.newerWithoutApk(noApk, "3.4.0"))
+        assertFalse(UpdateCheck.newerWithoutApk(noApk, "9.1.0"))
+        assertFalse(UpdateCheck.newerWithoutApk("""{"tag_name":"v9.1.0","assets":[{"name":"x-android.apk"}]}""", "3.4.0"))
     }
 }

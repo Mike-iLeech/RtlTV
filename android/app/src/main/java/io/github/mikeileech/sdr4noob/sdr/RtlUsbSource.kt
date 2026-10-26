@@ -9,7 +9,8 @@ import android.hardware.usb.UsbManager
 object RtlSdrNative {
     init { System.loadLibrary("sdr4noob") }
 
-    external fun open(fd: Int): Long
+    /** Хэндл (0 — ошибка, код в err[0]). Хэндл — указатель: на arm64 он бывает «отрицательным». */
+    external fun open(fd: Int, err: IntArray): Long
     external fun close(h: Long)
     external fun start(h: Long): Int
     external fun stop(h: Long)
@@ -49,10 +50,11 @@ class RtlUsbSource(private val context: Context, private val device: UsbDevice) 
         val um = context.getSystemService(Context.USB_SERVICE) as UsbManager
         if (!um.hasPermission(device)) throw SdrException("Нет разрешения на доступ к приёмнику по USB")
         val c = um.openDevice(device) ?: throw SdrException("Android не открыл USB-устройство (отключено?)")
-        val handle = RtlSdrNative.open(c.fileDescriptor)
-        if (handle <= 0L) {
+        val err = IntArray(1)
+        val handle = RtlSdrNative.open(c.fileDescriptor, err)
+        if (handle == 0L) {
             c.close()
-            throw SdrException("Драйвер RTL2832U не открыл приёмник (код $handle). Переподключите его к USB.")
+            throw SdrException("Драйвер RTL2832U не открыл приёмник (код ${err[0]}). Переподключите его к USB.")
         }
         conn = c
         h = handle

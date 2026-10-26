@@ -44,6 +44,12 @@ object UpdateCheck {
         return null
     }
 
+    /** В релизе новее текущей версии ещё нет APK (его догружают после Windows-сборки). */
+    fun newerWithoutApk(json: String, current: String): Boolean {
+        val ver = JSONObject(json).optString("tag_name").removePrefix("v").removePrefix("V")
+        return ver.isNotEmpty() && compare(ver, current) > 0 && parse(json, current) == null
+    }
+
     fun checkInBackground(context: Context, onNewer: (Info) -> Unit) {
         val prefs = context.getSharedPreferences("sdr4noob", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
@@ -59,8 +65,11 @@ object UpdateCheck {
                 c.setRequestProperty("Accept", "application/vnd.github+json")
                 c.setRequestProperty("User-Agent", "SDR4NOOB-Android/${BuildConfig.VERSION_NAME}")
                 val body = c.inputStream.bufferedReader().use { it.readText() }
-                prefs.edit().putLong("update_last", now).putString("update_cached", body).apply()
-                parse(body, BuildConfig.VERSION_NAME)?.let(onNewer)
+                val info = parse(body, BuildConfig.VERSION_NAME)
+                // APK догружается в релиз позже Windows-файлов: новая версия без APK — проверить снова позже
+                if (info != null || !newerWithoutApk(body, BuildConfig.VERSION_NAME))
+                    prefs.edit().putLong("update_last", now).putString("update_cached", body).apply()
+                info?.let(onNewer)
             } catch (_: Exception) {
                 // нет сети — проверим в следующий раз
             }

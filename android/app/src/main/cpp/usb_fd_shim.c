@@ -71,6 +71,16 @@ int sdr4n_open(libusb_device *dev, libusb_device_handle **handle)
 	return LIBUSB_ERROR_NOT_FOUND;
 }
 
+void sdr4n_exit(libusb_context *ctx)
+{
+	/* драйвер не взял обёрнутое устройство (например, неизвестный VID/PID) — закрыть до libusb_exit */
+	if (pending_handle && !pending_taken) {
+		libusb_close(pending_handle);
+		pending_handle = NULL;
+	}
+	libusb_exit(ctx);
+}
+
 void sdr4n_log(const char *fmt, ...)
 {
 	va_list ap;

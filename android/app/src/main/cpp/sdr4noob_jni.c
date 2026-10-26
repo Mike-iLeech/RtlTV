@@ -30,13 +30,15 @@ typedef struct {
 	uint8_t *ring;
 	size_t head, fill;        /* head — где читать; fill — сколько лежит */
 	int64_t dropped;
-	int running;              /* поток чтения жив */
+	int running;              /* поток чтения должен работать (stop() сбрасывает) */
+	int exited;               /* поток чтения завершился */
 	int lost;                 /* поток завершился сам: устройство отключено */
 } sdr_t;
 
 static void on_samples(unsigned char *buf, uint32_t len, void *ctx)
 {
 	sdr_t *s = ctx;
+	len &= ~1u;  /* пары I/Q не должны сдвигаться даже от нечётной короткой передачи */
 	pthread_mutex_lock(&s->lock);
 	if (s->fill + len > RING_BYTES) {
 		s->dropped += len;
@@ -54,31 +56,43 @@ static void on_samples(unsigned char *buf, uint32_t len, void *ctx)
 static void *reader(void *arg)
 {
 	sdr_t *s = arg;
-	rtlsdr_reset_buffer(s->dev);
-	int r = rtlsdr_read_async(s->dev, on_samples, s, ASYNC_BUFS, ASYNC_BUF_LEN);
+	int r = 0;
+	pthread_mutex_lock(&s->lock);
+	int go = s->running;
+	pthread_mutex_unlock(&s->lock);
+	/* stop() мог прийти раньше: тогда read_async не запускаем вовсе */
+	if (go)
+		r = rtlsdr_read_async(s->dev, on_samples, s, ASYNC_BUFS, ASYNC_BUF_LEN);
 	pthread_mutex_lock(&s->lock);
 	if (s->running)
 		s->lost = 1;  /* не stop(): чтение оборвалось само */
 	s->running = 0;
+	s->exited = 1;
 	pthread_cond_broadcast(&s->cond);
 	pthread_mutex_unlock(&s->lock);
 	__android_log_print(ANDROID_LOG_INFO, TAG, "rtlsdr_read_async завершился: %d", r);
 	return NULL;
 }
 
-static sdr_t *H(jlong h) { return (sdr_t *)(intptr_t)h; }
+static sdr_t *H(jlong h) { return (sdr_t *)(uintptr_t)h; }
 
 #define JNI(name) Java_io_github_mikeileech_sdr4noob_sdr_RtlSdrNative_##name
 
-JNIEXPORT jlong JNICALL JNI(open)(JNIEnv *env, jobject self, jint fd)
+/* Возвращает хэндл или 0; код ошибки — в err[0]. Хэндл — указатель, а не число со знаком: на arm64
+ * (Android 11+) у указателей кучи метка в старшем байте, и как jlong они отрицательные. */
+JNIEXPORT jlong JNICALL JNI(open)(JNIEnv *env, jobject self, jint fd, jintArray err)
 {
+	jint code = -ENOMEM;
 	sdr_t *s = calloc(1, sizeof(*s));
-	if (!s)
-		return -ENOMEM;
+	if (!s) {
+		(*env)->SetIntArrayRegion(env, err, 0, 1, &code);
+		return 0;
+	}
 	s->ring = malloc(RING_BYTES);
 	if (!s->ring) {
 		free(s);
-		return -ENOMEM;
+		(*env)->SetIntArrayRegion(env, err, 0, 1, &code);
+		return 0;
 	}
 	pthread_mutex_init(&s->lock, NULL);
 	pthread_cond_init(&s->cond, NULL);
@@ -88,23 +102,41 @@ JNIEXPORT jlong JNICALL JNI(open)(JNIEnv *env, jobject self, jint fd)
 	if (r < 0 || !s->dev) {
 		__android_log_print(ANDROID_LOG_ERROR, TAG, "rtlsdr_open(fd=%d): %d (устройство %s)", fd, r,
 				    taken == 0 ? "открыто" : "не взято драйвером");
+		pthread_cond_destroy(&s->cond);
+		pthread_mutex_destroy(&s->lock);
 		free(s->ring);
 		free(s);
-		return r < 0 ? r : -1;
+		code = r < 0 ? r : -1;
+		(*env)->SetIntArrayRegion(env, err, 0, 1, &code);
+		return 0;
 	}
-	return (jlong)(intptr_t)s;
+	return (jlong)(uintptr_t)s;
 }
 
+/* Остановить поток чтения. rtlsdr_cancel_async() действует, только пока read_async уже запущен, поэтому
+ * отмена повторяется, пока поток не сообщит, что вышел (иначе stop сразу после start ждал бы вечно). */
 static void stop_thread(sdr_t *s)
 {
 	if (!s->thread_started)
 		return;
 	pthread_mutex_lock(&s->lock);
-	int was = s->running;
 	s->running = 0;
-	pthread_mutex_unlock(&s->lock);
-	if (was)
+	while (!s->exited) {
+		pthread_mutex_unlock(&s->lock);
 		rtlsdr_cancel_async(s->dev);
+		pthread_mutex_lock(&s->lock);
+		if (s->exited)
+			break;
+		struct timespec ts;
+		clock_gettime(CLOCK_REALTIME, &ts);
+		ts.tv_nsec += 10 * 1000000L;
+		if (ts.tv_nsec >= 1000000000L) {
+			ts.tv_sec++;
+			ts.tv_nsec -= 1000000000L;
+		}
+		pthread_cond_timedwait(&s->cond, &s->lock, &ts);
+	}
+	pthread_mutex_unlock(&s->lock);
 	pthread_join(s->thread, NULL);
 	s->thread_started = 0;
 }
@@ -127,13 +159,16 @@ JNIEXPORT jint JNICALL JNI(start)(JNIEnv *env, jobject self, jlong h)
 	sdr_t *s = H(h);
 	if (s->thread_started)
 		return 0;
+	rtlsdr_reset_buffer(s->dev);  /* синхронно, до запуска потока */
 	pthread_mutex_lock(&s->lock);
 	s->head = s->fill = 0;
 	s->running = 1;
+	s->exited = 0;
 	s->lost = 0;
 	pthread_mutex_unlock(&s->lock);
 	if (pthread_create(&s->thread, NULL, reader, s) != 0) {
 		s->running = 0;
+		s->exited = 1;
 		return -1;
 	}
 	s->thread_started = 1;

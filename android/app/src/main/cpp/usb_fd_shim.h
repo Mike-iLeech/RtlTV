@@ -6,9 +6,9 @@
  * libhackrf …) ищут устройство сами: libusb_get_device_list() → libusb_open().
  *
  * Этот заголовок подключается к исходникам такой библиотеки раньше всего (-include usb_fd_shim.h)
- * и подменяет четыре вызова libusb: список устройств состоит из одного «обёрнутого» устройства,
- * а libusb_open() отдаёт уже открытый дескриптор. Так любой драйвер на libusb открывается по fd
- * без правки его исходников. Перед вызовом *_open() драйвера поток задаёт fd: sdr4n_shim_begin(fd).
+ * и подменяет вызовы libusb: список устройств состоит из одного «обёрнутого» устройства,
+ * libusb_open() отдаёт уже открытый дескриптор, а libusb_exit() закрывает его, если драйвер его
+ * не взял. Так любой драйвер на libusb открывается по fd без правки его исходников. Перед вызовом *_open() драйвера поток задаёт fd: sdr4n_shim_begin(fd).
  */
 #ifndef SDR4N_USB_FD_SHIM_H
 #define SDR4N_USB_FD_SHIM_H
@@ -30,6 +30,7 @@ int sdr4n_libusb_init(libusb_context **ctx);
 ssize_t sdr4n_get_device_list(libusb_context *ctx, libusb_device ***list);
 void sdr4n_free_device_list(libusb_device **list, int unref_devices);
 int sdr4n_open(libusb_device *dev, libusb_device_handle **handle);
+void sdr4n_exit(libusb_context *ctx);
 void sdr4n_log(const char *fmt, ...);
 
 #ifdef __cplusplus
@@ -41,6 +42,7 @@ void sdr4n_log(const char *fmt, ...);
 #define libusb_get_device_list(ctx, list) sdr4n_get_device_list(ctx, list)
 #define libusb_free_device_list(list, unref) sdr4n_free_device_list(list, unref)
 #define libusb_open(dev, handle) sdr4n_open(dev, handle)
+#define libusb_exit(ctx) sdr4n_exit(ctx)
 /* диагностика драйвера (fprintf(stderr, …)) — в logcat */
 #define fprintf(stream, ...) sdr4n_log(__VA_ARGS__)
 #endif

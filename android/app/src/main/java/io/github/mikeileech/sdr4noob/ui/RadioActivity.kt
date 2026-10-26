@@ -80,10 +80,12 @@ class RadioActivity : Activity() {
     override fun onPause() { super.onPause(); ui.removeCallbacks(ticker) }
 
     override fun onDestroy() {
-        engine?.stop()
+        engine?.stop()   // снимает listener — поздние onError/onOpened сюда уже не придут
         engine = null
         super.onDestroy()
     }
+
+    private val alive get() = !isFinishing && !isDestroyed
 
     private fun buildUi() {
         val root = Ui.vbox(this, 8)
@@ -206,6 +208,7 @@ class RadioActivity : Activity() {
     }
 
     private fun opened(e: RadioEngine) {
+        if (!alive || e !== engine) return
         val gains = e.gains
         val savedGain = prefs.getInt("gain", -1)
         if (gains.isEmpty()) {
@@ -234,6 +237,7 @@ class RadioActivity : Activity() {
     }
 
     private fun fail(message: String) {
+        if (!alive) return
         statusText.text = message
         AlertDialog.Builder(this)
             .setTitle("Приёмник")

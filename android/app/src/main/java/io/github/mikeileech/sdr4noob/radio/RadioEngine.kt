@@ -58,12 +58,18 @@ class RadioEngine(
     fun start() {
         if (running) return
         running = true
-        thread = Thread(::loop, "sdr4noob-radio").apply { priority = Thread.MAX_PRIORITY; start() }
+        // предыдущий движок мог ещё закрывать тот же приёмник — новый открывает его только после этого
+        val prev = previous
+        val t = Thread({ prev?.join(); loop() }, "sdr4noob-radio").apply { priority = Thread.MAX_PRIORITY }
+        previous = t
+        thread = t
+        t.start()
     }
 
+    /** Остановить без ожидания (UI-поток не блокируется): поток сам закроет приёмник и звук. */
     fun stop() {
+        listener = null
         running = false
-        thread?.join(3000)
         thread = null
     }
 
@@ -128,6 +134,7 @@ class RadioEngine(
         val spec = FloatArray(spectrumSize)
         try {
             source.open(sampleRate, centerHz)
+            if (!running) return   // закрыли, пока открывался приёмник: finally закроет его
             demod.offsetHz = (vfoHz - centerHz).toDouble()
             demod.stereo = stereoWanted
             source.start()
@@ -178,6 +185,8 @@ class RadioEngine(
     }
 
     companion object {
+        @Volatile private var previous: Thread? = null
+
         /** Станция ставится не в центр полосы, а на 1/8 левее: там нет пика постоянной составляющей. */
         fun offsetFor(rate: Int): Long = (rate / 8).toLong()
     }
