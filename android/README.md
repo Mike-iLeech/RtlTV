@@ -41,8 +41,10 @@ android/app/src/main/
     usb_fd_shim.[ch]        открытие любого драйвера на libusb по файловому дескриптору
     sdr4noob_jni.c          JNI к librtlsdr: поток rtlsdr_read_async → кольцевой буфер → Kotlin
     mbe_jni.c               JNI к mbelib (вокодер AMBE+2 для голоса DMR)
+    hackrf_airspy_jni.c     JNI к libhackrf и libairspy (sdr_ring.h — кольцевой буфер отсчётов float)
   java/io/github/mikeileech/sdr4noob/
-    sdr/                    приёмники: SdrSource, RtlUsbSource, RtlTcpSource, DemoSource, IqFile (записи IQ),
+    sdr/                    приёмники: SdrSource, RtlUsbSource, UsbSources (HackRF, Airspy), RtlTcpSource,
+                            DemoSource, IqFile (записи IQ),
                             UsbReceivers, Receivers
     dsp/                    Filters (КИХ-дециматоры, биквады, деэмфазис, смеситель), Spectrum (БПФ), RadioDemod,
                             Rds (декодер и кодер RDS), Agc (АРУ как в SDR#, комплексный КИХ),
@@ -86,7 +88,7 @@ android/app/src/main/
 | 1 | RDS, SSB/CW, АРУ, менеджер частот, запись IQ/звука | `rds.py`, `radio.py`, `freqman.py`, `iqfile.py` | готово (3.6.0) |
 | 1 | Приём в фоне при выключенном экране (foreground-сервис mediaPlayback) | — | готово (3.6.0) |
 | 1б | Поиск DMR и голос DMR (mbelib через NDK), воспроизведение IQ-файлов | `dmr.py`, `dmrscan.py`, `iqfile.py` | готово (3.7.0) |
-| 2 | Драйверы HackRF (libhackrf через fd-прослойку) и Airspy (`airspy_open_fd`) | `devices.py` | в планах |
+| 2 | Драйверы HackRF (libhackrf через fd-прослойку) и Airspy (`airspy_open_fd`) | `devices.py` | готово (3.7.0) |
 | 2 | APRS (AFSK 1200, карта OSM) | `aprs.py`, `mapview.py` | в планах |
 | 3 | ADS-B на карте (нужна полоса 2 MS/s и демодулятор PPM) | `adsb.py`, `aircraft_info.py` | в планах |
 | 3 | SSTV | `sstv.py` | в планах |
@@ -103,8 +105,8 @@ cd android
 ./gradlew testDebugUnitTest assembleDebug     # APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Исходники libusb 1.0.30, rtl-sdr-blog 1.4.0 и mbelib (коммит 9a04ed5) сборка скачивает сама в `android/deps`
-и сверяет SHA-256.
+Исходники libusb 1.0.30, rtl-sdr-blog 1.4.0, mbelib (коммит 9a04ed5), hackrf 2024.02.1 и airspyone_host
+(коммит fc61ab6) сборка скачивает сама в `android/deps` и сверяет SHA-256.
 
 **Релиз.** Тег `vX.Y.Z` запускает `.github/workflows/android.yml`: тесты, сборка, подпись ключом из секретов
 репозитория `ANDROID_KEYSTORE_B64` / `ANDROID_KEYSTORE_PASS` (алиас `sdr4noob`) и публикация

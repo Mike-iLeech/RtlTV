@@ -12,6 +12,8 @@ endif()
 set(LIBUSB "${SDR4N_DEPS}/libusb-1.0.30")
 set(RTLSDR "${SDR4N_DEPS}/rtl-sdr-blog-1.4.0")
 set(MBELIB "${SDR4N_DEPS}/mbelib-9a04ed5c78176a9965f3d43f7aa1b1f5330e771f")
+set(HACKRF "${SDR4N_DEPS}/hackrf-2024.02.1/host/libhackrf/src")
+set(AIRSPY "${SDR4N_DEPS}/airspyone_host-fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0/libairspy/src")
 
 set(CMAKE_C_STANDARD 11)
 add_compile_options(-O2 -Wno-unused-parameter -Wno-unused-function)
@@ -53,7 +55,20 @@ add_library(mbe STATIC ${MBELIB}/ecc.c ${MBELIB}/mbelib.c ${MBELIB}/ambe3600x240
 target_include_directories(mbe PUBLIC ${MBELIB})
 target_compile_options(mbe PRIVATE -Wno-unused-variable -Wno-unused-but-set-variable -Wno-sign-compare -Wno-format)
 
+# ---------- libhackrf: открывается по fd той же прослойкой, что librtlsdr ----------
+add_library(hackrf STATIC ${HACKRF}/hackrf.c)
+target_include_directories(hackrf PUBLIC ${HACKRF} ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(hackrf PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/usb_fd_shim.h
+  -Wno-sign-compare -Wno-format -Wno-unused-variable -Wno-unused-but-set-variable)
+target_link_libraries(hackrf PUBLIC usb-1.0)
+
+# ---------- libairspy: своя функция airspy_open_fd ----------
+add_library(airspy STATIC ${AIRSPY}/airspy.c ${AIRSPY}/iqconverter_float.c ${AIRSPY}/iqconverter_int16.c)
+target_include_directories(airspy PUBLIC ${AIRSPY})
+target_compile_options(airspy PRIVATE -Wno-sign-compare -Wno-format -Wno-unused-variable -Wno-unused-but-set-variable)
+target_link_libraries(airspy PUBLIC usb-1.0)
+
 # ---------- JNI ----------
-add_library(sdr4noob SHARED sdr4noob_jni.c usb_fd_shim.c mbe_jni.c)
-target_link_libraries(sdr4noob rtlsdr usb-1.0 mbe m log)
+add_library(sdr4noob SHARED sdr4noob_jni.c usb_fd_shim.c mbe_jni.c hackrf_airspy_jni.c)
+target_link_libraries(sdr4noob rtlsdr hackrf airspy usb-1.0 mbe m log)
 target_link_options(sdr4noob PRIVATE "-Wl,-z,max-page-size=16384")

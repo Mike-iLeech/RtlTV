@@ -27,6 +27,11 @@ val nativeDeps = listOf(
     // вокодер AMBE+2 для голоса DMR (тот же mbelib, что rtltv/driver/mbelib.dll на ПК)
     NativeDep("mbelib", "https://github.com/szechyjs/mbelib/archive/9a04ed5c78176a9965f3d43f7aa1b1f5330e771f.tar.gz",
         "c7d6ebbbf3ca44bc10ee0755dede7f74fd65c31d1568d4174f29a68ae2f92278", "mbelib-9a04ed5c78176a9965f3d43f7aa1b1f5330e771f"),
+    // драйверы HackRF (открывается через usb_fd_shim) и Airspy (airspy_open_fd есть только на master)
+    NativeDep("hackrf", "https://github.com/greatscottgadgets/hackrf/archive/refs/tags/v2024.02.1.tar.gz",
+        "16e4707b80d0d16db3a9e2149745d7a1bc253dea88c9c542d3ae062df5cbd9e3", "hackrf-2024.02.1"),
+    NativeDep("airspyone_host", "https://github.com/airspy/airspyone_host/archive/fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0.tar.gz",
+        "5318d8c9dfb1e84b424b6f33d027dc8501ee18db83e5e7519207ecda130d5afd", "airspyone_host-fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0"),
 )
 val depsDir: File = rootDir.resolve("deps")
 

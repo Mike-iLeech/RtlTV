@@ -27,7 +27,8 @@ import io.github.mikeileech.sdr4noob.update.UpdateCheck
 
 /**
  * Экран выбора приёмника и режима — как лаунчер настольной версии (rtltv/launcher.py).
- * Подходит любой USB радиоприёмник (SDR) через OTG-переходник; для RTL-SDR (RTL2832U) драйвер встроен.
+ * Подходит любой USB радиоприёмник (SDR) через OTG-переходник; для RTL2832U (например, RTL-SDR), HackRF и
+ * Airspy драйверы встроены.
  */
 class MainActivity : Activity() {
     companion object {
@@ -97,7 +98,7 @@ class MainActivity : Activity() {
         root.addView(Ui.text(this, "SDR4NOOB", 28f, Ui.ACCENT, bold = true))
         root.addView(Ui.text(this, "Всё в одном для начинающего радиолюбителя · версия ${BuildConfig.VERSION_NAME}", 13f, Ui.DIM))
         root.addView(Ui.text(this, "Подключите любой USB радиоприёмник (SDR) через OTG-переходник. " +
-            "Для приёмников на RTL2832U (например, RTL-SDR Blog V4) драйвер встроен — ничего ставить не нужно. " +
+            "Для приёмников на RTL2832U (например, RTL-SDR Blog V4), HackRF и Airspy драйверы встроены — ничего ставить не нужно. " +
             "Без приёмника можно попробовать тестовый сигнал.", 14f), Ui.lp(top = Ui.dp(this, 10)))
 
         updateBox = Ui.vbox(this, 0)
@@ -170,8 +171,8 @@ class MainActivity : Activity() {
     private fun chooseUsb(d: UsbDevice) {
         val m = UsbReceivers.model(d.vendorId, d.productId)
         if (m != null && !m.kind.builtIn) {
-            toastDialog("${m.name}: ${m.kind.title}.\n\nВ Android-версии пока работают приёмники на RTL2832U " +
-                "и сетевой rtl_tcp. Остальные USB радиоприёмники (SDR) поддерживаются в версии для Windows.")
+            toastDialog("${m.name}: ${m.kind.title}.\n\nВ Android-версии пока работают приёмники на RTL2832U, HackRF, " +
+                "Airspy R2/Mini и сетевой rtl_tcp. Остальные USB радиоприёмники (SDR) поддерживаются в версии для Windows.")
             return
         }
         val um = getSystemService(USB_SERVICE) as UsbManager

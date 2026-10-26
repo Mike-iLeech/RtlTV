@@ -7,8 +7,8 @@ import android.hardware.usb.UsbManager
 /** Какой драйвер нужен приёмнику. */
 enum class DriverKind(val title: String, val builtIn: Boolean) {
     RTL("RTL2832U — встроенный драйвер (librtlsdr)", true),
-    HACKRF("HackRF — драйвер в планах", false),
-    AIRSPY("Airspy — драйвер в планах", false),
+    HACKRF("HackRF — встроенный драйвер (libhackrf)", true),
+    AIRSPY("Airspy R2/Mini — встроенный драйвер (libairspy)", true),
     AIRSPY_HF("Airspy HF+ — драйвер в планах", false),
     SDRPLAY("SDRplay — нужен закрытый драйвер производителя", false),
     LIME("LimeSDR — драйвер в планах", false),
@@ -24,8 +24,8 @@ data class UsbModel(val vid: Int, val pid: Int?, val name: String, val kind: Dri
  * в res/xml/usb_receivers.xml (Android сам предлагает открыть SDR4NOOB при подключении).
  *
  * Как добавить драйвер другого приёмника: библиотеку на libusb собрать в CMakeLists.txt с
- * -include usb_fd_shim.h (она откроется по дескриптору без правок) или взять её функцию открытия
- * по fd (airspy_open_fd), сделать класс SdrSource и вернуть его в [Receivers.sourceFor].
+ * -include usb_fd_shim.h (она откроется по дескриптору без правок, так сделано для libhackrf) или взять её
+ * функцию открытия по fd (как airspy_open_fd), сделать класс SdrSource и вернуть его в [Receivers.sourceFor].
  */
 object UsbReceivers {
     private val rtlIds = listOf(

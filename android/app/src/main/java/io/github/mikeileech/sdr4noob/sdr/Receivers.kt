@@ -43,6 +43,8 @@ object Receivers {
             val m = UsbReceivers.model(d.vendorId, d.productId)
             when (m?.kind) {
                 DriverKind.RTL -> RtlUsbSource(context.applicationContext, d)
+                DriverKind.HACKRF -> HackRfUsbSource(context.applicationContext, d)
+                DriverKind.AIRSPY -> AirspyUsbSource(context.applicationContext, d)
                 null -> throw SdrException("Неизвестное USB-устройство %04x:%04x".format(d.vendorId, d.productId))
                 else -> throw SdrException("${m.name}: ${m.kind.title}. В Android-версии этот приёмник пока не работает — " +
                     "он поддерживается в версии для Windows.")
