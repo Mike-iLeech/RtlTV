@@ -1,5 +1,5 @@
-# Android-версия: тесты и сборка APK на каждый PR; по тегу vX.Y.Z — подписанный APK в тот же релиз,
-# что и Windows-архивы (release.yml). Версия APK берётся из rtltv/__init__.py, как у Windows-сборки.
+# Android-версия: тесты и сборка APK на каждый PR; по тегу vX.Y.Z — подписанный APK догружается в релиз,
+# который создаёт release.yml (Windows). Версия APK берётся из rtltv/__init__.py, как у Windows-сборки.
 # Ключ подписи — секреты репозитория ANDROID_KEYSTORE_B64 (base64 .jks) и ANDROID_KEYSTORE_PASS;
 # без них APK на PR подписывается отладочным ключом, а релиз по тегу не публикуется.
 name: android
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 100
     permissions:
       contents: write   # нужен только шагу «Публикация в релиз»
     env:
@@ -93,19 +93,19 @@ jobs:
       - name: Публикация в релиз
         if: startsWith(github.ref, 'refs/tags/')
         working-directory: .
+        timeout-minutes: 60
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # release.yml (Windows) публикует тот же релиз параллельно: кто первый — создаёт, второй догружает
-          notes=$(awk -v v="$VER" '$0 ~ "^## \\[?"v"\\]?([^0-9.]|$)" {f=1; next} /^## / {f=0} f' CHANGELOG.md)
-          [ -n "$notes" ] || notes="SDR4NOOB $VER"
-          printf '%s\n' "$notes" > notes.md
-          for i in 1 2 3; do
+          # Релиз создаёт release.yml (Windows) после всех своих проверок: обновлятор Windows-версии берёт
+          # releases/latest, и релиз без zip сломал бы ему обновление. Поэтому APK только догружается —
+          # ждём, пока релиз появится (сборка Windows идёт ~20–30 мин); если она упала, релиза не будет.
+          for i in $(seq 1 110); do
             if gh release view "$TAG" > /dev/null 2>&1; then
-              gh release upload "$TAG" "$APK" "$APK.sha256" --clobber && exit 0
-            else
-              gh release create "$TAG" "$APK" "$APK.sha256" --title "SDR4NOOB $VER" --notes-file notes.md && exit 0
+              gh release upload "$TAG" "$APK" "$APK.sha256" --clobber
+              exit $?
             fi
-            sleep 10
+            sleep 30
           done
+          echo "::error::релиз $TAG так и не появился (сборка Windows в release.yml не прошла?) — APK не опубликован"
           exit 1
