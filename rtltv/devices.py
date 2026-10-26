@@ -1436,24 +1436,72 @@ def usb_devices(raw=None):
 TEST_LABEL = "Тестовый генератор (без антенны)"
 
 
-def available_sources(test_label=TEST_LABEL, include_test=True):
+# Опрос USB дорогой: librtlsdr на каждое устройство открывает его ради подписи (~1 с на счёт + ~2 с на
+# подпись донгла). Поэтому результат кэшируется: лаунчер опрашивает заранее в фоне (prefetch), окна режимов
+# берут готовый список, а «Устройства…» и смена драйвера опрашивают заново.
+_hw_lock = threading.Lock()
+_hw_cache = None   # (ключ драйверов, [(id, подпись)], [(none, ошибка)])
+_hw_time = 0.0     # когда закончился последний опрос (time.monotonic)
+
+
+def _hw_key(d):
+    return (d.get("rtl_dll"), find_driver("hackrf"), find_driver("airspy"))
+
+
+def scan_hardware(refresh=False, max_age=None):
+    """USB-приёмники: ([(id, подпись)], [("none", ошибка)]). Повторный вызов отдаёт кэш, пока не сменился
+    драйвер; refresh=True — опросить заново, но если опрос (например, фоновый, которого пришлось дождаться)
+    закончился меньше max_age секунд назад — взять его. Потокобезопасно: окно, открытое во время фонового
+    опроса, дождётся его, а не опросит USB вторично."""
+    global _hw_cache, _hw_time
+    with _hw_lock:
+        d = load_dev_settings()
+        key = _hw_key(d)
+        fresh = max_age is not None and time.monotonic() - _hw_time < max_age
+        if (not refresh or fresh) and _hw_cache is not None and _hw_cache[0] == key:
+            return list(_hw_cache[1]), list(_hw_cache[2])
+        apply_rtl_driver(d)
+        out, errors = [], []
+        try:
+            for i in range(rtlsdr.device_count()):
+                out.append((f"rtl:{i}", f"RTL-SDR #{i}: {rtlsdr.device_label(i)}"))
+        except Exception as e:  # noqa: BLE001
+            errors.append(("none", f"Драйвер RTL-SDR: {e}"))
+        for kind, lister in (("hackrf", list_hackrf), ("airspy", list_airspy)):
+            if not key[1 if kind == "hackrf" else 2]:
+                continue
+            try:
+                for i, label in enumerate(lister()):
+                    out.append((f"{kind}:{i}", label))
+            except Exception as e:  # noqa: BLE001
+                errors.append(("none", f"{DRIVER_KINDS[kind][0]}: {e}"))
+        _hw_cache = (key, out, errors)
+        _hw_time = time.monotonic()
+        return list(out), list(errors)
+
+
+def has_hardware():
+    """В последнем опросе нашёлся хоть один USB-приёмник (False — если опроса ещё не было)."""
+    c = _hw_cache
+    return bool(c and c[1])
+
+
+def prefetch(delay=0.0):
+    """Опросить USB-приёмники в фоне (лаунчер — пока пользователь выбирает режим)."""
+    def run():
+        if delay:
+            time.sleep(delay)
+        try:
+            scan_hardware(refresh=True)
+        except Exception:  # noqa: BLE001 — фоновый опрос не должен ронять программу
+            pass
+    threading.Thread(target=run, name="sdr-scan", daemon=True).start()
+
+
+def available_sources(test_label=TEST_LABEL, include_test=True, refresh=False):
     """[(идентификатор, подпись)] для комбобоксов «Источник». Ошибки драйверов — строками с id "none"."""
     d = load_dev_settings()
-    apply_rtl_driver(d)
-    out, errors = [], []
-    try:
-        for i in range(rtlsdr.device_count()):
-            out.append((f"rtl:{i}", f"RTL-SDR #{i}: {rtlsdr.device_label(i)}"))
-    except Exception as e:  # noqa: BLE001
-        errors.append(("none", f"Драйвер RTL-SDR: {e}"))
-    for kind, lister in (("hackrf", list_hackrf), ("airspy", list_airspy)):
-        if not find_driver(kind):
-            continue
-        try:
-            for i, label in enumerate(lister()):
-                out.append((f"{kind}:{i}", label))
-        except Exception as e:  # noqa: BLE001
-            errors.append(("none", f"{DRIVER_KINDS[kind][0]}: {e}"))
+    out, errors = scan_hardware(refresh)
     for hp in d["rtltcp"]:
         out.append((f"rtltcp:{hp}", f"rtl_tcp {hp} (сеть)"))
     out += errors[:1] if out else errors

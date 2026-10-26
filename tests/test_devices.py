@@ -36,6 +36,7 @@ def isolated(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DIR", str(tmp_path / "cfg"))
     monkeypatch.setattr(devices, "DRIVERS_DIR", str(tmp_path / "drivers"))
     devices._scan_cache.clear()
+    monkeypatch.setattr(devices, "_hw_cache", None)   # кэш опроса USB — свой на тест
     yield
     rtlsdr.set_dll_override(None)
 
@@ -588,3 +589,40 @@ def test_devices_dialog_offscreen(rtltcp_server, monkeypatch):
     assert combo.itemText(0) == "RTL-SDR #7 (не найден)" and combo.currentData() == "rtl:7"
     assert combo.itemData(combo.count() - 1) == "test"
     dlg.close()
+
+
+def test_hardware_scan_cached(monkeypatch):
+    """Опрос USB (librtlsdr открывает донгл ради подписи, ~3 с) кэшируется: окна режимов берут готовый список,
+    refresh=True и смена драйвера опрашивают заново, max_age не повторяет только что законченный опрос."""
+    calls = []
+    monkeypatch.setattr(devices, "_hw_cache", None)
+    monkeypatch.setattr(devices, "apply_rtl_driver", lambda d=None: None)
+    monkeypatch.setattr(devices, "find_driver", lambda kind, drivers_dir=None: None)
+    dev = {"rtl_dll": None, "rtltcp": ["10.0.0.5:1234"]}
+    monkeypatch.setattr(devices, "load_dev_settings", lambda: dict(dev))
+    monkeypatch.setattr(rtlsdr, "device_count", lambda path=None: calls.append("count") or 1)
+    monkeypatch.setattr(rtlsdr, "device_label", lambda i, path=None: calls.append("label") or "Blog V4")
+    assert not devices.has_hardware()
+    src = devices.available_sources()
+    assert ("rtl:0", "RTL-SDR #0: Blog V4") in src and ("rtltcp:10.0.0.5:1234", "rtl_tcp 10.0.0.5:1234 (сеть)") in src
+    assert src[-1][0] == "test" and devices.has_hardware()
+    assert calls == ["count", "label"]
+    devices.available_sources()                       # второе окно — из кэша
+    devices.scan_hardware(refresh=True, max_age=5)    # только что опрошено — не повторять
+    assert calls == ["count", "label"]
+    devices.available_sources(refresh=True)           # «Устройства…» — заново
+    assert calls == ["count", "label"] * 2
+    dev["rtl_dll"] = "my.dll"                         # другой драйвер — кэш не годится
+    devices.available_sources()
+    assert len(calls) == 6
+    # фоновый опрос: окно ждёт его под замком, а не опрашивает второй раз
+    monkeypatch.setattr(devices, "_hw_cache", None)
+    gate = threading.Event()
+    monkeypatch.setattr(rtlsdr, "device_label", lambda i, path=None: gate.wait(5) and "Blog V4")
+    calls.clear()
+    devices.prefetch()
+    time.sleep(0.2)
+    t = threading.Timer(0.3, gate.set)
+    t.start()
+    out, _err = devices.scan_hardware()
+    assert out == [("rtl:0", "RTL-SDR #0: Blog V4")] and calls == ["count"]

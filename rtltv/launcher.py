@@ -1,5 +1,6 @@
 """Экран выбора режима при запуске и переключение между режимами."""
 import importlib
+import threading
 
 from PySide6.QtCore import QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
@@ -29,6 +30,24 @@ MODES = [
      N_("Пакеты радиолюбителей на карте: 144,800 МГц и МКС 145,825 МГц"), "radio"),
 ]
 
+
+def warm_up(opts=None):
+    """Пока пользователь выбирает режим — в фоне то, на что окно режима тратило ~4 с при открытии:
+    опрос USB-приёмников (devices.prefetch; с тестовым эфиром не нужен) и импорт scipy.signal (~1 с; не при
+    --mode — модуль режима импортируется сразу в главном потоке, два импорта scipy параллельно не нужны)."""
+    from . import devices
+    opts = opts or {}
+    if opts.get("source") != "test":
+        devices.prefetch()
+    if opts.get("direct"):
+        return
+
+    def imp():
+        try:
+            importlib.import_module("scipy.signal")
+        except Exception:  # noqa: BLE001
+            pass
+    threading.Thread(target=imp, name="warm-imports", daemon=True).start()
 
 def _icon_path(kind, s):
     p = QPainterPath()
@@ -201,6 +220,7 @@ class Launcher(QWidget):
         if not self.opts.get("shot"):
             importlib.import_module("rtltv.update_ui").maybe_check_on_start(self)
         self.apply_theme()
+        warm_up(self.opts)
 
     def apply_theme(self):
         name = self.app_s.get("theme", DEFAULT_THEME)
@@ -233,6 +253,9 @@ class Launcher(QWidget):
                                                      mode=tr(entry[3]), error=e))
             return
         self._save_app(last=key)
+        from . import devices
+        if not self.cb_test.isChecked() and not devices.has_hardware():   # приёмник могли подключить после запуска
+            devices.scan_hardware(refresh=True, max_age=5)   # фоновый опрос, если ещё идёт, — дождаться, не повторять
         opts = dict(self.opts)
         opts["theme"] = self.app_s.get("theme", DEFAULT_THEME)
         if self.cb_test.isChecked():

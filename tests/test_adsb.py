@@ -447,3 +447,73 @@ if __name__ == "__main__":
             n += 1
             print(f"OK  {name}  {time.perf_counter() - t:.2f} с")
     print(f"Все {n} тестов прошли")
+
+
+def _plane(i, now, **kw):
+    a = {"hex": f"AB{i:04X}", "lat": None, "lon": None, "suspect": False, "last": now, "alt": 10000 + i * 100,
+         "track": 90.0, "heading": None, "callsign": f"TST{i}", "on_ground": False, "signal": -10.0,
+         "raw_lat": None, "raw_lon": None, "raw_note": ""}
+    a.update(kw)
+    return a
+
+
+def test_overlay_list_scroll_survives_refresh(monkeypatch):
+    """Список «Без координат» поверх карты: высота ровно под строки (без полосы прокрутки при ≤10), при >10 —
+    прокрутка, которая НЕ сбрасывается обновлением раз в 0,5 с; колесо не уходит карте."""
+    import time as _t
+    from PySide6.QtCore import QPoint, QPointF, Qt
+    from PySide6.QtGui import QWheelEvent
+    from PySide6.QtWidgets import QApplication
+    from rtltv import settings
+    from rtltv.modes.adsb_window import AdsbWindow
+    monkeypatch.setattr(settings, "save", lambda *_a: None)
+    app = QApplication.instance() or QApplication([])
+    w = AdsbWindow({"source": "test", "theme": "Тёмная", "shot": "x"})
+    w.timer.stop()
+    w.resize(1300, 820)
+    w.show()
+    app.processEvents()
+    now = _t.time()
+    lw = w.ovl_list
+    w._update_overlay([_plane(i, now) for i in range(4)], now)
+    app.processEvents()
+    assert lw.count() == 4 and lw.verticalScrollBar().maximum() == 0   # всё влезло — прокрутки нет
+    assert lw.verticalScrollBarPolicy() == Qt.ScrollBarAlwaysOff
+    planes = [_plane(i, now) for i in range(25)]
+    w._update_overlay(planes, now)
+    app.processEvents()
+    sb = lw.verticalScrollBar()
+    assert lw.count() == 25 and sb.maximum() > 0
+    first = lw.item(0)
+    sb.setValue(sb.maximum() // 2)
+    pos = sb.value()
+    for _ in range(3):   # обновления по таймеру — прокрутка на месте, строки те же объекты
+        w._update_overlay(planes, now + 1)
+        app.processEvents()
+    assert sb.value() == pos and lw.item(0) is first
+    sb.setValue(sb.maximum())
+    ev = QWheelEvent(QPointF(10, 10), QPointF(lw.mapToGlobal(QPoint(10, 10))), QPoint(0, 0), QPoint(0, -120),
+                     Qt.NoButton, Qt.NoModifier, Qt.NoScrollPhase, False)
+    zoom = w.map.zoom
+    QApplication.sendEvent(lw.viewport(), ev)
+    assert ev.isAccepted() and w.map.zoom == zoom   # у края списка карта не масштабируется
+    w._update_overlay(planes[:3], now)   # список сократился — без прокрутки и пустых строк
+    app.processEvents()
+    assert lw.count() == 3 and lw.verticalScrollBar().maximum() == 0
+    w.close()
+
+
+def test_overlay_header_row_drops_plane_color():
+    """Строки списка переиспользуются: бывшая строка борта, ставшая заголовком группы, теряет цвет высоты."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+    from rtltv.modes.adsb_window import _OverlayList
+    app = QApplication.instance() or QApplication([])
+    assert app is not None   # приложение Qt нужно виджету (и ссылку держим до конца теста)
+    lw = _OverlayList()
+    lw.set_rows([("AFL1  3 000 м", "AB0001", "#ff0000", "", False)])
+    assert lw.item(0).data(Qt.ForegroundRole) is not None and lw.item(0).flags() & Qt.ItemIsSelectable
+    lw.set_rows([("Подозрительные (1)", None, None, "", True), ("AFL1  3 000 м", "AB0001", "#ff0000", "", False)])
+    head = lw.item(0)
+    assert head.data(Qt.ForegroundRole) is None and head.font().bold() and not head.flags() & Qt.ItemIsSelectable
+    assert head.data(Qt.UserRole) is None and lw.item(1).data(Qt.UserRole) == "AB0001"

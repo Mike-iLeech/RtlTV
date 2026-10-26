@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Путь радиосигнала — SDR4NOOB</title>
+<title>Путь сигнала: шаги и уровни — SDR4NOOB</title>
 <meta name="description" content="Как голос из рации попадает в динамик вашего компьютера: что происходит с сигналом в передатчике, в эфире, в антенне, в кабеле и внутри приёмника SDR (например, RTL-SDR), и какой у него уровень в кажд">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/guide/pipeline.html">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../assets/sdr4noob-256.png">
-<meta property="og:title" content="Путь радиосигнала — SDR4NOOB">
+<meta property="og:title" content="Путь сигнала: шаги и уровни — SDR4NOOB">
 <meta property="og:description" content="Как голос из рации попадает в динамик вашего компьютера: что происходит с сигналом в передатчике, в эфире, в антенне, в кабеле и внутри приёмника SDR (например, RTL-SDR), и какой у него уровень в кажд">
 <meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="../assets/style.css">
@@ -35,18 +35,18 @@
 <aside id="sidebar" class="sidebar" aria-label="Разделы сайта">
 <div class="nav-group"><h2>SDR4NOOB</h2><ul><li><a href="../index.html">Главная</a></li><li><a href="../install.html">Установка и обновление</a></li><li><a href="../guide/index.html">Руководство: содержание</a></li></ul></div>
 <div class="nav-group"><h2>Первые шаги</h2><ul><li><a href="../guide/quickstart.html">Быстрый старт</a></li><li><a href="../guide/bands.html">Что можно принимать</a></li><li><a href="../guide/legal.html">Закон и этика эфира</a></li></ul></div>
-<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html" aria-current="page" class="cur">Путь радиосигнала</a></li><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
+<div class="nav-group"><h2>Основы радиоприёма</h2><ul><li><a href="../guide/pipeline.html" aria-current="page" class="cur">Путь сигнала: шаги и уровни</a></li><li><a href="../guide/sdr.html">Приёмники SDR</a></li><li><a href="../guide/decibels.html">Единицы и децибелы</a></li><li><a href="../guide/gain.html">Усиление и АРУ</a></li><li><a href="../guide/antennas.html">Антенны и кабели</a></li><li><a href="../guide/modulation.html">Виды модуляции</a></li><li><a href="../guide/spectrum.html">Спектр и водопад</a></li><li><a href="../guide/satellites.html">Доплер и спутники</a></li></ul></div>
 <div class="nav-group"><h2>Режимы SDR4NOOB</h2><ul><li><a href="../guide/mode-tv.html">ТВ</a></li><li><a href="../guide/mode-radio.html">Радио</a></li><li><a href="../guide/mode-sstv.html">SSTV</a></li><li><a href="../guide/mode-sat.html">Спутники</a></li><li><a href="../guide/mode-adsb.html">Самолёты (ADS-B)</a></li><li><a href="../guide/mode-aprs.html">APRS</a></li></ul></div>
 <div class="nav-group"><h2>Помощь</h2><ul><li><a href="../guide/troubleshooting.html">Помехи и неполадки</a></li><li><a href="../guide/glossary.html">Словарь терминов</a></li></ul></div>
 </aside>
 <main id="content" class="content">
 <p class="crumbs"><a href="index.html">Содержание</a> › Основы радиоприёма</p>
-<h1>Путь радиосигнала</h1>
+<h1>Путь сигнала: шаги и уровни</h1>
 <p>Как голос из рации попадает в динамик вашего компьютера: что происходит с сигналом в передатчике, в эфире,
 в антенне, в кабеле и внутри приёмника SDR (например, RTL-SDR), и какой у него уровень в каждой точке — в децибелах, ваттах и вольтах.</p>
 
-<p class="cta"><a class="btn big" href="pipeline/index.html"><b>▶ Открыть интерактивную схему</b></a></p>
-<p class="dim">Интерактивная схема: анимации модуляции, оцифровки, спектра и водопада, демодуляции AM и FM,
+<p class="dim">Эта страница — краткий конспект с таблицей уровней. <a href="pipeline/index.html">Интерактивная схема</a> —
+отдельный раздел «Путь радиосигнала» в начале оглавления справки: анимации модуляции, оцифровки, спектра и водопада, демодуляции AM и FM,
 калькулятор уровней с ползунками и сравнение аналога и цифры при шуме. Интернет не нужен.</p>
 
 <p><figure class="diagram"><picture><source srcset="img/pipeline-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/pipeline.svg" alt="Путь радиосигнала от источника до звука" width="760" height="440" loading="lazy"></picture></figure></p>
