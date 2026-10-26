@@ -168,7 +168,7 @@ jobs:
           - arch: aarch64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 50
+    timeout-minutes: 90   # по тегу ещё до 40 минут ждёт релиз от сборки Windows
     env:
       QT_QPA_PLATFORM: offscreen
       RTLTV_MUTE: "1"
@@ -231,11 +231,11 @@ jobs:
           # .deb: ставится, кладёт правило udev и команду sdr4noob, удаляется без следов
           sudo apt-get install -y -q ./release/sdr4noob_*.deb
           test -x /opt/sdr4noob/SDR4NOOB && test -f /usr/lib/udev/rules.d/60-sdr4noob.rules
-          test -f /etc/modprobe.d/blacklist-sdr4noob.conf && test -f /usr/share/applications/sdr4noob.desktop
+          test -f /usr/lib/modprobe.d/blacklist-sdr4noob.conf && test -f /usr/share/applications/sdr4noob.desktop
           timeout 120 sdr4noob --mode radio --test --shot "$RUNNER_TEMP/shot2.png" --shot-delay 5
           [ -s "$RUNNER_TEMP/shot2.png" ]
           sudo apt-get remove -y -q sdr4noob
-          test ! -e /opt/sdr4noob/SDR4NOOB
+          test ! -e /opt/sdr4noob/SDR4NOOB && test ! -e /usr/lib/modprobe.d/blacklist-sdr4noob.conf
 
       - name: Сборка как артефакт
         uses: actions/upload-artifact@v4

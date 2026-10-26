@@ -84,7 +84,7 @@ mkdir -p "$DEB/DEBIAN" "$DEB/opt" "$DEB/usr/bin"
 cp -a dist/SDR4NOOB "$DEB/opt/sdr4noob"
 ln -s /opt/sdr4noob/SDR4NOOB "$DEB/usr/bin/sdr4noob"
 install_desktop "$DEB/usr"
-write_udev "$DEB/usr/lib/udev/rules.d" "$DEB/etc/modprobe.d"
+write_udev "$DEB/usr/lib/udev/rules.d" "$DEB/usr/lib/modprobe.d"
 SIZE_KB=$(du -sk "$DEB" | cut -f1)
 GLIBC=$(ldd --version | head -n1 | grep -oE '[0-9]+\.[0-9]+$')   # Qt из PyPI: x86_64 — от 2.34, aarch64 — от 2.39
 cat > "$DEB/DEBIAN/control" <<EOF
@@ -103,7 +103,6 @@ Description: All-in-one for the beginner radio amateur on any USB radio receiver
  on any USB radio receiver (SDR). The RTL-SDR driver is built in; HackRF and
  Airspy use the system libraries (libhackrf0, libairspy0).
 EOF
-echo "/etc/modprobe.d/blacklist-sdr4noob.conf" > "$DEB/DEBIAN/conffiles"
 cat > "$DEB/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e

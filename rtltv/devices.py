@@ -160,15 +160,60 @@ def _host_arch():
     return {"amd64": "x86_64", "arm64": "aarch64"}.get(m, m)
 
 
+def elf_exports(data):
+    """Имена функций и данных, которые ELF-библиотека определяет сама (.dynsym, st_shndx != 0) — без символов
+    её зависимостей (dlsym/hasattr нашёл бы pthread_create в libc у любой библиотеки)."""
+    if data[:4] != b"\x7fELF" or len(data) < 64:
+        return set()
+    b64 = data[4] == 2
+    e = "<" if data[5] == 1 else ">"
+    try:
+        if b64:
+            shoff, = struct.unpack_from(e + "Q", data, 0x28)
+            shentsize, shnum = struct.unpack_from(e + "HH", data, 0x3A)
+        else:
+            shoff, = struct.unpack_from(e + "I", data, 0x20)
+            shentsize, shnum = struct.unpack_from(e + "HH", data, 0x2E)
+
+        def sec(i):
+            o = shoff + i * shentsize
+            if b64:
+                _n, typ, _f, _a, off, size, link, _i, _al, entsize = struct.unpack_from(e + "IIQQQQIIQQ", data, o)
+            else:
+                _n, typ, _f, _a, off, size, link, _i, _al, entsize = struct.unpack_from(e + "IIIIIIIIII", data, o)
+            return typ, off, size, link, entsize
+        out = set()
+        for i in range(min(shnum, 4096)):
+            typ, off, size, link, entsize = sec(i)
+            if typ != 11 or not entsize:          # SHT_DYNSYM
+                continue
+            _t, stroff, strsize, _l, _e = sec(link)
+            for k in range(1, min(size // entsize, 1 << 20)):
+                o = off + k * entsize
+                if b64:
+                    name, info, _other, shndx = struct.unpack_from(e + "IBBH", data, o)
+                else:
+                    name, _v, _s, info, _other, shndx = struct.unpack_from(e + "IIIBBH", data, o)
+                if shndx == 0 or (info & 0xF) not in (1, 2) or not name:   # не определён здесь / не функция и не данные
+                    continue
+                p = stroff + name
+                end = data.index(b"\0", p, stroff + strsize)
+                out.add(data[p:end].decode("latin-1"))
+        return out
+    except (struct.error, ValueError):
+        return set()
+
+
 def native_lib_info(path):
     """macOS / Linux: заголовок ELF или Mach-O (архитектура) и экспорт — пробной загрузкой (файл выбрал сам
     пользователь, загрузить его всё равно придётся). Формат как у pe_info."""
     name = os.path.basename(path)
     try:
         with open(path, "rb") as f:
-            head = f.read(64)
+            data = f.read()
     except OSError as e:
         raise DriverError(f"Не удалось прочитать {path}: {e}") from e
+    head = data[:64]
     if head[:4] == b"\x7fELF" and len(head) >= 20:
         bits64 = head[4] == 2
         etype, machine = struct.unpack_from("<HH" if head[5] == 1 else ">HH", head, 16)
@@ -180,12 +225,15 @@ def native_lib_info(path):
         raise DriverError(f"{name} — не библиотека {osplat.LIB_EXT} (нет заголовка ELF/Mach-O)")
     exports = set()
     if info["dll"] and info["x64"]:
-        ensure_dll_dir(os.path.dirname(os.path.abspath(path)))
-        try:
-            L = C.CDLL(os.path.abspath(path))
-        except OSError as e:
-            raise DriverError(f"{name} не загружается: {e}. Скорее всего, {osplat.driver_dep_hint()}.") from e
-        exports = {n for n in _probe_names() if hasattr(L, n)}
+        if info["machine"] != "Mach-O":
+            exports = elf_exports(data) & _probe_names()
+        else:   # macOS: экспорт — пробной загрузкой
+            ensure_dll_dir(os.path.dirname(os.path.abspath(path)))
+            try:
+                L = C.CDLL(os.path.abspath(path))
+            except OSError as e:
+                raise DriverError(f"{name} не загружается: {e}. Скорее всего, {osplat.driver_dep_hint()}.") from e
+            exports = {n for n in _probe_names() if hasattr(L, n)}
     info["exports"] = exports
     return info
 
@@ -233,6 +281,8 @@ def ensure_dll_dir(path=None):
         return
     if not osplat.IS_WIN:
         _dll_dir_handles[path] = None
+        if path != os.path.abspath(DRIVERS_DIR):   # системный каталог (/usr/lib/…) — не трогаем
+            return
         for n in sorted(os.listdir(path)):
             if osplat.is_lib_name(n) and n.lower().startswith(DEP_NAMES):
                 try:

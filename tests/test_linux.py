@@ -257,3 +257,75 @@ def test_updater_linux_kind_and_replace(tmp_path, monkeypatch):
         U.download_to(dict(a, sha256=None), str(tmp_path / "dl" / "x"), "ua", opener=lambda req, timeout: R(body))
     U.replace_appimage(str(dl), str(img))
     assert img.read_bytes() == body and not dl.exists() and not (img.parent / "SDR4NOOB.AppImage.new").exists()
+
+
+def test_udev_rules_syntax_each_line():
+    """udev понимает «#» только в начале строки — комментарий в конце правила ломает всё правило."""
+    for line in linux_setup.udev_rules_text().splitlines():
+        line = line.strip()
+        assert not line or line.startswith("#") or ("#" not in line and line.startswith("SUBSYSTEM==")), line
+
+
+def test_run_setup_127_is_not_cancel(monkeypatch):
+    import subprocess
+    monkeypatch.setattr(linux_setup.shutil, "which", lambda n: "/usr/bin/pkexec")
+    monkeypatch.setattr(linux_setup.subprocess, "run", lambda a, **k: subprocess.CompletedProcess(a, 127, "", ""))
+    ok, msg = linux_setup.run_setup()
+    assert not ok and "polkit" in msg and "sudo tee" in msg
+    sc = linux_setup.setup_script("/tmp/it's/r.rules", "/tmp/b.conf")
+    assert "'/tmp/it'\"'\"'s/r.rules'" in sc        # shlex.quote
+
+
+def test_preload_only_from_drivers_dir(monkeypatch, tmp_path):
+    loaded = []
+    monkeypatch.setattr(devices.osplat, "IS_WIN", False)
+    monkeypatch.setattr(devices.C, "CDLL", lambda p, mode=0: loaded.append(os.path.basename(p)))
+    if not hasattr(devices.C, "RTLD_GLOBAL"):
+        monkeypatch.setattr(devices.C, "RTLD_GLOBAL", 0x100, raising=False)
+    monkeypatch.setattr(devices.osplat, "is_lib_name", lambda n: n.endswith(".so") or ".so." in n)
+    sysdir, drv = tmp_path / "usr_lib", tmp_path / "drivers"
+    for d in (sysdir, drv):
+        d.mkdir()
+        (d / "libusb-1.0.so.0").write_bytes(b"x")
+        (d / "libfftw3_mpi.so.3").write_bytes(b"x")
+    monkeypatch.setattr(devices, "DRIVERS_DIR", str(drv))
+    devices._dll_dir_handles.clear()
+    devices.ensure_dll_dir(str(sysdir))
+    assert loaded == []                                       # системный каталог не трогаем
+    devices.ensure_dll_dir(str(drv))
+    assert sorted(loaded) == ["libfftw3_mpi.so.3", "libusb-1.0.so.0"]
+    devices._dll_dir_handles.clear()
+
+
+def test_child_env_strips_bundle_libs(monkeypatch):
+    monkeypatch.setattr(osplat, "IS_LINUX", True)
+    monkeypatch.setattr(osplat.sys, "frozen", True, raising=False)
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/opt/sdr4noob/_internal")
+    monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/usr/local/lib")
+    monkeypatch.setenv("QT_PLUGIN_PATH", "/opt/sdr4noob/_internal/PySide6/Qt/plugins")
+    env = osplat.child_env()
+    assert env["LD_LIBRARY_PATH"] == "/usr/local/lib" and "QT_PLUGIN_PATH" not in env
+    monkeypatch.delenv("LD_LIBRARY_PATH_ORIG")
+    assert "LD_LIBRARY_PATH" not in osplat.child_env()
+
+
+def test_updater_picks_appimage_on_linux(monkeypatch):
+    import json
+    from rtltv import updater, updater_linux
+    rel = {"tag_name": "v9.9.9", "body": "", "html_url": "u", "assets": [
+        {"name": "SDR4NOOB-9.9.9-win64.zip", "browser_download_url": "https://x/w.zip", "size": 1,
+         "digest": "sha256:" + "a" * 64},
+        {"name": f"SDR4NOOB-9.9.9-{updater_linux.arch()}.AppImage", "browser_download_url": "https://x/a", "size": 2,
+         "digest": "sha256:" + "b" * 64},
+        {"name": "sdr4noob_9.9.9_amd64.deb", "browser_download_url": "https://x/d", "size": 3}]}
+    monkeypatch.setattr(updater, "_get", lambda url, timeout=15: json.dumps(rel).encode())
+    info = updater.check_latest()
+    assert info["appimage"]["url"] == "https://x/a" and info["appimage"]["sha256"] == "b" * 64
+    assert info["asset"]["url"] == "https://x/w.zip"           # Windows-ветка не изменилась
+    monkeypatch.setattr(updater.osplat, "IS_LINUX", True)
+    monkeypatch.setattr(updater_linux, "appimage_path", lambda: None)
+    assert updater.update_kind(info) == "manual"               # .deb / исходники — только ссылка
+    monkeypatch.setattr(updater_linux, "appimage_path", lambda: "/home/u/SDR4NOOB.AppImage")
+    monkeypatch.setattr(updater_linux, "can_replace", lambda p: True)
+    assert updater.update_kind(info) == "appimage"
+    assert updater.update_kind(dict(info, appimage=None)) == "manual"   # Windows-zip AppImage не заменит

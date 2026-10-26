@@ -239,7 +239,17 @@ class DevicesDialog(QDialog):
             what = "Доступ уже настроен. Установить файлы заново?\n\n" + what
         if QMessageBox.question(self, "Доступ к USB", what) != QMessageBox.Yes:
             return
-        ok, msg = linux_setup.run_setup()
+        from PySide6.QtCore import QEventLoop
+        import threading
+        res, loop = {}, QEventLoop()   # pkexec ждёт пароль в своём окне — окно программы не замирает
+        th = threading.Thread(target=lambda: (res.update(r=linux_setup.run_setup()), loop.quit()), daemon=True)
+        self.b_access.setEnabled(False)
+        th.start()
+        if "r" not in res:
+            loop.exec()
+        th.join()
+        self.b_access.setEnabled(True)
+        ok, msg = res["r"]
         (QMessageBox.information if ok else QMessageBox.warning)(self, "Доступ к USB", msg)
         self.refresh()
 

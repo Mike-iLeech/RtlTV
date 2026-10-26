@@ -25,6 +25,25 @@ def configure(data_dir=None, updates=None):
     return 0
 
 
+def _route_urls_linux(app):
+    """Собранная программа в Linux: ссылки (справка, «Страница релиза», QTextBrowser) открываются через xdg-open
+    с окружением без LD_LIBRARY_PATH сборки (osplat.child_env) — иначе браузер получил бы её библиотеки."""
+    import sys as _sys
+    if not getattr(_sys, "frozen", False):
+        return
+    from PySide6.QtCore import QObject, Slot
+    from PySide6.QtGui import QDesktopServices
+    from . import osplat
+
+    class _Opener(QObject):
+        @Slot("QUrl")
+        def open(self, url):
+            osplat.open_path(url.toString())
+    app._url_opener = _Opener(app)
+    for scheme in ("http", "https", "file", "mailto"):
+        QDesktopServices.setUrlHandler(scheme, app._url_opener, "open")
+
+
 def main():
     if "--configure" in sys.argv:
         cp = argparse.ArgumentParser(prog="SDR4NOOB --configure")
@@ -62,6 +81,7 @@ def main():
     app.setApplicationName("SDR4NOOB")
     if osplat.IS_LINUX:
         app.setDesktopFileName("sdr4noob")   # значок окна в Wayland — из sdr4noob.desktop
+        _route_urls_linux(app)
     from .branding import app_icon
     app.setWindowIcon(app_icon())   # иконка всех окон и панели задач
     if a.selftest_guide:            # встроенный браузер справки собран и оживает (код выхода 0)

@@ -63,7 +63,10 @@ gcc $CFLAGS_COMMON -shared -Wl,-soname,libmbelib.so -o "$OUT/libmbelib.so" \
 install -m 0644 "$M/COPYRIGHT" "$OUT/mbelib-LICENSE.txt"
 
 # ---- lrpt_dsp
-gcc $CFLAGS_COMMON -ffast-math -shared -Wl,-soname,liblrpt_dsp.so -o "$OUT/liblrpt_dsp.so" "$ROOT/tools/lrpt_dsp.c" -lm
+# -ffast-math только при компиляции: при линковке -shared gcc < 13 добавил бы crtfastmath.o, и загрузка
+# библиотеки включила бы FTZ/DAZ всему процессу (numpy/scipy потеряли бы субнормальные числа)
+gcc $CFLAGS_COMMON -ffast-math -c -o "$WORK/lrpt_dsp.o" "$ROOT/tools/lrpt_dsp.c"
+gcc -shared -Wl,-soname,liblrpt_dsp.so -o "$OUT/liblrpt_dsp.so" "$WORK/lrpt_dsp.o" -lm
 
 strip --strip-unneeded "$OUT/librtlsdr.so" "$OUT/libmbelib.so" "$OUT/liblrpt_dsp.so" "$OUT/libportaudio.so.2"
 echo "OK ($(uname -m)):"

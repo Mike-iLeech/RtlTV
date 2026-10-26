@@ -69,7 +69,7 @@ Airspy R2/Mini, сетевой rtl_tcp). Python не нужен.
 
 ### Linux
 
-Готовые сборки для **x86_64** (Ubuntu 22.04+, Debian 12+, Fedora 36+ и другие с glibc 2.34+) и **aarch64**
+Готовые сборки для **x86_64** (Ubuntu 22.04+, Debian 12+, Fedora 36+ и другие с glibc 2.35+) и **aarch64**
 (Raspberry Pi 5 и др., glibc 2.39+: Ubuntu 24.04+, Debian 13+) — на странице
 [последнего выпуска](https://github.com/Mike-iLeech/SDR4NOOB/releases/latest):
 

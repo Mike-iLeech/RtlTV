@@ -631,7 +631,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 </ul>
 
 <h2 id="linux">Linux<a class="anchor" href="#linux" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Для Linux есть готовые сборки: <b>x86_64</b> (Ubuntu 22.04 и новее, Debian 12+, Fedora 36+ — нужна glibc 2.34+)
+<p>Для Linux есть готовые сборки: <b>x86_64</b> (Ubuntu 22.04 и новее, Debian 12+, Fedora 36+ — нужна glibc 2.35+)
 и <b>aarch64</b> (Raspberry Pi 5 и другие; glibc 2.39+: Ubuntu 24.04+, Debian 13+). Скачайте со
 <a href="{DOWNLOAD_URL}">страницы последнего выпуска</a> один из вариантов:</p>
 <ul>

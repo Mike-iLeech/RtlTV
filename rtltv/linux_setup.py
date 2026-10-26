@@ -11,6 +11,7 @@
 пароль администратора). Пакет .deb ставит те же файлы при установке.
 """
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -44,8 +45,8 @@ def udev_rules_text():
            'MODE="0660", GROUP="plugdev", TAG+="uaccess"'
     lines = [head, "# приёмники на RTL2832U (RTL-SDR и совместимые)"]
     lines += [rule.format(v, p) for v, p in RTL_IDS]
-    lines.append("# HackRF, Airspy")
-    lines += [rule.format(v, p) + f"   # {name}" for v, p, name in OTHER_IDS]
+    for v, p, name in OTHER_IDS:   # udev понимает комментарий только с начала строки
+        lines += [f"# {name}", rule.format(v, p)]
     return "\n".join(lines) + "\n"
 
 
@@ -58,20 +59,21 @@ def setup_script(rules_src, blacklist_src):
     """Команды для pkexec sh -c: поставить оба файла, перечитать правила udev, выгрузить модули ядра."""
     mods = " ".join(KERNEL_MODULES)
     return (f"set -e\n"
-            f"install -m 0644 '{rules_src}' {RULES_PATH}\n"
-            f"install -m 0644 '{blacklist_src}' {BLACKLIST_PATH}\n"
+            f"install -m 0644 {shlex.quote(rules_src)} {RULES_PATH}\n"
+            f"install -m 0644 {shlex.quote(blacklist_src)} {BLACKLIST_PATH}\n"
             f"udevadm control --reload-rules || true\n"
             f"udevadm trigger --subsystem-match=usb || true\n"
             f"for m in {mods}; do modprobe -r \"$m\" 2>/dev/null || true; done\n")
 
 
 PACKAGE_RULES = ("/usr/lib/udev/rules.d/60-sdr4noob.rules", "/lib/udev/rules.d/60-sdr4noob.rules")   # пакет .deb
+PACKAGE_BLACKLIST = "/usr/lib/modprobe.d/blacklist-sdr4noob.conf"   # пакет .deb (уходит вместе с пакетом)
 
 
 def is_configured():
     """Правило udev и запрет драйвера уже стоят (поставлены этой кнопкой или пакетом .deb)."""
     rules = any(os.path.isfile(p) for p in (RULES_PATH,) + PACKAGE_RULES)
-    return rules and os.path.isfile(BLACKLIST_PATH)
+    return rules and (os.path.isfile(BLACKLIST_PATH) or os.path.isfile(PACKAGE_BLACKLIST))
 
 
 def manual_commands():
@@ -101,8 +103,11 @@ def run_setup(timeout=300):
         return False, f"Не удалось запустить pkexec: {e}"
     finally:
         shutil.rmtree(d, ignore_errors=True)
-    if r.returncode in (126, 127):
+    if r.returncode == 126:
         return False, "Настройка отменена (пароль администратора не введён)."
+    if r.returncode == 127:
+        return False, ("pkexec не смог запросить пароль: нет агента polkit или нет прав администратора. "
+                       "Выполните в терминале:\n\n" + manual_commands())
     if r.returncode != 0:
         return False, f"Настройка не удалась (код {r.returncode}): {(r.stderr or r.stdout).strip()[:500]}"
     return True, ("Готово. Выдерните приёмник из USB и вставьте снова — после этого SDR4NOOB откроет его "

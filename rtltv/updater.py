@@ -26,7 +26,7 @@ import time
 import urllib.request
 import zipfile
 
-from . import REPO, __version__, paths, settings
+from . import REPO, __version__, osplat, paths, settings, updater_linux
 
 
 EXE_NAMES = ("SDR4NOOB.exe", "RtlTV.exe")   # основное имя и прежнее (архивы 2.x/3.0)
@@ -78,7 +78,8 @@ def check_latest(timeout=15):
     for a in data.get("assets") or []:
         name = a.get("name", "")
         low = name.lower()
-        kind = "asset" if low.endswith("-win64.zip") else "setup" if low.endswith("-setup.exe") else None
+        kind = "asset" if low.endswith("-win64.zip") else "setup" if low.endswith("-setup.exe") else \
+            "appimage" if low.endswith(updater_linux.asset_suffix()) else None
         if kind:
             digest = a.get("digest") or ""
             found[kind] = {"name": name, "url": a.get("browser_download_url"), "size": a.get("size", 0),
@@ -93,7 +94,8 @@ def check_latest(timeout=15):
             except Exception:  # noqa: BLE001
                 pass
     return {"version": ver, "tag": tag, "notes": data.get("body") or "", "url": data.get("html_url") or RELEASES_PAGE,
-            "asset": found.get("asset"), "setup": found.get("setup"), "published": data.get("published_at") or ""}
+            "asset": found.get("asset"), "setup": found.get("setup"), "appimage": found.get("appimage"),
+            "published": data.get("published_at") or ""}
 
 
 def installed():
@@ -116,7 +118,10 @@ def writable(d):
 
 def update_kind(info):
     """Чем обновлять: "setup" (поставлено установщиком и он есть в релизе), "asset" (архив zip) или
-    "manual" (в папку программы нельзя писать — например, её поставили в Program Files от администратора)."""
+    "manual" (в папку программы нельзя писать — например, её поставили в Program Files от администратора).
+    В Linux: "appimage" (заменить запущенный файл AppImage) или "manual" (пакет .deb, исходники)."""
+    if osplat.IS_LINUX:
+        return updater_linux.update_kind({"asset": info.get("appimage")})
     d = app_dir()
     if d and not writable(d):
         return "manual"
@@ -214,6 +219,7 @@ def download(info, progress=None, cancel=None, kind="asset"):
     a = info.get(kind)
     if not a or not a.get("url"):
         raise UpdateError("В релизе нет установщика SDR4NOOB-*-setup.exe." if kind == "setup" else
+                          f"В релизе нет файла SDR4NOOB-*-{updater_linux.arch()}.AppImage." if kind == "appimage" else
                           "В релизе нет архива для Windows (SDR4NOOB-*-win64.zip).")
     if not a.get("sha256"):
         raise UpdateError("Не удалось получить контрольную сумму файла — без неё обновление не ставится. "
@@ -221,7 +227,8 @@ def download(info, progress=None, cancel=None, kind="asset"):
     d = os.path.join(paths.LOCAL, "updates")
     os.makedirs(d, exist_ok=True)
     for old in os.listdir(d):   # прежние скачанные архивы и установщики больше не нужны
-        if old.lower().endswith((".zip", ".zip.part", "-setup.exe", "-setup.exe.part")) and old != a["name"]:
+        if old.lower().endswith((".zip", ".zip.part", "-setup.exe", "-setup.exe.part", ".appimage",
+                                 ".appimage.part")) and old != a["name"]:
             _rm(os.path.join(d, old))
     path = os.path.join(d, a["name"])
     req = urllib.request.Request(a["url"], headers={"User-Agent": UA})
@@ -374,6 +381,18 @@ def start_name(new_dir):
         if os.path.isfile(os.path.join(new_dir, n)):
             return n
     return os.path.basename(sys.executable)
+
+
+def install_appimage(path):
+    """Linux: поставить скачанный AppImage на место запущенного и запустить его. Вызывающий сразу закрывает программу."""
+    target = updater_linux.appimage_path()
+    if not target:
+        raise UpdateError("Программа запущена не из AppImage — обновите её вручную со страницы релиза.")
+    try:
+        updater_linux.replace_appimage(path, target)
+    except OSError as e:
+        raise UpdateError(f"Не удалось заменить {target}: {e}") from e
+    return updater_linux.restart(target)
 
 
 def install_and_restart(new_dir):
