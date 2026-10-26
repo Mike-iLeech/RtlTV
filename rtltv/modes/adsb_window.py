@@ -244,6 +244,56 @@ class _Scroll(QScrollArea):
             b._arrange(2 if self.viewport().width() >= b.need2() else 1)
 
 
+class _OverlayList(QListWidget):
+    """Список бортов поверх карты: колесо мыши всегда прокручивает список и не уходит карте (иначе у края списка
+    карта внезапно масштабируется), прокрутка не сбрасывается при обновлении (строки меняются на месте)."""
+
+    MAX_ROWS = 10
+
+    def wheelEvent(self, e):
+        super().wheelEvent(e)
+        e.accept()
+
+    def set_rows(self, rows):
+        """rows: [(текст, hex или None, цвет или None, подсказка, заголовок группы?)] — обновить на месте."""
+        sb = self.verticalScrollBar()
+        pos = sb.value()
+        self.setUpdatesEnabled(False)
+        try:
+            while self.count() > len(rows):
+                self.takeItem(self.count() - 1)
+            while self.count() < len(rows):
+                self.addItem(QListWidgetItem())
+            for i, (text, key, color, tip, head) in enumerate(rows):
+                it = self.item(i)
+                if it.text() != text:
+                    it.setText(text)
+                it.setData(Qt.UserRole, key)
+                it.setToolTip(tip or "")
+                it.setFlags(Qt.NoItemFlags if head else Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                f = it.font()
+                if f.bold() != head:
+                    f.setBold(head)
+                    it.setFont(f)
+                if color is not None:
+                    it.setForeground(QColor(color))
+        finally:
+            self.setUpdatesEnabled(True)
+        self.fit_height()
+        sb.setValue(min(pos, sb.maximum()))
+
+    def fit_height(self):
+        """Высота — ровно под строки (не больше MAX_ROWS): полоса прокрутки только когда строк больше."""
+        n = self.count()
+        self.doItemsLayout()   # высоты строк — по фактической раскладке (шрифт из таблицы стилей), не по подсказке
+        rows = sum(max(self.visualItemRect(self.item(i)).height(), self.sizeHintForRow(i))
+                   for i in range(min(n, self.MAX_ROWS))) if n else 18
+        many = n > self.MAX_ROWS
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded if many else Qt.ScrollBarAlwaysOff)
+        m = self.contentsMargins()
+        self.setFixedHeight(rows + 2 * self.frameWidth() + m.top() + m.bottom() + 2 * self.spacing())
+
+
 def _chains(pts, max_km=80.0):
     """Разрезать трек там, где соседние точки дальше max_km (скачки подмены GNSS): линия через полмира не нужна."""
     out, cur = [], []
@@ -547,8 +597,10 @@ class AdsbWindow(ModeWindow):
         self.ovl_title.setToolTip("Свернуть/развернуть список")
         self.ovl_title.clicked.connect(lambda: self.ovl_list.setVisible(not self.ovl_list.isVisible())
                                        or self._place_overlay())
-        self.ovl_list = QListWidget()
+        self.ovl_list = _OverlayList()
         self.ovl_list.setObjectName("ovlList")
+        self.ovl_list.setVerticalScrollMode(QListWidget.ScrollPerPixel)
+        self.ovl_list.setFrameShape(QFrame.NoFrame)
         self.ovl_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.ovl_list.itemClicked.connect(lambda it: it.data(Qt.UserRole) and self._select(it.data(Qt.UserRole)))
         self.ovl_hint = QLabel(NOPOS_HINT)
@@ -562,9 +614,7 @@ class AdsbWindow(ModeWindow):
         o.hide()
 
     def _place_overlay(self):
-        n = self.ovl_list.count()
-        rh = self.ovl_list.sizeHintForRow(0) if n else 18
-        self.ovl_list.setFixedHeight(min(n, 10) * rh + 6)
+        self.ovl_list.fit_height()
         self.ovl.adjustSize()
 
     def showEvent(self, e):
@@ -1142,31 +1192,26 @@ class AdsbWindow(ModeWindow):
             title += f" · подозрительные ({len(suspect)})"
         self.ovl_title.setText(title)
         lw = self.ovl_list
-        lw.blockSignals(True)
-        lw.clear()
         groups = []
         if suspect:
             groups.append((f"Подозрительные координаты ({len(suspect)})", suspect))
         if nopos:
             groups.append((f"Без координат ({len(nopos)})", nopos))
+        rows = []
         for head, group in groups:
             if len(groups) > 1:
-                h = QListWidgetItem(head)
-                h.setFlags(Qt.NoItemFlags)
-                f = h.font()
-                f.setBold(True)
-                h.setFont(f)
-                lw.addItem(h)
-            for a in group:
-                lw.addItem(self._overlay_item(a, now))
-                if a["hex"] == self.sel:
-                    lw.item(lw.count() - 1).setSelected(True)
+                rows.append((head, None, None, "", True))
+            rows.extend(self._overlay_row(a, now) for a in group)
+        lw.blockSignals(True)
+        lw.set_rows(rows)
+        for i, r in enumerate(rows):
+            lw.item(i).setSelected(r[1] is not None and r[1] == self.sel)
         lw.blockSignals(False)
-        self._place_overlay()
+        self.ovl.adjustSize()
         self.ovl.show()
         self.ovl.raise_()
 
-    def _overlay_item(self, a, now):
+    def _overlay_row(self, a, now):
         trk = a["track"] if a["track"] is not None else a["heading"]
         name = a["callsign"] or a["hex"]
         alt = "на земле" if a["on_ground"] else self._alt_text(a["alt"])
@@ -1180,12 +1225,9 @@ class AdsbWindow(ModeWindow):
         age = now - a["last"]
         if age > adsb.STALE_S:
             text += f"  ⌛ {age / 60:.0f} мин"
-        it = QListWidgetItem(text)
-        it.setData(Qt.UserRole, a["hex"])
-        if a["suspect"] and a["raw_note"]:
-            it.setToolTip(a["raw_note"])
-        it.setForeground(QColor(STALE_FG) if age > adsb.STALE_S else QColor(alt_color(a["alt"], a["on_ground"])))
-        return it
+        tip = a["raw_note"] if a["suspect"] and a["raw_note"] else ""
+        color = STALE_FG if age > adsb.STALE_S else alt_color(a["alt"], a["on_ground"])
+        return text, a["hex"], color, tip, False
 
     def _fill_table(self, planes, now):
         t = self.table

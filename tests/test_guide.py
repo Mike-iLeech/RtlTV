@@ -163,16 +163,44 @@ def test_help_menu_in_mode_window(monkeypatch):
 
 
 def test_pipeline_page_in_toc():
-    """«Путь радиосигнала» — в разделе «Основы радиоприёма», со схемой и кнопкой интерактивной страницы."""
+    """Конспект «Путь сигнала» — в разделе «Основы радиоприёма», со схемой и ссылкой на интерактивную страницу."""
     groups = {key: [pid for pid, _t in val] for key, val in gw.TOC if isinstance(val, list)}
     assert "pipeline" in groups["Основы радиоприёма"]
-    assert gw.page_title("pipeline") == "Путь радиосигнала"
+    assert gw.page_title("pipeline") == "Путь сигнала: шаги и уровни"
     src = gw.read_page("pipeline")
     assert 'src="img/pipeline.svg"' in src
-    assert re.search(r'<table class="btn"[^>]*>\s*<tr>\s*<td>\s*<a href="pipeline/index.html">', src)
+    assert '<a href="pipeline/index.html">' in src and 'class="btn"' not in src   # не кнопка-«приложение»
     assert '<a href="pipeline.html">' in gw.read_page("index")
     texts = {pid: gw.page_text(s) for pid, s in _all().items()}
     assert "pipeline" in [pid for pid, _n, _s in gw.search("фидер МШУ", texts)]
+
+
+def test_signal_path_is_root_toc_item(monkeypatch):
+    """Интерактивная схема — пункт в корне оглавления сразу после «Содержания»: щелчок открывает её саму, без
+    промежуточной страницы с кнопкой (здесь без QtWebEngine — в браузере), open_page("signal") — тоже."""
+    monkeypatch.setattr(gw.settings, "save", lambda *_a: None)
+    monkeypatch.setattr(gw, "web_engine", lambda: None)
+    opened = []
+    monkeypatch.setattr(gw, "open_in_browser", lambda path: opened.append(path) or True)
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    w = gw.GuideWindow("index")
+    w.show()
+    app.processEvents()
+    top = [w.tree.topLevelItem(i) for i in range(w.tree.topLevelItemCount())]
+    assert [it.data(0, Qt.UserRole) for it in top[:2]] == ["index", "signal"]
+    assert top[1].text(0) == "Путь радиосигнала" and top[1].childCount() == 0
+    want = os.path.normcase(os.path.join(gw.guide_dir(), "pipeline", "index.html"))
+    w._tree_clicked(top[1])
+    app.processEvents()
+    assert [os.path.normcase(p) for p in opened] == [want]
+    w.open_page("signal")
+    assert [os.path.normcase(p) for p in opened] == [want, want]
+    assert w.current_page() == "index"   # текст не сменился
+    assert gw.interactive_dir("signal") == "pipeline" and gw.interactive_id("pipeline") == "signal"
+    assert "signal" not in dict(gw.pages())   # в поиск и на сайт как HTML-страница не попадает
+    w.close()
 
 
 def test_interactive_page_offline():
@@ -220,13 +248,13 @@ def test_interactive_link_without_webengine_opens_browser(monkeypatch):
     opened.clear()
     w.resize(1100, 760)
     app.processEvents()
-    cur = w.view.document().find("Открыть интерактивную схему")
+    cur = w.view.document().find("Интерактивная схема")
     assert not cur.isNull()
     w.view.setTextCursor(cur)
     w.view.ensureCursorVisible()
     app.processEvents()
     r = w.view.cursorRect(cur)
-    pos = QPoint(r.left() - 40, r.center().y())
+    pos = QPoint(r.left() - 20, r.center().y())
     QTest.mouseClick(w.view.viewport(), Qt.LeftButton, Qt.NoModifier, pos)
     app.processEvents()
     assert [os.path.normcase(p) for p in opened] == [os.path.normcase(want)]

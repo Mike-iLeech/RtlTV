@@ -1,5 +1,6 @@
 """Экран выбора режима при запуске и переключение между режимами."""
 import importlib
+import threading
 
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
@@ -24,6 +25,19 @@ MODES = [
     ("aprs", "rtltv.modes.aprs_window", "AprsWindow", "APRS", "Пакеты радиолюбителей на карте: 144,800 МГц и МКС 145,825 МГц", "radio"),
 ]
 
+
+def warm_up():
+    """Пока пользователь выбирает режим — в фоне то, на что окно режима тратило ~4 с при открытии:
+    опрос USB-приёмников (devices.prefetch) и импорт scipy.signal (~1 с)."""
+    from . import devices
+    devices.prefetch()
+
+    def imp():
+        try:
+            import scipy.signal  # noqa: F401
+        except Exception:  # noqa: BLE001
+            pass
+    threading.Thread(target=imp, name="warm-imports", daemon=True).start()
 
 def _icon_path(kind, s):
     p = QPainterPath()
@@ -183,6 +197,7 @@ class Launcher(QWidget):
         if not self.opts.get("shot"):
             importlib.import_module("rtltv.update_ui").maybe_check_on_start(self)
         self.apply_theme()
+        warm_up()
 
     def apply_theme(self):
         name = self.app_s.get("theme", "Тёмная")
@@ -214,6 +229,9 @@ class Launcher(QWidget):
             QMessageBox.warning(self, "SDR4NOOB", f"Режим «{entry[3]}» не загрузился:\n{e}")
             return
         self._save_app(last=key)
+        from . import devices
+        if not devices.has_hardware():   # приёмник могли подключить после запуска — опросить заново
+            devices.scan_hardware(refresh=True)
         opts = dict(self.opts)
         opts["theme"] = self.app_s.get("theme", "Тёмная")
         if self.cb_test.isChecked():
