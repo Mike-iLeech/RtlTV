@@ -1,7 +1,7 @@
 # Нативная часть SDR4NOOB для Android:
 #   usb-1.0   — libusb (без поиска устройств: на Android их открывает приложение через UsbManager);
 #   rtlsdr    — librtlsdr сборки rtl-sdr-blog, открывается по файловому дескриптору (usb_fd_shim);
-#   sdr4noob  — JNI-обёртка для Kotlin (sdr/RtlSdrNative.kt).
+#   sdr4noob  — JNI-обёртка для Kotlin (sdr/RtlSdrNative.kt, dsp/Ambe.kt, lrpt/LrptNative.kt).
 # Исходники libusb и librtlsdr скачивает задача Gradle fetchNativeDeps в SDR4N_DEPS.
 cmake_minimum_required(VERSION 3.22)
 project(sdr4noob C)
@@ -69,6 +69,7 @@ target_compile_options(airspy PRIVATE -Wno-sign-compare -Wno-format -Wno-unused-
 target_link_libraries(airspy PUBLIC usb-1.0)
 
 # ---------- JNI ----------
-add_library(sdr4noob SHARED sdr4noob_jni.c usb_fd_shim.c mbe_jni.c hackrf_airspy_jni.c)
+# lrpt_dsp.c — копия tools/lrpt_dsp.c (демодулятор, Витерби, Рид — Соломон «Метеор-М» LRPT), обёртка lrpt_jni.c
+add_library(sdr4noob SHARED sdr4noob_jni.c usb_fd_shim.c mbe_jni.c hackrf_airspy_jni.c lrpt_dsp.c lrpt_jni.c)
 target_link_libraries(sdr4noob rtlsdr hackrf airspy usb-1.0 mbe m log)
 target_link_options(sdr4noob PRIVATE "-Wl,-z,max-page-size=16384")
