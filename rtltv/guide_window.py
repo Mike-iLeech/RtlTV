@@ -214,6 +214,9 @@ def open_in_browser(path):
 _WEB = None
 
 
+_WEB_ERROR = ""   # почему QtWebEngine не загрузился — для самопроверки сборки
+
+
 def web_engine():
     """(QtWebEngineWidgets, QtWebEngineCore) или None, если модуля нет в сборке или он отключён
     RTLTV_NO_WEBENGINE=1 — тогда интерактивные страницы открываются в системном браузере."""
@@ -226,6 +229,8 @@ def web_engine():
             _WEB = (QtWebEngineWidgets, QtWebEngineCore)
         except ImportError as e:  # сборка без QtWebEngine
             log.warning("QtWebEngine недоступен (%s): схема откроется в браузере", e)
+            global _WEB_ERROR
+            _WEB_ERROR = str(e)
             _WEB = False
     return _WEB or None
 
@@ -893,6 +898,8 @@ def selftest_interactive(timeout=40.0):
     w = GuideWindow("pipeline")
     if not w.show_interactive(path) or w.web is None:
         log.error("самопроверка справки: QtWebEngine недоступен")
+        import sys
+        print(f"selftest-guide: QtWebEngine недоступен: {_WEB_ERROR or 'нет окна браузера'}", file=sys.stderr)
         return 1
     box = []
     end = time.time() + timeout

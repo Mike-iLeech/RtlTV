@@ -229,7 +229,14 @@ jobs:
           export APPIMAGE_EXTRACT_AND_RUN=1
           timeout 120 "$img" --mode radio --test --shot "$RUNNER_TEMP/shot.png" --shot-delay 5
           [ -s "$RUNNER_TEMP/shot.png" ] || { echo "AppImage не открыл окно"; exit 1; }
-          timeout 120 "$img" --selftest-guide || { echo "--selftest-guide: схема в справке не открылась"; exit 1; }
+          if ! timeout 120 "$img" --selftest-guide; then
+            echo "--selftest-guide: схема в справке не открылась"
+            tail -n 40 "$XDG_DATA_HOME/SDR4NOOB/sdr4noob.log" || true
+            ( cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$img" --appimage-extract >/dev/null 2>&1 || true
+              for f in $(find squashfs-root -name 'QtWebEngine*.so' -o -name 'libQt6WebEngine*.so*'); do
+                ldd "$f" | grep "not found" | sed "s|^|$(basename "$f"): |"; done ) || true
+            exit 1
+          fi
           # .deb: ставится, кладёт правило udev и команду sdr4noob, удаляется без следов
           sudo apt-get install -y -q ./release/sdr4noob_*.deb
           test -x /opt/sdr4noob/SDR4NOOB && test -f /usr/lib/udev/rules.d/60-sdr4noob.rules
