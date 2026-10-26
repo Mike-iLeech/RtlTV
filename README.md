@@ -67,6 +67,28 @@ Airspy R2/Mini, сетевой rtl_tcp). Python не нужен.
 
 Подробно, с картинками и ответами на вопросы — [«Установка и обновление»](https://mike-ileech.github.io/SDR4NOOB/install.html).
 
+### Linux
+
+Готовые сборки для **x86_64** (Ubuntu 22.04+, Debian 12+, Fedora 36+ и другие с glibc 2.34+) и **aarch64**
+(Raspberry Pi 5 и др., glibc 2.39+: Ubuntu 24.04+, Debian 13+) — на странице
+[последнего выпуска](https://github.com/Mike-iLeech/SDR4NOOB/releases/latest):
+
+- **AppImage** `SDR4NOOB-<версия>-x86_64.AppImage` (или `-aarch64`) — один файл, без установки:
+  `chmod +x SDR4NOOB-*.AppImage && ./SDR4NOOB-*.AppImage`. Обновляется сам (заменяет этот файл).
+- **Пакет .deb** `sdr4noob_<версия>_amd64.deb` (или `_arm64`) для Ubuntu/Debian:
+  `sudo apt install ./sdr4noob_*.deb` — появится в меню приложений и как команда `sdr4noob`. Пакет сразу ставит
+  правило udev и запрет драйвера ТВ-тюнера ядра (см. ниже). Новые версии ставятся так же, поверх.
+
+**Доступ к приёмнику.** В Linux любой USB радиоприёмник (SDR) по умолчанию доступен только root, а приёмники на
+RTL2832U ядро считает ТВ-тюнером (модуль `dvb_usb_rtl28xxu`) и занимает. Один раз нажмите **«Режим → Устройства…
+→ Настроить доступ…»** (спросит пароль администратора): SDR4NOOB поставит `/etc/udev/rules.d/60-sdr4noob.rules`
+и `/etc/modprobe.d/blacklist-sdr4noob.conf`. Затем переподключите приёмник. Окно «Устройства…» показывает,
+есть ли доступ и чей драйвер держит приёмник. HackRF и Airspy работают через системные библиотеки
+(`sudo apt install libhackrf0 libairspy0`).
+
+Настройки — в `~/.config/SDR4NOOB`, служебные файлы (кэш карт, орбиты, журнал) — в `~/.local/share/SDR4NOOB`,
+папка данных по умолчанию — `~/Документы/SDR4NOOB` (папка «Документы» из `xdg-user-dir DOCUMENTS`).
+
 ### Драйвер WinUSB (Zadig)
 
 Librtlsdr (сборка [rtl-sdr-blog](https://github.com/rtlsdrblog/rtl-sdr-blog) с поддержкой V4) уже встроен
@@ -169,6 +191,8 @@ SDR4NOOB проверяет новую версию на GitHub Releases (по �
 никогда), вручную — «Справка → Проверить обновления…». «Обновить сейчас» скачивает
 `SDR4NOOB-<версия>-win64.zip`, сверяет SHA-256, после выхода программы заменяет файлы (прежняя версия
 восстанавливается при ошибке) и перезапускает SDR4NOOB. Настройки и данные не затрагиваются.
+В Linux AppImage обновляется так же — скачивается новый файл `SDR4NOOB-<версия>-<arch>.AppImage` (SHA-256)
+и заменяет прежний; пакет .deb программа только сообщает о новой версии со ссылкой на выпуск.
 
 ## Сборка из исходников
 
@@ -195,6 +219,19 @@ build.bat
 
 Готовые DLL лежат в `rtltv\driver\` (librtlsdr, mbelib, lrpt_dsp). Пересобрать свои: `tools\build_mbelib.bat`
 (исходники mbelib), `tools\build_lrpt_dsp.bat` (MSVC x64, исходник `tools\lrpt_dsp.c`).
+
+**Linux** (Python 3.12; Ubuntu/Debian):
+
+```bash
+sudo apt install build-essential cmake pkg-config git patchelf libusb-1.0-0-dev libasound2-dev
+bash tools/build_linux_libs.sh          # librtlsdr, libusb, mbelib, lrpt_dsp, PortAudio → rtltv/driver/*.so
+python3.12 -m pip install -r requirements-dev.txt
+python3.12 -m rtltv --test
+APPIMAGETOOL=/путь/к/appimagetool bash tools/build_linux.sh   # → release/*.AppImage и *.deb
+```
+
+Без `tools/build_linux_libs.sh` из исходников берётся системный librtlsdr (пакет `librtlsdr0`), если он есть.
+Сборка в CI — job `build-linux` в `.github/workflows/release.yml` (x86_64 и aarch64).
 
 Сайт (GitHub Pages из `docs/`) собирается из встроенного руководства:
 

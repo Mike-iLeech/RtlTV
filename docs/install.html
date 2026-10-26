@@ -140,6 +140,40 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 папки (программа должна быть закрыта).</li>
 </ul>
 
+<h2 id="linux">Linux<a class="anchor" href="#linux" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Для Linux есть готовые сборки: <b>x86_64</b> (Ubuntu 22.04 и новее, Debian 12+, Fedora 36+ — нужна glibc 2.34+)
+и <b>aarch64</b> (Raspberry Pi 5 и другие; glibc 2.39+: Ubuntu 24.04+, Debian 13+). Скачайте со
+<a href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">страницы последнего выпуска</a> один из вариантов:</p>
+<ul>
+<li><b>AppImage</b> <code>SDR4NOOB-&lt;версия&gt;-x86_64.AppImage</code> (или <code>-aarch64</code>) — один файл без
+установки. Сделайте его исполняемым (в свойствах файла или <code>chmod +x SDR4NOOB-*.AppImage</code>) и запустите.
+Автообновление заменяет этот файл новой версией.</li>
+<li><b>Пакет .deb</b> <code>sdr4noob_&lt;версия&gt;_amd64.deb</code> (или <code>_arm64</code>) для Ubuntu и Debian:
+<code>sudo apt install ./sdr4noob_*.deb</code>. Программа появится в меню приложений и как команда
+<code>sdr4noob</code>; новые версии ставятся так же, поверх прежней. Удаление — <code>sudo apt remove sdr4noob</code>.</li>
+</ul>
+<h3 id="linux-access">Доступ к приёмнику</h3>
+<p>В Linux любой USB радиоприёмник (SDR) по умолчанию доступен только администратору, а приёмники на RTL2832U ядро
+считает ТВ-тюнером и занимает своим драйвером <code>dvb_usb_rtl28xxu</code>. Это настраивается один раз:</p>
+<ol>
+<li>Откройте <b>«Режим → Устройства…»</b> и нажмите <b>«Настроить доступ…»</b>. Система спросит пароль
+администратора.</li>
+<li>SDR4NOOB поставит правило udev <code>/etc/udev/rules.d/60-sdr4noob.rules</code> (доступ для вошедшего
+пользователя) и запрет драйвера ТВ-тюнера <code>/etc/modprobe.d/blacklist-sdr4noob.conf</code>.</li>
+<li>Выдерните приёмник из USB и вставьте снова. В окне «Устройства…» в столбце «Состояние» должно быть
+«доступ есть».</li>
+</ol>
+<p>Пакет .deb ставит эти файлы сам. Если кнопка недоступна (нет pkexec), SDR4NOOB покажет те же команды для
+терминала. HackRF и Airspy работают через системные библиотеки: <code>sudo apt install libhackrf0 libairspy0</code>.
+Звук — через ALSA (PulseAudio и PipeWire тоже); если звука нет, проверьте устройство вывода в меню «Звук».</p>
+<div class="tw"><table class="t">
+<tr><th style="width:38%">Папка в Linux</th><th>Что в ней</th></tr>
+<tr><td><code>~/Документы/SDR4NOOB</code></td><td>Папка данных по умолчанию (папка «Документы» берётся из
+<code>xdg-user-dir DOCUMENTS</code>).</td></tr>
+<tr><td><code>~/.config/SDR4NOOB</code></td><td>Настройки (*.json).</td></tr>
+<tr><td><code>~/.local/share/SDR4NOOB</code></td><td>Кэш карт, орбиты, история самолётов, драйверы, журнал.</td></tr>
+</table></div>
+
 <h2 id="uninstall">Удаление<a class="anchor" href="#uninstall" aria-label="Ссылка на этот раздел">#</a></h2>
 <p>Если ставили установщиком — «Параметры → Приложения → SDR4NOOB → Удалить»; ваши записи и настройки при этом остаются. Переносную версию: закройте SDR4NOOB и удалите папку программы. Чтобы не осталось следов, удалите также <code>%APPDATA%\SDR4NOOB</code>
 и <code>%LOCALAPPDATA%\SDR4NOOB</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно

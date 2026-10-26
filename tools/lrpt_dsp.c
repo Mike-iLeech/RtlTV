@@ -8,13 +8,15 @@
  *   * Рида — Соломона (255,223) CCSDS: GF(2^8) по 0x187, fcr=112, prim=11, 32 проверочных символа,
  *     опционально — дуальный базис.
  *
- * Сборка: tools\build_lrpt_dsp.bat (cl /O2 /LD) -> rtltv\driver\lrpt_dsp.dll
+ * Сборка: tools\build_lrpt_dsp.bat (cl /O2 /LD) -> rtltv\driver\lrpt_dsp.dll;
+ *         Linux и macOS: tools/build_linux_libs.sh (gcc -O2 -shared) -> rtltv/driver/liblrpt_dsp.so
  *
  * Библиотека не зависит от CRT и Windows SDK (/NODEFAULTLIB /NOENTRY): память под состояние и
  * буферы выделяет вызывающая сторона (Python/numpy), математика — свои функции ниже.
  */
 #include <stdint.h>
 
+#ifdef _MSC_VER   /* Windows: без CRT — свои memset/memcpy, sqrtf встроенная */
 int _fltused = 0;
 
 #pragma function(memset, memcpy)
@@ -54,6 +56,10 @@ static void *memmove_(void *d, const void *s, size_t n)
 
 float sqrtf(float);
 #pragma intrinsic(sqrtf)
+#else             /* gcc/clang (Linux, macOS): libc и libm */
+#include <math.h>
+#include <string.h>
+#endif
 
 static inline double fabs_(double x) { return x < 0 ? -x : x; }
 static inline float fabsf_(float x) { return x < 0 ? -x : x; }

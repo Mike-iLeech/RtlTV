@@ -222,6 +222,7 @@ def test_parse_hostport():
 # ======================================================================
 #  USB
 # ======================================================================
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows: SetupAPI/PE/DLL")
 def test_usb_this_machine_rtl_v4_winusb():
     found = devices.usb_devices()
     rtl = [d for d in found if (d["vid"], d["pid"]) == (0x0BDA, 0x2838)]
@@ -231,6 +232,7 @@ def test_usb_this_machine_rtl_v4_winusb():
     assert rtl[0]["kind"] == "rtl"
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows: SetupAPI/PE/DLL")
 def test_usb_grouping_and_hints():
     raw = [
         (r"USB\VID_0BDA&PID_2838\00000001", r"USB\ROOT_HUB30\4&1", "usbccgp", "Составное USB устройство"),
@@ -253,6 +255,7 @@ def test_usb_grouping_and_hints():
 # ======================================================================
 #  Загрузка драйверов (DLL)
 # ======================================================================
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows: SetupAPI/PE/DLL")
 def test_import_rtl_dll_and_load_by_path(tmp_path):
     src_dir = tmp_path / "user"
     src_dir.mkdir()
@@ -280,6 +283,7 @@ def test_import_rtl_dll_and_load_by_path(tmp_path):
     assert rtlsdr.active_dll_path() == BUILTIN
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows: SetupAPI/PE/DLL")
 def test_reject_32bit_and_foreign_dll(tmp_path):
     p32 = tmp_path / "librtlsdr32.dll"
     data = bytearray(open(BUILTIN, "rb").read())
@@ -303,7 +307,8 @@ def test_reject_32bit_and_foreign_dll(tmp_path):
 
 
 def test_missing_backend_messages():
-    for sid, name in (("hackrf:0", "hackrf.dll"), ("airspy:0", "airspy.dll")):
+    for sid, name in (("hackrf:0", devices.PREFERRED_NAMES["hackrf"][0]),
+                      ("airspy:0", devices.PREFERRED_NAMES["airspy"][0])):
         col = Collector()
         src = devices.make_source(sid, col, 2400000, 100e6)
         src.start()
@@ -561,7 +566,8 @@ def test_airspy_stub_stream_resampled(stubs):
 # ======================================================================
 def test_devices_dialog_offscreen(rtltcp_server, monkeypatch):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    os.environ.setdefault("QT_QPA_FONTDIR", "C:/Windows/Fonts")
+    if os.name == "nt":
+        os.environ.setdefault("QT_QPA_FONTDIR", "C:/Windows/Fonts")
     from PySide6.QtWidgets import QApplication, QComboBox
     from rtltv.devices_dialog import DevicesDialog
     app = QApplication.instance() or QApplication([])

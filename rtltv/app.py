@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QFormLayout,
                                QMessageBox, QProgressBar, QPushButton, QRadioButton,
                                QScrollArea, QSlider, QSpinBox, QSplitter, QStackedWidget, QVBoxLayout, QWidget)
 
-from . import devices
+from . import devices, osplat
 from .engine import Engine
 from .modebase import ModeWindow
 from .standards import PLANS, STANDARDS, channels
@@ -457,7 +457,7 @@ class MainWindow(ModeWindow):
         self._gain_changed()
         self.dev_info = f"{info['label']} · тюнер {info['tuner']}"
         drv = ("Эмуляция эфира: ДМВ 35 (аналог) и ДМВ 30 (DVB-T2)" if info["label"].startswith("Тест")
-               else "Драйвер: " + info.get("driver", "встроенный librtlsdr (rtl-sdr-blog), WinUSB"))
+               else "Драйвер: " + info.get("driver", osplat.builtin_driver_label()))
         if info.get("note"):
             drv += "; " + info["note"]
         self.dev_label.setText(f"{self.dev_info}\n{drv}")

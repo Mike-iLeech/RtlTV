@@ -52,7 +52,8 @@ def lib():
         return _lib
     path = _dll_path()
     if not os.path.exists(path):
-        raise RuntimeError(f"Не найдена библиотека декодера: {path} (соберите tools\\build_lrpt_dsp.bat)")
+        raise RuntimeError(f"Не найдена библиотека декодера: {path} (соберите "
+                           + ("tools\\build_lrpt_dsp.bat)" if osplat.IS_WIN else "tools/build_linux_libs.sh)"))
     L = C.CDLL(path)
     vp, i32, f64 = C.c_void_p, C.c_int, C.c_double
     L.demod_size.argtypes, L.demod_size.restype = [], i32

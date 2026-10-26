@@ -17,6 +17,21 @@ SDR4NOOB распространяется под лицензией **GPL-3.0-or
 | **mbelib** (`mbelib.dll`) | ISC (`rtltv/driver/mbelib-LICENSE.txt`) | https://github.com/szechyjs/mbelib | Вокодер IMBE/AMBE для голоса DMR. Собирается `tools/build_mbelib.bat`. См. оговорку о патентах ниже. |
 | **lrpt_dsp** (`lrpt_dsp.dll`) | GPL-3.0-or-later (часть SDR4NOOB) | `tools/lrpt_dsp.c` | Свой код: демодулятор QPSK/OQPSK, Витерби, Рид — Соломон для «Метеор-М» LRPT. Собирается `tools/build_lrpt_dsp.bat`. |
 
+### Сборки для Linux
+
+В AppImage и пакете .deb вместо DLL — библиотеки `.so`, собранные `tools/build_linux_libs.sh` в CI из исходников:
+
+| Компонент | Лицензия | Исходники |
+|---|---|---|
+| **librtlsdr** (`librtlsdr.so`), rtl-sdr-blog v1.3.6 | GPL-2.0-or-later | https://github.com/rtlsdrblog/rtl-sdr-blog/tree/v1.3.6 |
+| **libusb** (`libusb-1.0.so.0`) — из пакета `libusb-1.0-0` Ubuntu сборочной машины, без изменений | LGPL-2.1-or-later | https://github.com/libusb/libusb , исходный пакет Ubuntu `libusb-1.0` |
+| **mbelib** (`libmbelib.so`), v1.3.0 | ISC | https://github.com/szechyjs/mbelib/tree/v1.3.0 |
+| **lrpt_dsp** (`liblrpt_dsp.so`) | GPL-3.0-or-later | `tools/lrpt_dsp.c` |
+| **PortAudio** (`libportaudio.so.2`), v19.7.0, только ALSA; используется, если в системе нет своей | MIT | https://github.com/PortAudio/portaudio/tree/v19.7.0 |
+
+Библиотеки Qt и прочие зависимости PySide6 в сборке для Linux — из колёс PyPI (как и в Windows) и подключаются
+динамически: их можно заменить своей сборкой.
+
 ### Оговорка о патентах AMBE
 
 Алгоритмы вокодеров AMBE/AMBE+2, которые реализует mbelib, в некоторых странах могут быть защищены

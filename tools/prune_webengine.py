@@ -5,7 +5,8 @@ Controls, Graphs…) и отладочные ресурсы Chromium — это 
   * языки Chromium (qtwebengine_locales\\*.pak) — оставить ru и en-US (без своего языка берётся en-US);
   * *.debug.pak и qtwebengine_devtools_resources.pak — отладка и инструменты разработчика;
   * PySide6\\qml и plugins\\qmltooling — QML не используется;
-  * Qt6*.dll, которые после этого не импортирует ни один оставшийся модуль (импорты из PE-заголовков, по кругу).
+  * Qt6*.dll, которые после этого не импортирует ни один оставшийся модуль (импорты из PE-заголовков, по кругу);
+    в Linux так же — libQt6*.so.6 по записям NEEDED заголовков ELF (readelf из binutils).
 Проверка результата — SDR4NOOB.exe --selftest-guide (схема грузится) и обычный запуск.
 
     py -3.12 tools/prune_webengine.py [dist\\SDR4NOOB]
@@ -16,7 +17,8 @@ import sys
 
 KEEP_LOCALES = {"ru.pak", "en-US.pak"}
 DROP_FILES = ("qtwebengine_devtools_resources.pak",)
-DROP_DIRS = (("PySide6", "qml"), ("PySide6", "plugins", "qmltooling"))
+DROP_DIRS = (("PySide6", "qml"), ("PySide6", "plugins", "qmltooling"),
+             ("PySide6", "Qt", "qml"), ("PySide6", "Qt", "plugins", "qmltooling"))   # раскладка Linux
 PE_EXT = (".exe", ".dll", ".pyd")
 
 
@@ -41,6 +43,49 @@ def _imports(path):
             out.add(entry.dll.decode("ascii", "replace").lower())
     pe.close()
     return out
+
+
+def _is_elf(path):
+    try:
+        with open(path, "rb") as f:
+            return f.read(4) == b"\x7fELF"
+    except OSError:
+        return False
+
+
+def _elf_needed(path):
+    """Имена из NEEDED (readelf -d) — библиотеки, которые ELF-файл подгружает при загрузке."""
+    import subprocess
+    try:
+        out = subprocess.run(["readelf", "-d", path], capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return {line.split("[", 1)[1].split("]", 1)[0] for line in out.splitlines() if "(NEEDED)" in line and "[" in line}
+
+
+def _prune_elf(base, drop, log):
+    """Linux: libQt6*.so*, которые не нужны ни одному оставшемуся ELF (по кругу). Возвращает имена убранных."""
+    elfs = [os.path.join(dp, f) for dp, _dn, fn in os.walk(base) for f in fn
+            if not os.path.islink(os.path.join(dp, f)) and _is_elf(os.path.join(dp, f))]
+    needed = {}
+    for p in elfs:
+        n = _elf_needed(p)
+        if n is None:
+            log("readelf не найден — лишние библиотеки Qt не убираются")
+            return []
+        needed[p] = n
+    removed = []
+    while True:
+        used = set().union(*needed.values()) if needed else set()
+        extra = [p for p in needed if os.path.basename(p).startswith("libQt6") and ".so" in os.path.basename(p)
+                 and os.path.basename(p) not in used]
+        if not extra:
+            break
+        for p in extra:
+            drop(p)
+            needed.pop(p)
+            removed.append(os.path.basename(p))
+    return removed
 
 
 def prune(dist, log=print):
@@ -81,7 +126,9 @@ def prune(dist, log=print):
             drop(p)
             imports.pop(p)
             removed.append(os.path.basename(p))
-    log(f"Qt WebEngine: убрано лишних DLL Qt {len(removed)}, освобождено {freed / 1e6:.0f} МБ")
+    if sys.platform.startswith("linux"):
+        removed += _prune_elf(base, drop, log)
+    log(f"Qt WebEngine: убрано лишних библиотек Qt {len(removed)}, освобождено {freed / 1e6:.0f} МБ")
     return freed
 
 

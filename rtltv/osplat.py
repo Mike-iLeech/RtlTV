@@ -224,6 +224,37 @@ def driver_dep_hint():
     return "нужна библиотека libusb (пакет libusb-1.0-0)"
 
 
+def usb_busy_hint():
+    """Почему приёмник мог не открыться — окончание сообщения об ошибке."""
+    if IS_WIN:
+        return "Устройство занято другой программой или не привязан WinUSB."
+    if IS_MAC:
+        return "Устройство занято другой программой."
+    return ("Устройство занято другой программой, нет прав доступа к USB или его держит драйвер ТВ-тюнера ядра — "
+            "«Режим → Устройства…» → «Настроить доступ…».")
+
+
+def builtin_driver_label():
+    """Как назвать встроенный драйвер RTL-SDR в строке состояния."""
+    return "встроенный librtlsdr (rtl-sdr-blog)" + (", WinUSB" if IS_WIN else "")
+
+
+def use_bundled_portaudio():
+    """Linux: если в системе нет libportaudio2, звук (sounddevice) берёт встроенную rtltv/driver/libportaudio.so.2.
+    Вызывать до первого import sounddevice — он ищет библиотеку через ctypes.util.find_library("portaudio")."""
+    if not IS_LINUX:
+        return None
+    p = os.path.join(driver_dir(), "libportaudio.so.2")
+    if not os.path.isfile(p) or ctypes.util.find_library("portaudio"):
+        return None
+    orig = ctypes.util.find_library
+
+    def find_library(name):
+        return p if name == "portaudio" else orig(name)
+    ctypes.util.find_library = find_library
+    return p
+
+
 # ---------------------------------------------------------------- прочее
 
 def open_path(path):

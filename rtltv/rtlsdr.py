@@ -124,8 +124,7 @@ class RtlSdr:
         self.dev = C.c_void_p()
         r = self.L.rtlsdr_open(C.byref(self.dev), index)
         if r != 0:
-            raise RtlSdrError(f"Не удалось открыть RTL-SDR #{index} (код {r}). "
-                              "Устройство занято другой программой или не привязан WinUSB.")
+            raise RtlSdrError(f"Не удалось открыть RTL-SDR #{index} (код {r}). " + osplat.usb_busy_hint())
         self.index = index
         self.label = device_label(index, lib_path)
         self.tuner = TUNER_NAMES.get(self.L.rtlsdr_get_tuner_type(self.dev), "?")

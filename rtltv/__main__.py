@@ -47,12 +47,21 @@ def main():
     a = ap.parse_args()
     from . import diag
     diag.setup()
+    from . import osplat
+    osplat.use_bundled_portaudio()   # Linux без libportaudio2 — встроенная (до первого import sounddevice)
     from . import updater
     updater.cleanup_legacy_exe()   # RtlTV.exe от 3.0 и ярлыки на него — после обновления с 3.0
+    if osplat.IS_LINUX:
+        # справка открывает только свои локальные страницы (guide_window.web_nav), а песочница Chromium в AppImage
+        # не запускается без setuid chrome-sandbox / непривилегированных пространств имён (Ubuntu 24.04)
+        import os
+        os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
     from PySide6.QtCore import QCoreApplication, Qt
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # до QApplication — нужно QtWebEngine (схема в справке)
     app = QApplication(sys.argv)
     app.setApplicationName("SDR4NOOB")
+    if osplat.IS_LINUX:
+        app.setDesktopFileName("sdr4noob")   # значок окна в Wayland — из sdr4noob.desktop
     from .branding import app_icon
     app.setWindowIcon(app_icon())   # иконка всех окон и панели задач
     if a.selftest_guide:            # встроенный браузер справки собран и оживает (код выхода 0)

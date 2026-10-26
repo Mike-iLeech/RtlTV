@@ -9,3 +9,6 @@ prof.out
 *.wav
 .pytest_cache/
 release/
+rtltv/driver/*.so
+rtltv/driver/*.so.*
+*.AppImage

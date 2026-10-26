@@ -333,8 +333,9 @@ def test_test_air_iss():
 @pytest.fixture(scope="module")
 def qapp():
     os.environ["QT_QPA_PLATFORM"] = "offscreen"          # окна не всплывают на экране
-    windir = os.environ.get("WINDIR", r"C:\Windows")
-    os.environ.setdefault("QT_QPA_FONTDIR", os.path.join(windir, "Fonts"))  # без этого у offscreen нет шрифтов
+    if os.name == "nt":
+        windir = os.environ.get("WINDIR", r"C:\Windows")
+        os.environ.setdefault("QT_QPA_FONTDIR", os.path.join(windir, "Fonts"))  # без этого у offscreen нет шрифтов
     from PySide6.QtGui import QFont
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
