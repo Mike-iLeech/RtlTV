@@ -32,6 +32,7 @@ $PY -m PyInstaller --noconfirm --clean --windowed --name SDR4NOOB \
   --collect-submodules rtltv \
   --add-data "build/linux-driver:rtltv/driver" \
   --add-data "rtltv/guide:rtltv/guide" \
+  --add-data "rtltv/locale:rtltv/locale" \
   --add-data "rtltv/assets:rtltv/assets" \
   --hidden-import PySide6.QtSvg \
   --hidden-import PySide6.QtWebEngineWidgets \

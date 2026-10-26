@@ -54,18 +54,23 @@ def main():
         c, _rest = cp.parse_known_args()
         sys.exit(configure(c.data_dir, c.updates))
     from PySide6.QtWidgets import QApplication
+    from .i18n import tr
     from .launcher import MODES, Launcher
-    ap = argparse.ArgumentParser(prog="SDR4NOOB", description="SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на любом USB радиоприёмнике (SDR)")
-    ap.add_argument("--mode", choices=[m[0] for m in MODES], help="сразу открыть режим, минуя выбор")
-    ap.add_argument("--test", action="store_true", help="тестовый эфир вместо приёмника")
-    ap.add_argument("--digital", action="store_true", help="ТВ: запуск в цифровом режиме")
-    ap.add_argument("--shot", help="сохранить снимок окна через --shot-delay секунд и выйти")
+    ap = argparse.ArgumentParser(prog="SDR4NOOB", description=tr(
+        "SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на любом USB радиоприёмнике (SDR)"))
+    ap.add_argument("--mode", choices=[m[0] for m in MODES], help=tr("сразу открыть режим, минуя выбор"))
+    ap.add_argument("--test", action="store_true", help=tr("тестовый эфир вместо приёмника"))
+    ap.add_argument("--digital", action="store_true", help=tr("ТВ: запуск в цифровом режиме"))
+    ap.add_argument("--shot", help=tr("сохранить снимок окна через --shot-delay секунд и выйти"))
     ap.add_argument("--shot-delay", type=float, default=8.0)
-    ap.add_argument("--freq", type=float, help="ТВ: частота, МГц")
-    ap.add_argument("--auto", action="store_true", help="Спутники: сразу включить автоприём по расписанию")
+    ap.add_argument("--freq", type=float, help=tr("ТВ: частота, МГц"))
+    ap.add_argument("--auto", action="store_true", help=tr("Спутники: сразу включить автоприём по расписанию"))
+    ap.add_argument("--lang", choices=["ru", "en"], help=tr("язык интерфейса на этот запуск (ru, en)"))
     ap.add_argument("--selftest-guide", action="store_true", help=argparse.SUPPRESS)  # проверка сборки в CI
     a = ap.parse_args()
-    from . import diag
+    from . import diag, i18n
+    if a.lang:
+        i18n.set_language(a.lang)
     diag.setup()
     from . import osplat
     osplat.use_bundled_portaudio()   # Linux без libportaudio2 — встроенная (до первого import sounddevice)
@@ -80,6 +85,7 @@ def main():
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # до QApplication — нужно QtWebEngine (схема в справке)
     app = QApplication(sys.argv)
     app.setApplicationName("SDR4NOOB")
+    i18n.install_qt_translator(app)   # стандартные кнопки Qt (Да/Нет, Отмена) на языке интерфейса
     if osplat.IS_LINUX:
         app.setDesktopFileName("sdr4noob")   # значок окна в Wayland — из sdr4noob.desktop
         _route_urls_linux(app)
@@ -99,16 +105,17 @@ def main():
         opts["mode"] = "digital"
     if a.auto:
         opts["auto"] = True
+    from .themes import DEFAULT_THEME
     launcher = Launcher(opts)
     if a.mode or a.digital or a.freq:
         key = a.mode or "tv"
         entry = next(m for m in MODES if m[0] == key)
         cls = getattr(importlib.import_module(entry[1]), entry[2])
         o = dict(opts)
-        o["theme"] = launcher.app_s.get("theme", "Тёмная")
+        o["theme"] = launcher.app_s.get("theme", DEFAULT_THEME)
         w = cls(o)
         w.switchRequested.connect(launcher._back)
-        launcher.current = w
+        launcher.current, launcher.current_key = w, key
         if a.freq and hasattr(w, "_set_freq"):
             w._set_freq(a.freq * 1e6)
         w.show()

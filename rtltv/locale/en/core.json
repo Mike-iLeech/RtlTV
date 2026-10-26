@@ -1,0 +1,26 @@
+{
+ "Всё в одном для начинающего радиолюбителя": "All-in-one for beginner radio amateurs",
+ "SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на любом USB радиоприёмнике (SDR)": "SDR4NOOB — all-in-one for beginner radio amateurs: TV, radio, SSTV, satellites, ADS-B, APRS on any USB SDR receiver",
+ "сразу открыть режим, минуя выбор": "open a mode right away, skipping the mode picker",
+ "тестовый эфир вместо приёмника": "test signal instead of the receiver",
+ "ТВ: запуск в цифровом режиме": "TV: start in digital mode",
+ "сохранить снимок окна через --shot-delay секунд и выйти": "save a window screenshot after --shot-delay seconds and exit",
+ "ТВ: частота, МГц": "TV: frequency, MHz",
+ "Спутники: сразу включить автоприём по расписанию": "Satellites: turn on scheduled auto-reception right away",
+ "язык интерфейса на этот запуск (ru, en)": "interface language for this run (ru, en)",
+
+ "Тёмная": "Dark",
+ "Светлая": "Light",
+ "Ночная (красная)": "Night (red)",
+ "Матрица": "Matrix",
+ "Ретро (янтарь)": "Retro (amber)",
+ "Ч/Б": "B/W",
+ "Тёплый кинескоп": "Warm CRT",
+ "Холодный кинескоп": "Cold CRT",
+ "Янтарный монитор": "Amber monitor",
+ "Зелёный люминофор": "Green phosphor",
+ "Сепия": "Sepia",
+ "Тепловизор": "Thermal",
+ "Радуга": "Rainbow",
+ "Негатив": "Negative"
+}
