@@ -36,6 +36,7 @@ done
   --add-data "rtltv/driver/*.txt:rtltv/driver" \
   --add-data "rtltv/guide:rtltv/guide" \
   --add-data "rtltv/assets:rtltv/assets" \
+  --add-data "rtltv/locale:rtltv/locale" \
   --icon "rtltv/assets/sdr4noob.icns" \
   --hidden-import PySide6.QtSvg \
   --hidden-import PySide6.QtWebEngineWidgets \
