@@ -12,44 +12,21 @@
 %LOCALAPPDATA%\\RtlTV, а прежняя папка данных «Документы\\RtlTV» продолжает использоваться (migrate()).
 Пути читаются при загрузке модулей, поэтому смена папки вступает в силу после перезапуска.
 """
-import ctypes
 import os
 import shutil
 
-from . import settings
+from . import osplat, settings
 
 APP = "SDR4NOOB"
 OLD_APP = "RtlTV"     # прежнее название программы (до 3.0)
 
 
-def _known_folder(guid_str, fallback):
-    """Путь известной папки Windows (учитывает перенос «Документов» в OneDrive и т.п.)."""
-    try:
-        from ctypes import wintypes
-
-        class GUID(ctypes.Structure):
-            _fields_ = [("Data1", wintypes.DWORD), ("Data2", wintypes.WORD), ("Data3", wintypes.WORD),
-                        ("Data4", ctypes.c_ubyte * 8)]
-        h = guid_str.strip("{}").split("-")
-        g = GUID(int(h[0], 16), int(h[1], 16), int(h[2], 16),
-                 (ctypes.c_ubyte * 8)(*bytes.fromhex(h[3] + h[4])))
-        p = ctypes.c_wchar_p()
-        if ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(g), 0, None, ctypes.byref(p)) == 0:
-            path = p.value
-            ctypes.windll.ole32.CoTaskMemFree(p)
-            if path:
-                return path
-    except Exception:  # noqa: BLE001
-        pass
-    return fallback
-
-
-HOME = os.path.expanduser("~")
-DOCUMENTS = _known_folder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}", os.path.join(HOME, "Documents"))
-PICTURES = _known_folder("{33E28130-4E1E-4676-835A-98395C3BC3BB}", os.path.join(HOME, "Pictures"))
-MUSIC = _known_folder("{4BD8D571-6D19-48D3-BE97-422220080E43}", os.path.join(HOME, "Music"))
-LOCAL = os.path.join(os.environ.get("LOCALAPPDATA") or HOME, APP)
-OLD_LOCAL = os.path.join(os.environ.get("LOCALAPPDATA") or HOME, OLD_APP)
+HOME = osplat.HOME
+DOCUMENTS = osplat.documents_dir()
+PICTURES = osplat.pictures_dir()
+MUSIC = osplat.music_dir()
+LOCAL = osplat.local_dir()
+OLD_LOCAL = os.path.join(osplat.local_base(), OLD_APP)
 
 DEFAULT_DATA = os.path.join(DOCUMENTS, APP)
 OLD_DEFAULT_DATA = os.path.join(DOCUMENTS, OLD_APP)

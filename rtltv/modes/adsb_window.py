@@ -21,7 +21,7 @@ from ..mapview import MapView, lonlat_to_px
 from ..modebase import ModeWindow
 from ..source import R828D_GAINS
 from ..widgets import LevelMeter
-from .. import paths
+from .. import osplat, paths
 
 HOME_DEFAULT = (55.7558, 37.6173)  # Москва, Красная площадь
 DEFAULTS = {
@@ -1762,7 +1762,7 @@ class AdsbWindow(ModeWindow):
     def _open_logs(self):
         os.makedirs(LOG_DIR, exist_ok=True)
         try:
-            os.startfile(LOG_DIR)  # noqa: S606 — только Windows, как и всё приложение
+            osplat.open_path(LOG_DIR)
         except (OSError, AttributeError):
             self.statusBar().showMessage(LOG_DIR, 10000)
 
