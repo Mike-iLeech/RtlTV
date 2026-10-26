@@ -131,7 +131,7 @@ data class AfskProfile(val band: Pair<Double, Double>?, val winBits: Double, val
 
 /** Принятый кадр: байты без FCS, время конца кадра (с), исправленных битов, сколько срезателей его приняли. */
 class AprsRxFrame(val data: ByteArray, var t: Double, var fixed: Int, var decoders: Int) {
-    override fun toString() = "AprsRxFrame(t=$t, fixed=$fixed, decoders=$decoders, ${data.size} байт)"
+    override fun toString() = "AprsRxFrame(t=$t, fixed=$fixed, decoders=$decoders, ${data.size} байт)"  // noqa: i18n — отладочный toString
 }
 
 /** Корреляторы метки/паузы одного профиля: звук → амплитуды тонов на сниженной частоте. */

@@ -4,6 +4,7 @@ import io.github.mikeileech.sdr4noob.dsp.DmrScanner
 import io.github.mikeileech.sdr4noob.dsp.Modulation
 import io.github.mikeileech.sdr4noob.dsp.RadioDemod
 import io.github.mikeileech.sdr4noob.dsp.SpectrumAnalyzer
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.sdr.SdrException
 import io.github.mikeileech.sdr4noob.sdr.SdrSource
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -89,7 +90,7 @@ class RadioEngine(
         current = this
         val t = Thread({
             if (!OWNER.tryAcquire(CLOSE_WAIT_MS, TimeUnit.MILLISECONDS)) {
-                if (running) listener?.onError("Приёмник ещё занят прежним окном радио — попробуйте через несколько секунд.")
+                if (running) listener?.onError(tr("Приёмник ещё занят прежним окном радио — попробуйте через несколько секунд."))
                 running = false
             } else {
                 try {
@@ -170,7 +171,7 @@ class RadioEngine(
         scanner = s
         post {
             if (scanner !== s) return@post               // успели остановить или запустить другой
-            if (s.fs != sampleRate) { scanner = null; listener?.onScanStopped("Поиск DMR не начат: сменилась полоса обзора"); return@post }
+            if (s.fs != sampleRate) { scanner = null; listener?.onScanStopped(tr("Поиск DMR не начат: сменилась полоса обзора")); return@post }
             scanWindow = 0; scanFill = 0; scanSkip = 0; lastScanLine = ""
             scanBufRe = FloatArray(s.nsamp); scanBufIm = FloatArray(s.nsamp)
             scan = s
@@ -231,13 +232,13 @@ class RadioEngine(
     private fun checkRec(ref: AtomicReference<WavWriter?>, what: String) {
         val w = ref.get() ?: return
         val why = w.failed ?: return
-        if (ref.compareAndSet(w, null)) { w.close(); listener?.onRecordStopped("Запись $what остановлена: $why") }
+        if (ref.compareAndSet(w, null)) { w.close(); listener?.onRecordStopped(tr("Запись {what} остановлена: {why}", "what" to what, "why" to why)) }
     }
 
     private fun stopIqOnRetune() {
         val w = iqRec.getAndSet(null) ?: return
         w.close()
-        listener?.onRecordStopped("Запись IQ остановлена: центр приёмника перестроен (в одном файле — одна частота)")
+        listener?.onRecordStopped(tr("Запись IQ остановлена: центр приёмника перестроен (в одном файле — одна частота)"))
     }
 
     private fun tuneNow(hz: Long) {
@@ -263,7 +264,7 @@ class RadioEngine(
         if (scan != null || scanner != null) {
             val was = scan != null
             scan = null; scanner = null
-            listener?.onScanStopped(if (was) "Поиск DMR остановлен: сменена полоса обзора" else "Поиск DMR не начат: сменилась полоса обзора")
+            listener?.onScanStopped(if (was) tr("Поиск DMR остановлен: сменена полоса обзора") else tr("Поиск DMR не начат: сменилась полоса обзора"))
         }
         sampleRate = rate
         source.setSampleRate(rate)
@@ -271,7 +272,7 @@ class RadioEngine(
             it.stereo = stereoWanted; it.squelchDb = squelch; it.setBandwidth(bandwidth); it.agc.on = agcOn
         }
         // в записи IQ одна частота дискретизации
-        iqRec.getAndSet(null)?.let { it.close(); listener?.onRecordStopped("Запись IQ остановлена: сменена полоса обзора") }
+        iqRec.getAndSet(null)?.let { it.close(); listener?.onRecordStopped(tr("Запись IQ остановлена: сменена полоса обзора")) }
         centerHz = vfoHz + offsetFor(rate)
         source.setFrequency(centerHz)
         demod.offsetHz = (vfoHz - centerHz).toDouble()
@@ -351,13 +352,13 @@ class RadioEngine(
                 audio.write(aud, frames)
                 audioTap?.invoke(aud, frames)
                 audioRec.get()?.write(aud, frames * 2)
-                checkRec(audioRec, "звука"); checkRec(iqRec, "IQ")
+                checkRec(audioRec, tr("звука")); checkRec(iqRec, "IQ")
                 dropped = source.droppedSamples
             }
         } catch (e: SdrException) {
-            listener?.onError(e.message ?: "Ошибка приёмника")
+            listener?.onError(e.message ?: tr("Ошибка приёмника"))
         } catch (e: Exception) {
-            listener?.onError("Сбой: ${e.javaClass.simpleName}: ${e.message}")
+            listener?.onError(tr("Сбой: {cls}: {msg}", "cls" to e.javaClass.simpleName, "msg" to e.message))
         } finally {
             running = false
             try { source.close() } catch (_: Exception) {}

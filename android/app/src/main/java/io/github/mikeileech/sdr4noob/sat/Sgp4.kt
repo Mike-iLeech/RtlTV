@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.sat
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -889,8 +890,8 @@ class Sgp4 private constructor() {
         fun twoline2rv(line1: String, line2: String): Sgp4 {
             val l1 = line1.trimEnd()
             val l2 = line2.trimEnd()
-            require(l1.length >= 61 && l1.startsWith("1 ")) { "строка 1 TLE: «$l1»" }
-            require(l2.length >= 63 && l2.startsWith("2 ")) { "строка 2 TLE: «$l2»" }
+            require(l1.length >= 61 && l1.startsWith("1 ")) { tr("строка 1 TLE: «{line}»", "line" to l1) }
+            require(l2.length >= 63 && l2.startsWith("2 ")) { tr("строка 2 TLE: «{line}»", "line" to l2) }
             val s = Sgp4()
             try {
                 s.satnum = field(l1, 2, 7)
@@ -899,7 +900,7 @@ class Sgp4 private constructor() {
                 s.ndot = num(field(l1, 33, 43))
                 s.nddot = implied(field(l1, 44, 50), field(l1, 50, 52))
                 s.bstar = implied(field(l1, 53, 59), field(l1, 59, 61))
-                require(field(l2, 2, 7) == s.satnum) { "номера спутника в строках TLE не совпадают" }
+                require(field(l2, 2, 7) == s.satnum) { tr("номера спутника в строках TLE не совпадают") }
                 s.inclo = field(l2, 8, 16).toDouble()
                 s.nodeo = field(l2, 17, 25).toDouble()
                 s.ecco = ("0." + l2.substring(26, minOf(33, l2.length)).replace(' ', '0')).toDouble()
@@ -923,9 +924,9 @@ class Sgp4 private constructor() {
                 s.jdSatEpoch = year * 365.0 + Math.floorDiv(year - 1, 4) + days + 1721044.5
                 s.jdSatEpochF = round(fraction * 1e8) / 1e8
             } catch (e: NumberFormatException) {
-                throw IllegalArgumentException("TLE не разобран: ${e.message}", e)
+                throw IllegalArgumentException(tr("TLE не разобран: {e}", "e" to e.message), e)
             } catch (e: StringIndexOutOfBoundsException) {
-                throw IllegalArgumentException("TLE слишком короткий", e)
+                throw IllegalArgumentException(tr("TLE слишком короткий"), e)
             }
             s.init(s.jdSatEpoch + s.jdSatEpochF - 2433281.5)
             return s

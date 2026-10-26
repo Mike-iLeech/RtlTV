@@ -19,6 +19,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import io.github.mikeileech.sdr4noob.BuildConfig
+import io.github.mikeileech.sdr4noob.i18n.I18n
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.sdr.Receivers
 import io.github.mikeileech.sdr4noob.sdr.RtlTcpSource
 import io.github.mikeileech.sdr4noob.sdr.SdrException
@@ -49,8 +51,7 @@ class MainActivity : Activity() {
                     val dev = usbExtra(intent)
                     val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                     if (dev != null && granted) { select(Receivers.usb(dev.deviceName)); openRadio() }
-                    else if (dev != null) toastDialog("Без разрешения Android не даст программе доступ к приёмнику. " +
-                        "Нажмите на приёмник ещё раз и разрешите доступ.")
+                    else if (dev != null) toastDialog(tr("Без разрешения Android не даст программе доступ к приёмнику. Нажмите на приёмник ещё раз и разрешите доступ."))
                 }
                 UsbManager.ACTION_USB_DEVICE_ATTACHED, UsbManager.ACTION_USB_DEVICE_DETACHED -> refreshDevices()
             }
@@ -96,48 +97,53 @@ class MainActivity : Activity() {
         val root = Ui.vbox(this, 16)
         root.setBackgroundColor(Ui.BG)
         root.addView(Ui.text(this, "SDR4NOOB", 28f, Ui.ACCENT, bold = true))
-        root.addView(Ui.text(this, "Всё в одном для начинающего радиолюбителя · версия ${BuildConfig.VERSION_NAME}", 13f, Ui.DIM))
-        root.addView(Ui.text(this, "Подключите любой USB радиоприёмник (SDR) через OTG-переходник. " +
-            "Для приёмников на RTL2832U (например, RTL-SDR Blog V4), HackRF и Airspy драйверы встроены — ничего ставить не нужно. " +
-            "Без приёмника можно попробовать тестовый сигнал.", 14f), Ui.lp(top = Ui.dp(this, 10)))
+        root.addView(Ui.text(this, tr("Всё в одном для начинающего радиолюбителя") + " · " +
+            tr("версия {version}", "version" to BuildConfig.VERSION_NAME), 13f, Ui.DIM))
+        root.addView(Ui.text(this, tr("Подключите любой USB радиоприёмник (SDR) через OTG-переходник.") + " " +
+            tr("Для приёмников на RTL2832U (например, RTL-SDR Blog V4), HackRF и Airspy драйверы встроены — ничего ставить не нужно.") + " " +
+            tr("Без приёмника можно попробовать тестовый сигнал."), 14f), Ui.lp(top = Ui.dp(this, 10)))
 
         updateBox = Ui.vbox(this, 0)
         root.addView(updateBox, Ui.lp(top = Ui.dp(this, 8)))
 
         val dev = Ui.card(this)
-        dev.addView(Ui.text(this, "Приёмник", 17f, bold = true))
+        dev.addView(Ui.text(this, tr("Приёмник"), 17f, bold = true))
         selectedText = Ui.text(this, "", 14f, Ui.ACCENT)
         dev.addView(selectedText, Ui.lp(top = Ui.dp(this, 4)))
         devicesBox = Ui.vbox(this, 0)
         dev.addView(devicesBox, Ui.lp(top = Ui.dp(this, 6)))
         val row = Ui.hbox(this)
-        row.addView(Ui.button(this, "Сетевой rtl_tcp…") { askTcp() }, Ui.lp(0, weight = 1f))
-        row.addView(Ui.button(this, "Тестовый сигнал") { select(Receivers.DEMO) }, Ui.lp(0, weight = 1f))
+        row.addView(Ui.button(this, tr("Сетевой rtl_tcp…")) { askTcp() }, Ui.lp(0, weight = 1f))
+        row.addView(Ui.button(this, tr("Тестовый сигнал")) { select(Receivers.DEMO) }, Ui.lp(0, weight = 1f))
         dev.addView(row)
-        dev.addView(Ui.button(this, "Файл IQ… (запись с ПК или телефона)") {
+        dev.addView(Ui.button(this, tr("Файл IQ… (запись с ПК или телефона)")) {
             startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), REQ_IQ_FILE)
         })
         root.addView(dev, Ui.lp(top = Ui.dp(this, 12)))
 
         val modes = Ui.card(this)
-        modes.addView(Ui.text(this, "Режимы", 17f, bold = true))
-        modes.addView(Ui.button(this, "📻  Радио и спектр: FM с RDS, NFM, AM, SSB, CW, DMR, водопад") { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
-        modes.addView(Ui.button(this, "🖼  SSTV — картинки с МКС и любителей (Robot, Martin, Scottie, PD)") { openRadio(RadioActivity.APP_SSTV) })
-        modes.addView(Ui.button(this, "✈  Самолёты ADS-B на карте (1090 МГц)") { openRadio(RadioActivity.APP_ADSB) })
-        modes.addView(Ui.button(this, "📍  APRS — метки любителей на карте (144,800 МГц)") { openRadio(RadioActivity.APP_APRS) })
-        modes.addView(Ui.button(this, "📺  Телевидение: измеритель DVB-T/T2, аналоговая картинка, поиск каналов") { openRadio(RadioActivity.APP_TV) })
-        modes.addView(Ui.button(this, "🛰  Спутники: пролёты, приём с доплером, «Метеор» LRPT") { openRadio(RadioActivity.APP_SAT) })
-        modes.addView(Ui.text(this, "Все режимы версии для Windows. Без приёмника каждый режим можно попробовать на тестовом сигнале.",
+        modes.addView(Ui.text(this, tr("Режимы"), 17f, bold = true))
+        modes.addView(Ui.button(this, tr("📻  Радио и спектр: FM с RDS, NFM, AM, SSB, CW, DMR, водопад")) { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
+        modes.addView(Ui.button(this, tr("🖼  SSTV — картинки с МКС и любителей (Robot, Martin, Scottie, PD)")) { openRadio(RadioActivity.APP_SSTV) })
+        modes.addView(Ui.button(this, tr("✈  Самолёты ADS-B на карте (1090 МГц)")) { openRadio(RadioActivity.APP_ADSB) })
+        modes.addView(Ui.button(this, tr("📍  APRS — метки любителей на карте (144,800 МГц)")) { openRadio(RadioActivity.APP_APRS) })
+        modes.addView(Ui.button(this, tr("📺  Телевидение: измеритель DVB-T/T2, аналоговая картинка, поиск каналов")) { openRadio(RadioActivity.APP_TV) })
+        modes.addView(Ui.button(this, tr("🛰  Спутники: пролёты, приём с доплером, «Метеор» LRPT")) { openRadio(RadioActivity.APP_SAT) })
+        modes.addView(Ui.text(this, tr("Все режимы версии для Windows. Без приёмника каждый режим можно попробовать на тестовом сигнале."),
             12f, Ui.DIM), Ui.lp(top = Ui.dp(this, 4)))
         root.addView(modes, Ui.lp(top = Ui.dp(this, 12)))
 
         val more = Ui.hbox(this)
-        more.addView(Ui.button(this, "Справка для начинающих") { startActivity(Intent(this, GuideActivity::class.java)) },
+        more.addView(Ui.button(this, tr("Справка для начинающих")) { startActivity(Intent(this, GuideActivity::class.java)) },
             Ui.lp(0, weight = 1f))
-        more.addView(Ui.button(this, "Об Android-версии") {
+        more.addView(Ui.button(this, tr("Об Android-версии")) {
             startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE, "android/index.html"))
         }, Ui.lp(0, weight = 1f))
         root.addView(more, Ui.lp(top = Ui.dp(this, 12)))
+
+        // язык интерфейса: как в системе / русский / English — смена пересоздаёт экран
+        root.addView(Ui.button(this, tr("Язык: {lang}", "lang" to languageName(I18n.configured(this)))) { askLanguage() },
+            Ui.lp(top = Ui.dp(this, 8)))
 
         val scroll = ScrollView(this)
         scroll.setBackgroundColor(Ui.BG)
@@ -149,24 +155,22 @@ class MainActivity : Activity() {
         devicesBox.removeAllViews()
         val list = UsbReceivers.attached(this)
         if (list.isEmpty()) {
-            devicesBox.addView(Ui.text(this, "USB-приёмников не найдено. Подключите приёмник через OTG-переходник " +
-                "(на некоторых телефонах OTG нужно включить в настройках).", 13f, Ui.DIM))
+            devicesBox.addView(Ui.text(this, tr("USB-приёмников не найдено. Подключите приёмник через OTG-переходник (на некоторых телефонах OTG нужно включить в настройках)."), 13f, Ui.DIM))
         }
         for ((d, m) in list) {
-            val status = if (m.kind.builtIn) "встроенный драйвер" else m.kind.title.substringAfter(" — ")
+            val status = if (m.kind.builtIn) tr("встроенный драйвер") else m.kind.status
             val b = Ui.button(this, "🔌  ${m.name} · $status") { chooseUsb(d) }
             b.gravity = Gravity.START or Gravity.CENTER_VERTICAL
             devicesBox.addView(b)
         }
         // выбранный USB-приёмник отключили — показываем, но открыть не получится
-        selectedText.text = "Выбран: " + Receivers.describe(this, selected)
+        selectedText.text = tr("Выбран: {receiver}", "receiver" to Receivers.describe(this, selected))
     }
 
     private fun chooseUsb(d: UsbDevice) {
         val m = UsbReceivers.model(d.vendorId, d.productId)
         if (m != null && !m.kind.builtIn) {
-            toastDialog("${m.name}: ${m.kind.title}.\n\nВ Android-версии пока работают приёмники на RTL2832U, HackRF, " +
-                "Airspy R2/Mini и сетевой rtl_tcp. Остальные USB радиоприёмники (SDR) поддерживаются в версии для Windows.")
+            toastDialog("${m.name}: ${m.kind.title}.\n\n" + tr("В Android-версии пока работают приёмники на RTL2832U, HackRF, Airspy R2/Mini и сетевой rtl_tcp. Остальные USB радиоприёмники (SDR) поддерживаются в версии для Windows."))
             return
         }
         val um = getSystemService(USB_SERVICE) as UsbManager
@@ -182,11 +186,10 @@ class MainActivity : Activity() {
             setText(prefs.getString("tcp", "192.168.1.10:1234"))
         }
         AlertDialog.Builder(this)
-            .setTitle("Сетевой rtl_tcp")
-            .setMessage("Адрес сервера rtl_tcp (хост:порт). Приёмник подключён к другому компьютеру, " +
-                "на котором запущен rtl_tcp -a 0.0.0.0.")
+            .setTitle(tr("Сетевой rtl_tcp"))
+            .setMessage(tr("Адрес сервера rtl_tcp (хост:порт). Приёмник подключён к другому компьютеру, на котором запущен rtl_tcp -a 0.0.0.0."))
             .setView(edit)
-            .setPositiveButton("Подключить") { _, _ ->
+            .setPositiveButton(tr("Подключить")) { _, _ ->
                 val t = edit.text.toString()
                 try {
                     RtlTcpSource.parse(t)
@@ -194,14 +197,14 @@ class MainActivity : Activity() {
                     select(Receivers.tcp(t)); openRadio()
                 } catch (e: SdrException) { toastDialog(e.message ?: "") }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(tr("Отмена"), null)
             .show()
     }
 
     private fun select(id: String) {
         selected = id
         prefs.edit().putString("source", id).apply()
-        if (::selectedText.isInitialized) selectedText.text = "Выбран: " + Receivers.describe(this, id)
+        if (::selectedText.isInitialized) selectedText.text = tr("Выбран: {receiver}", "receiver" to Receivers.describe(this, id))
     }
 
     private fun openRadio(app: String? = null) {
@@ -221,14 +224,36 @@ class MainActivity : Activity() {
     }
 
     private fun toastDialog(msg: String) {
-        AlertDialog.Builder(this).setMessage(msg).setPositiveButton("Понятно", null).show()
+        AlertDialog.Builder(this).setMessage(msg).setPositiveButton(tr("Понятно"), null).show()
+    }
+
+    private fun languageName(choice: String) = when (choice) {
+        "ru" -> "Русский"   // noqa: i18n — название языка всегда на нём самом
+        "en" -> "English"
+        else -> tr("как в системе")
+    }
+
+    private fun askLanguage() {
+        val choices = listOf(I18n.AUTO, "ru", "en")
+        val cur = choices.indexOf(I18n.configured(this)).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle(tr("Язык интерфейса"))
+            .setSingleChoiceItems(choices.map { languageName(it) }.toTypedArray(), cur) { d, which ->
+                d.dismiss()
+                if (which != cur) {
+                    I18n.choose(this, choices[which])
+                    recreate()
+                }
+            }
+            .setNegativeButton(tr("Отмена"), null)
+            .show()
     }
 
     private fun showUpdate(info: UpdateCheck.Info) {
         updateBox.removeAllViews()
         val c = Ui.card(this)
-        c.addView(Ui.text(this, "Вышла версия ${info.version}", 15f, Ui.ACCENT, bold = true))
-        c.addView(Ui.button(this, "Скачать APK (${info.sizeMb} МБ)") {
+        c.addView(Ui.text(this, tr("Вышла версия {version}", "version" to info.version), 15f, Ui.ACCENT, bold = true))
+        c.addView(Ui.button(this, tr("Скачать APK ({size} МБ)", "size" to info.sizeMb)) {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.apkUrl)))
         })
         updateBox.addView(c)

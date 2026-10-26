@@ -1,6 +1,8 @@
 package io.github.mikeileech.sdr4noob.radio
 
 import io.github.mikeileech.sdr4noob.dsp.Modulation
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import org.json.JSONArray
 import org.json.JSONObject
 import org.w3c.dom.Element
@@ -18,14 +20,15 @@ import kotlin.math.roundToLong
 data class FreqEntry(val name: String, val freq: Double, val mode: String, val bw: Double, val group: String)
 
 object FreqMan {
-    val HEADER = listOf("Название", "Частота, Гц", "Режим", "Полоса, Гц", "Группа")
-    const val DEFAULT_GROUP = "Мои"
+    val HEADER = listOf("Название", "Частота, Гц", "Режим", "Полоса, Гц", "Группа")  // noqa: i18n
+    /** Группа по умолчанию — сохраняется в файл закладок как есть (по-русски); показывать через tr(group). */
+    val DEFAULT_GROUP = N_("Мои")
     private val COLS = mapOf(
-        "name" to listOf("название", "name", "имя", "станция"),
-        "freq" to listOf("частота, гц", "частота", "frequency", "freq", "freq_hz", "frequency_hz", "hz"),
-        "mode" to listOf("режим", "mode", "modulation", "detectortype", "демодулятор"),
-        "bw" to listOf("полоса, гц", "полоса", "bandwidth", "bw", "filterbandwidth", "bw_hz"),
-        "group" to listOf("группа", "group", "groupname", "категория", "category"),
+        "name" to listOf("название", "name", "имя", "станция"),  // noqa: i18n
+        "freq" to listOf("частота, гц", "частота", "frequency", "freq", "freq_hz", "frequency_hz", "hz"),  // noqa: i18n
+        "mode" to listOf("режим", "mode", "modulation", "detectortype", "демодулятор"),  // noqa: i18n
+        "bw" to listOf("полоса, гц", "полоса", "bandwidth", "bw", "filterbandwidth", "bw_hz"),  // noqa: i18n
+        "group" to listOf("группа", "group", "groupname", "категория", "category"),  // noqa: i18n
     )
     private val SDRSHARP_MODES = mapOf("WFM" to "WFM", "NFM" to "NFM", "AM" to "AM", "DSB" to "AM", "USB" to "USB",
         "LSB" to "LSB", "CW" to "CW", "RAW" to "NFM")
@@ -43,7 +46,7 @@ object FreqMan {
         val f = freq ?: 0.0
         val (def, lo, hi) = modeRange(m)
         val b = if (bw != null && bw > 0) bw.coerceIn(lo.toDouble(), hi.toDouble()) else def.toDouble()
-        val nm = name?.trim().orEmpty().ifEmpty { String.format(Locale.ROOT, "%.4f МГц", f / 1e6) }
+        val nm = name?.trim().orEmpty().ifEmpty { String.format(Locale.ROOT, "%.4f МГц", f / 1e6) }  // noqa: i18n
         val g = group?.trim().orEmpty().ifEmpty { DEFAULT_GROUP }
         return FreqEntry(nm, f, m, b, g)
     }
@@ -52,7 +55,7 @@ object FreqMan {
     fun parseFreq(text: String, guessMhz: Boolean = true): Double {
         var low = text.trim().replace(" ", "").replace(" ", "").lowercase(Locale.ROOT)
         var mul = 1.0
-        for ((suf, m) in listOf("ghz" to 1e9, "mhz" to 1e6, "мгц" to 1e6, "khz" to 1e3, "кгц" to 1e3, "hz" to 1.0, "гц" to 1.0)) {
+        for ((suf, m) in listOf("ghz" to 1e9, "mhz" to 1e6, "мгц" to 1e6, "khz" to 1e3, "кгц" to 1e3, "hz" to 1.0, "гц" to 1.0)) {  // noqa: i18n
             if (low.endsWith(suf)) { low = low.dropLast(suf.length); mul = m; break }
         }
         val v = low.replace(',', '.').toDoubleOrNull() ?: throw NumberFormatException(text)
@@ -129,7 +132,7 @@ object FreqMan {
         // без DTD: у файлов SDR# его нет, а чужой файл с DTD мог бы раздуть память («billion laughs»).
         // Парсер Android не поддерживает запрет DOCTYPE через setFeature — проверяем сами.
         if (String(bytes, Charsets.UTF_8).contains("<!DOCTYPE", ignoreCase = true))
-            throw IllegalArgumentException("файл с DOCTYPE — это не список частот SDR#")
+            throw IllegalArgumentException(tr("файл с DOCTYPE — это не список частот SDR#"))
         val f = DocumentBuilderFactory.newInstance()
         f.isExpandEntityReferences = false
         val doc = f.newDocumentBuilder().parse(ByteArrayInputStream(bytes))

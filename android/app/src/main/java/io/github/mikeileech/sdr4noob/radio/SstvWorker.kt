@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.radio
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.dsp.SstvDecoder
 import io.github.mikeileech.sdr4noob.dsp.SstvEvent
 import io.github.mikeileech.sdr4noob.dsp.SstvLevel
@@ -60,7 +61,7 @@ class SstvWorker(private val onEvents: (List<SstvEvent>, SstvLevel) -> Unit, pri
             } catch (e: Exception) {
                 // сбой декодера на «живом» эфире не должен ронять приложение: начать заново
                 dec = SstvDecoder(48_000.0).also { it.forceMode = force }
-                if (!reported) { reported = true; onError("SSTV: сбой декодера (${e.javaClass.simpleName}), декодер перезапущен") }
+                if (!reported) { reported = true; onError(tr("SSTV: сбой декодера ({err}), декодер перезапущен", "err" to e.javaClass.simpleName)) }
             }
         }
     }
@@ -76,7 +77,7 @@ class SstvWorker(private val onEvents: (List<SstvEvent>, SstvLevel) -> Unit, pri
             val out = ArrayList<SstvEvent>()
             fun keep(ev: List<SstvEvent>) { for (e in ev) if (e is SstvEvent.Done || e is SstvEvent.Lost) out += e }
             WavPcm.stream(input, { fs ->
-                if (fs < 6000) throw IOException("частота дискретизации $fs Гц слишком мала для SSTV (нужно от 6 кГц)")
+                if (fs < 6000) throw IOException(tr("частота дискретизации {fs} Гц слишком мала для SSTV (нужно от 6 кГц)", "fs" to fs))
                 rate = fs
                 dec = SstvDecoder(fs.toDouble()).also { it.forceMode = forceMode }   // режим без VIS (обрезано начало)
                 maxOf(1, fs / 20)
@@ -109,14 +110,14 @@ object WavPcm {
     fun stream(input: InputStream, onFormat: (Int) -> Int, onBlock: (FloatArray, Int) -> Unit) {
         val hdr = readFully(input, 12)
         if (String(hdr, 0, 4, Charsets.US_ASCII) != "RIFF" || String(hdr, 8, 4, Charsets.US_ASCII) != "WAVE")
-            throw IOException("это не WAV-файл")
+            throw IOException(tr("это не WAV-файл"))
         var fmt = -1; var ch = 0; var fs = 0; var bits = 0
         while (true) {
             val ck = readFully(input, 8)
             val id = String(ck, 0, 4, Charsets.US_ASCII)
             val size = ByteBuffer.wrap(ck, 4, 4).order(ByteOrder.LITTLE_ENDIAN).int.toLong() and 0xFFFFFFFFL
             if (id == "fmt ") {
-                if (size < 16) throw IOException("неверный заголовок WAV")
+                if (size < 16) throw IOException(tr("неверный заголовок WAV"))
                 val f = ByteBuffer.wrap(readFully(input, size.toInt())).order(ByteOrder.LITTLE_ENDIAN)
                 fmt = f.getShort(0).toInt() and 0xFFFF
                 ch = f.getShort(2).toInt() and 0xFFFF
@@ -125,10 +126,10 @@ object WavPcm {
                 if (fmt == 0xFFFE && size >= 26) fmt = f.getShort(24).toInt() and 0xFFFF   // WAVE_FORMAT_EXTENSIBLE
                 if (size % 2 == 1L) skip(input, 1)
             } else if (id == "data") {
-                if (fmt < 0) throw IOException("в WAV нет описания формата")
-                if (ch < 1 || fs <= 0) throw IOException("неверный заголовок WAV")
+                if (fmt < 0) throw IOException(tr("в WAV нет описания формата"))
+                if (ch < 1 || fs <= 0) throw IOException(tr("неверный заголовок WAV"))
                 if (!(fmt == 1 && bits in intArrayOf(8, 16, 24, 32)) && !(fmt == 3 && bits == 32))
-                    throw IOException("формат WAV не поддерживается (нужен PCM или float 32 бит)")
+                    throw IOException(tr("формат WAV не поддерживается (нужен PCM или float 32 бит)"))
                 readData(input, size, ch, bits, fmt == 3, onFormat(fs).coerceAtLeast(1), onBlock)
                 return
             } else skip(input, size + (size and 1))
@@ -173,12 +174,12 @@ object WavPcm {
     }
 
     private fun readFully(input: InputStream, n: Int): ByteArray {
-        if (n < 0 || n > 1 shl 20) throw IOException("повреждённый WAV")
+        if (n < 0 || n > 1 shl 20) throw IOException(tr("повреждённый WAV"))
         val b = ByteArray(n)
         var p = 0
         while (p < n) {
             val r = input.read(b, p, n - p)
-            if (r <= 0) throw IOException("WAV обрывается: нет звука")
+            if (r <= 0) throw IOException(tr("WAV обрывается: нет звука"))
             p += r
         }
         return b
@@ -189,7 +190,7 @@ object WavPcm {
         while (left > 0) {
             val s = input.skip(left)
             if (s > 0) left -= s
-            else if (input.read() < 0) throw IOException("WAV обрывается: нет звука")
+            else if (input.read() < 0) throw IOException(tr("WAV обрывается: нет звука"))
             else left--
         }
     }

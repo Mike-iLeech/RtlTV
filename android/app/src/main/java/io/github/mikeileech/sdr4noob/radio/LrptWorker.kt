@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.radio
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.lrpt.AutoLrptReceiver
 import io.github.mikeileech.sdr4noob.lrpt.LrptGray
 import io.github.mikeileech.sdr4noob.lrpt.LrptStats
@@ -104,7 +105,7 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
                 break
             } catch (e: Throwable) {
                 // сбой или нехватка памяти не роняют приложение: приём начинается заново
-                if (!reported) { reported = true; onError("LRPT: сбой декодера (${e.javaClass.simpleName}), приём начат заново") }
+                if (!reported) { reported = true; onError(tr("LRPT: сбой декодера ({err}), приём начат заново", "err" to e.javaClass.simpleName)) }
                 rx.rxs.forEach { runCatching { it.close() } }
                 rx = AutoLrptReceiver(fs.toDouble()); off = Double.NaN; preview = null
             }

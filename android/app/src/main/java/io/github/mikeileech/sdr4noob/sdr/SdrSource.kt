@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+
 /** Ошибка приёмника с понятным пользователю текстом. */
 class SdrException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -61,5 +63,6 @@ object U8 {
 }
 
 /** Типы тюнеров librtlsdr (rtlsdr_get_tuner_type, заголовок rtl_tcp). */
-val TUNERS = mapOf(0 to "неизвестен", 1 to "E4000", 2 to "FC0012", 3 to "FC0013", 4 to "FC2580",
+/** Названия латиницей; «неизвестен» помечено N_ — показывать через tr(). */
+val TUNERS = mapOf(0 to N_("неизвестен"), 1 to "E4000", 2 to "FC0012", 3 to "FC0013", 4 to "FC2580",
     5 to "R820T/R820T2", 6 to "R828D")

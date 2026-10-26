@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.PI
@@ -108,17 +110,17 @@ object Adsb {
     const val CHARSET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######"
 
     val CATEGORIES: Map<Pair<Int, Int>, String> = mapOf(
-        (4 to 1) to "A1 лёгкий (< 7 т)", (4 to 2) to "A2 малый (7–34 т)", (4 to 3) to "A3 большой (34–136 т)",
-        (4 to 4) to "A4 большой с сильным вихрем (B757)", (4 to 5) to "A5 тяжёлый (> 136 т)",
-        (4 to 6) to "A6 высокоманёвренный", (4 to 7) to "A7 вертолёт",
-        (3 to 1) to "B1 планер", (3 to 2) to "B2 аэростат", (3 to 3) to "B3 парашютист",
-        (3 to 4) to "B4 дельтаплан/параплан", (3 to 6) to "B6 беспилотник", (3 to 7) to "B7 космический аппарат",
-        (2 to 1) to "C1 аварийная машина", (2 to 3) to "C3 служебная машина", (2 to 4) to "C4 точечное препятствие",
-        (2 to 5) to "C5 групповое препятствие", (2 to 6) to "C6 протяжённое препятствие",
+        (4 to 1) to N_("A1 лёгкий (< 7 т)"), (4 to 2) to N_("A2 малый (7–34 т)"), (4 to 3) to N_("A3 большой (34–136 т)"),
+        (4 to 4) to N_("A4 большой с сильным вихрем (B757)"), (4 to 5) to N_("A5 тяжёлый (> 136 т)"),
+        (4 to 6) to N_("A6 высокоманёвренный"), (4 to 7) to N_("A7 вертолёт"),
+        (3 to 1) to N_("B1 планер"), (3 to 2) to N_("B2 аэростат"), (3 to 3) to N_("B3 парашютист"),
+        (3 to 4) to N_("B4 дельтаплан/параплан"), (3 to 6) to N_("B6 беспилотник"), (3 to 7) to N_("B7 космический аппарат"),
+        (2 to 1) to N_("C1 аварийная машина"), (2 to 3) to N_("C3 служебная машина"), (2 to 4) to N_("C4 точечное препятствие"),
+        (2 to 5) to N_("C5 групповое препятствие"), (2 to 6) to N_("C6 протяжённое препятствие"),
     )
 
-    val SQUAWK_NOTES = mapOf("7500" to "захват", "7600" to "отказ связи", "7700" to "бедствие", "7000" to "ПВП",
-        "2000" to "ППП без кода")
+    val SQUAWK_NOTES = mapOf("7500" to N_("захват"), "7600" to N_("отказ связи"), "7700" to N_("бедствие"), "7000" to N_("ПВП"),
+        "2000" to N_("ППП без кода"))
 
     /** 13 бит поля ID/AC (C1 A1 C2 A2 C4 A4 X B1 D1 B2 D2 B4 D4) → 0xABCD (по три бита на цифру). */
     fun id13ToHex(id13: Int): Int {
@@ -328,7 +330,7 @@ object Adsb {
             val ca = g(6, 8)
             val cs = String(CharArray(8) { k -> CHARSET[g(9 + 6 * k, 14 + 6 * k)] })
             m.callsign = cs.replace("#", "").trim(' ')
-            m.category = CATEGORIES[tc to ca] ?: if (ca != 0) "${"DCBA"[tc - 1]}$ca" else null
+            m.category = CATEGORIES[tc to ca]?.let { tr(it) } ?: if (ca != 0) "${"DCBA"[tc - 1]}$ca" else null
         } else if (tc in 5..8) {
             m.onGround = true
             surfaceSpeed(g(6, 12))?.let { m.gs = it }
@@ -464,56 +466,56 @@ object Adsb {
 
     /** Расшифровка сообщения по-русски для ленты журнала. */
     fun describe(m: AdsbMsg, pos: Pair<Double, Double>? = null, metric: Boolean = true): String {
-        fun alt(ft: Int) = if (metric) "${num(ft * FT)} м" else "${num(ft.toDouble())} фут"
+        fun alt(ft: Int) = if (metric) tr("{v} м", "v" to num(ft * FT)) else tr("{v} фут", "v" to num(ft.toDouble()))
         val parts = ArrayList<String>()
-        if (!m.callsign.isNullOrEmpty()) parts.add("позывной ${m.callsign}")
-        if (!m.category.isNullOrEmpty() && (m.tc ?: 0) in 1..4) parts.add("категория ${m.category}")
-        if (m.onGround == true && m.tc in 5..8) parts.add("на земле")
-        m.alt?.let { parts.add("высота ${alt(it)}") }
-        m.altGnss?.let { parts.add("высота GNSS ${alt(it)}") }
+        if (!m.callsign.isNullOrEmpty()) parts.add(tr("позывной {cs}", "cs" to m.callsign))
+        if (!m.category.isNullOrEmpty() && (m.tc ?: 0) in 1..4) parts.add(tr("категория {cat}", "cat" to m.category))
+        if (m.onGround == true && m.tc in 5..8) parts.add(tr("на земле"))
+        m.alt?.let { parts.add(tr("высота {alt}", "alt" to alt(it))) }
+        m.altGnss?.let { parts.add(tr("высота GNSS {alt}", "alt" to alt(it))) }
         val gs = m.gs; val track = m.track; val heading = m.heading
         if (gs != null) {
-            var t = "скорость ${pyF(gs * KT_KMH, 0)} км/ч"
-            if (track != null) t += ", путевой угол ${pyF(track, 0)}°"
+            var t = tr("скорость {v} км/ч", "v" to pyF(gs * KT_KMH, 0))
+            if (track != null) t += ", " + tr("путевой угол {deg}°", "deg" to pyF(track, 0))
             parts.add(t)
-        } else if (track != null) parts.add("путевой угол ${pyF(track, 0)}°")
+        } else if (track != null) parts.add(tr("путевой угол {deg}°", "deg" to pyF(track, 0)))
         for ((k, v) in listOf("IAS" to m.ias, "TAS" to m.tas)) {
             if (v == null) continue
-            var t = "скорость ${pyF(v * KT_KMH, 0)} км/ч $k"
-            if (heading != null) t += ", курс ${pyF(heading, 0)}°"
+            var t = tr("скорость {v} км/ч {kind}", "v" to pyF(v * KT_KMH, 0), "kind" to k)
+            if (heading != null) t += ", " + tr("курс {deg}°", "deg" to pyF(heading, 0))
             parts.add(t)
         }
-        if (heading != null && m.ias == null && m.tas == null) parts.add("курс ${pyF(heading, 0)}°")
+        if (heading != null && m.ias == null && m.tas == null) parts.add(tr("курс {deg}°", "deg" to pyF(heading, 0)))
         m.vr?.let {
-            parts.add(if (metric) "вертикальная ${pyF(it * FT / 60, 1, plus = true)} м/с"
-                      else "вертикальная ${pyF(it.toDouble(), 0, plus = true)} фут/мин")
+            parts.add(if (metric) tr("вертикальная {v} м/с", "v" to pyF(it * FT / 60, 1, plus = true))
+                      else tr("вертикальная {v} фут/мин", "v" to pyF(it.toDouble(), 0, plus = true)))
         }
         m.squawk?.let { sq ->
             val note = SQUAWK_NOTES[sq]
-            parts.add("сквок $sq" + (if (note != null) " ($note)" else ""))
+            parts.add(if (note != null) tr("сквок {sq} ({note})", "sq" to sq, "note" to tr(note)) else tr("сквок {sq}", "sq" to sq))
         }
-        m.emergency?.let { if (it != 0) parts.add("аварийный статус $it") }
+        m.emergency?.let { if (it != 0) parts.add(tr("аварийный статус {code}", "code" to it)) }
         if (m.selAlt != null || m.selHdg != null || m.qnh != null) {
             val ap = ArrayList<String>()
-            m.selAlt?.let { ap.add("высота ${alt(it)}") }
-            m.selHdg?.let { ap.add("курс ${pyF(it, 0)}°") }
-            m.qnh?.let { ap.add("QNH ${pyF(it, 1)} гПа") }
-            parts.add("автопилот: " + ap.joinToString(", "))
+            m.selAlt?.let { ap.add(tr("высота {alt}", "alt" to alt(it))) }
+            m.selHdg?.let { ap.add(tr("курс {deg}°", "deg" to pyF(it, 0))) }
+            m.qnh?.let { ap.add(tr("QNH {v} гПа", "v" to pyF(it, 1))) }
+            parts.add(tr("автопилот: {items}", "items" to ap.joinToString(", ")))
         }
-        if (m.noPos) parts.add("нет координат (TC0)")
+        if (m.noPos) parts.add(tr("нет координат (TC0)"))
         val cpr = m.cpr
         if (cpr != null) {
             val note = m.posNote
-            if (pos != null) parts.add("позиция ${pyF(pos.first, 4)}, ${pyF(pos.second, 4)}" +
+            if (pos != null) parts.add(tr("позиция {pos}", "pos" to "${pyF(pos.first, 4)}, ${pyF(pos.second, 4)}") +
                 (if (!note.isNullOrEmpty()) " — $note" else ""))
             else if (!note.isNullOrEmpty()) parts.add(note)
-            else parts.add("CPR ${if (cpr.odd != 0) "нечётный" else "чётный"} (ждём пару)")
+            else parts.add(if (cpr.odd != 0) tr("CPR нечётный (ждём пару)") else tr("CPR чётный (ждём пару)"))
         }
         if (parts.isEmpty()) {
             parts.add(when {
-                m.df == 11 -> "ответ на общий запрос (DF11)"
-                m.tc == 31 -> "эксплуатационный статус (TC31)"
-                else -> "служебное сообщение"
+                m.df == 11 -> tr("ответ на общий запрос (DF11)")
+                m.tc == 31 -> tr("эксплуатационный статус (TC31)")
+                else -> tr("служебное сообщение")
             })
         }
         return parts.joinToString(", ")

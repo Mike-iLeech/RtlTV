@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.dec
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -80,7 +82,7 @@ object TvDigital {
      * которые в 6 раз выше скользящего среднего по 129 бинам (и их соседи, и бин 0), обнуляются.
      */
     fun prep(re: FloatArray, im: FloatArray, len: Int = re.size): Pair<FloatArray, FloatArray> {
-        require(len >= 2) { "мало отсчётов" }
+        require(len >= 2) { tr("мало отсчётов") }
         val n = Integer.highestOneBit(len)
         val xr = re.copyOf(n); val xi = im.copyOf(n)
         val f = fft(n)
@@ -224,7 +226,7 @@ class MuxAnalyzer(fs: Double, center: Double, bandwidth: Double) {
     val ofdm = OfdmEstimator(fs)
 
     init {
-        require(fs >= 2 * TvDigital.HOP_KEEP) { "полоса ${fs / 1e6} МГц меньше куска обхода ±1 МГц" }
+        require(fs >= 2 * TvDigital.HOP_KEEP) { tr("полоса {bw} МГц меньше куска обхода ±1 МГц", "bw" to dec("${fs / 1e6}")) }
         val span = bandwidth / 2 + 1.0e6
         val n = ceil(span / TvDigital.HOP_STEP).toInt()
         offsets = (-n..n).map { it * TvDigital.HOP_STEP }

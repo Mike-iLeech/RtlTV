@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 import io.github.mikeileech.sdr4noob.dsp.TvTestSignal
 
 /**
@@ -7,7 +9,7 @@ import io.github.mikeileech.sdr4noob.dsp.TvTestSignal
  * (ДМВ 35) и мультиплекс DVB-T2 на 546 МГц (ДМВ 30). Отсчёты в реальном темпе; частоту можно перестраивать.
  */
 class TvDemoSource(private var fs: Int = 2_400_000) : SdrSource {
-    override val label = "Тестовый сигнал ТВ (без приёмника)"
+    override val label = tr("Тестовый сигнал ТВ (без приёмника)")
     override val gains = IntArray(0)
     override val sampleRates get() = io.github.mikeileech.sdr4noob.sdr.TV_RATES
 

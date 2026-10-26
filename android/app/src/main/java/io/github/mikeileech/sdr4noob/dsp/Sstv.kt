@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
@@ -164,7 +165,7 @@ object Sstv {
      * Результат — три плоскости R, G, B (float, 0..255) по [w]×[h].
      */
     fun fitImage(argb: IntArray, w0: Int, h0: Int, w: Int, h: Int): Array<FloatArray> {
-        require(argb.size >= w0 * h0) { "картинка меньше заявленного размера" }
+        require(argb.size >= w0 * h0) { tr("картинка меньше заявленного размера") }
         val out = Array(3) { FloatArray(w * h) }
         for (y in 0 until h) {
             val yi = (y.toLong() * h0 / h).toInt()
@@ -247,7 +248,7 @@ object Sstv {
         val tEnd = tImg + nl * m.line
 
         val total = Math.rint(tEnd * fs).toLong()
-        require(total < Int.MAX_VALUE) { "передача слишком длинная" }
+        require(total < Int.MAX_VALUE) { tr("передача слишком длинная") }
         val out = FloatArray(total.toInt())
         val gen = PhaseGen(out, fs, amplitude)
         val span = (F_SPAN / 255.0).toFloat()

@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.lrpt
 
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 /** JNI к lrpt_dsp.c (src/main/cpp/lrpt_jni.c). Без нативной библиотеки (JVM-тесты) loaded = false. */
 object LrptNative {
     val loaded: Boolean = runCatching { System.loadLibrary("sdr4noob"); demodSize() > 0 }.getOrDefault(false)
@@ -22,7 +24,7 @@ class NativeDemod(sps: Double, mode: Int, costasBw: Double, timingBw: Double, fm
     private var h: Long = LrptNative.demodCreate(sps, mode, costasBw, timingBw, fmaxRad)
 
     init {
-        check(h != 0L) { "demodCreate: не удалось создать демодулятор" }
+        check(h != 0L) { tr("demodCreate: не удалось создать демодулятор") }
     }
 
     override fun setCostas(bw: Double) = LrptNative.demodSetCostas(h, bw)

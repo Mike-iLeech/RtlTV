@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.nio.charset.Charset
 import kotlin.math.PI
 import kotlin.math.abs
@@ -23,11 +25,11 @@ object RdsCode {
     fun offIdx(off: Int): Int? = off2idx[off]
     fun offOk(idx: Int, off: Int) = when (idx) { 0 -> off == A; 1 -> off == B; 2 -> off == C || off == CP; else -> off == D }
 
-    val PTY_NAMES = arrayOf("—", "Новости", "Текущие события", "Информация", "Спорт", "Образование", "Драма", "Культура",
-        "Наука", "Разное", "Поп-музыка", "Рок-музыка", "Лёгкая музыка", "Лёгкая классика",
-        "Классика", "Другая музыка", "Погода", "Финансы", "Детям", "Общество", "Религия", "Звонки в эфир",
-        "Путешествия", "Досуг", "Джаз", "Кантри", "Национальная музыка", "Ретро", "Фолк",
-        "Документальное", "Тест тревоги", "Тревога")
+    val PTY_NAMES = arrayOf("—", N_("Новости"), N_("Текущие события"), N_("Информация"), N_("Спорт"), N_("Образование"), N_("Драма"), N_("Культура"),
+        N_("Наука"), N_("Разное"), N_("Поп-музыка"), N_("Рок-музыка"), N_("Лёгкая музыка"), N_("Лёгкая классика"),
+        N_("Классика"), N_("Другая музыка"), N_("Погода"), N_("Финансы"), N_("Детям"), N_("Общество"), N_("Религия"), N_("Звонки в эфир"),
+        N_("Путешествия"), N_("Досуг"), N_("Джаз"), N_("Кантри"), N_("Национальная музыка"), N_("Ретро"), N_("Фолк"),
+        N_("Документальное"), N_("Тест тревоги"), N_("Тревога"))
 
     /** Проверочное слово (без смещения) для всех 65536 значений данных блока. */
     val CRC: IntArray by lazy {
@@ -121,7 +123,7 @@ class RdsDecoder(val fs: Int = 240_000) {
         val end = txt.indexOf('\r')
         return RdsState(synced, pi, ps.ifEmpty { String(psBuf).trim() },
             rt.ifEmpty { (if (end >= 0) txt.substring(0, end) else txt).trim() },
-            pty, pty?.let { RdsCode.PTY_NAMES[it] } ?: "", tp, ta, ct)
+            pty, pty?.let { tr(RdsCode.PTY_NAMES[it]) } ?: "", tp, ta, ct)
     }
 
     /**
@@ -372,7 +374,7 @@ class RdsEncoder(groups: List<IntArray>) {
 
     companion object {
         /** Группы 0A (PS) ×4 + 2A (RT) [+ 4A часы]: каждая группа — 4 пары (данные, смещение). */
-        fun groups(pi: Int = 0x7201, ps: String = "SDR4NOOB", rt: String = "Тестовый эфир SDR4NOOB", pty: Int = 10,
+        fun groups(pi: Int = 0x7201, ps: String = "SDR4NOOB", rt: String = "Тестовый эфир SDR4NOOB", pty: Int = 10,  // noqa: i18n
                    ct: IntArray? = null): List<IntArray> {
             val out = ArrayList<IntArray>()
             val psB = RdsCode.bytes(ps, 8)

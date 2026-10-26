@@ -15,7 +15,7 @@ import kotlin.math.tan
 object Firwin {
     /** КИХ ФНЧ окном Хэмминга, срез [cutoffHz] при частоте [fs]; коэффициенты нормированы (сумма = 1) — как scipy.signal.firwin. */
     fun lowpass(taps: Int, cutoffHz: Double, fs: Double): FloatArray {
-        require(taps % 2 == 1) { "нечётное число отводов" }
+        require(taps % 2 == 1) { "нечётное число отводов" }   // noqa: i18n — проверка программиста, не для пользователя
         val fc = cutoffHz / fs  // доля частоты дискретизации
         val m = (taps - 1) / 2.0
         val h = DoubleArray(taps)

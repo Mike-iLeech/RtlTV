@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
@@ -48,38 +50,38 @@ class RtlUsbSource(private val context: Context, private val device: UsbDevice) 
 
     override fun open(sampleRate: Int, frequencyHz: Long) {
         val um = context.getSystemService(Context.USB_SERVICE) as UsbManager
-        if (!um.hasPermission(device)) throw SdrException("Нет разрешения на доступ к приёмнику по USB")
-        val c = um.openDevice(device) ?: throw SdrException("Android не открыл USB-устройство (отключено?)")
+        if (!um.hasPermission(device)) throw SdrException(tr("Нет разрешения на доступ к приёмнику по USB"))
+        val c = um.openDevice(device) ?: throw SdrException(tr("Android не открыл USB-устройство (отключено?)"))
         val err = IntArray(1)
         val handle = RtlSdrNative.open(c.fileDescriptor, err)
         if (handle == 0L) {
             c.close()
-            throw SdrException("Драйвер RTL2832U не открыл приёмник (код ${err[0]}). Переподключите его к USB.")
+            throw SdrException(tr("Драйвер RTL2832U не открыл приёмник (код {code}). Переподключите его к USB.", "code" to err[0]))
         }
         conn = c
         h = handle
-        val tuner = TUNERS[RtlSdrNative.tunerType(h)] ?: "?"
+        val tuner = TUNERS[RtlSdrNative.tunerType(h)]?.let { tr(it) } ?: "?"
         val (manuf, product) = RtlSdrNative.usbStrings(h).split('|').let { it.getOrElse(0) { "" } to it.getOrElse(1) { "" } }
         val name = listOf(manuf, product).filter { it.isNotBlank() }.joinToString(" ").ifBlank { "RTL2832U" }
         label = "$name ($tuner)"
         gains = RtlSdrNative.gains(h)
-        check(RtlSdrNative.setSampleRate(h, sampleRate), "частоту дискретизации $sampleRate")
-        check(RtlSdrNative.setCenterFreq(h, frequencyHz), "частоту ${frequencyHz} Гц")
+        check(RtlSdrNative.setSampleRate(h, sampleRate), tr("частоту дискретизации {rate}", "rate" to sampleRate))
+        check(RtlSdrNative.setCenterFreq(h, frequencyHz), tr("частоту {hz} Гц", "hz" to frequencyHz))
     }
 
     private fun check(r: Int, what: String) {
-        if (r < 0) throw SdrException("Приёмник не принял $what (код $r)")
+        if (r < 0) throw SdrException(tr("Приёмник не принял {what} (код {code})", "what" to what, "code" to r))
     }
 
     override fun start() {
-        if (RtlSdrNative.start(h) != 0) throw SdrException("Не удалось запустить поток чтения USB")
+        if (RtlSdrNative.start(h) != 0) throw SdrException(tr("Не удалось запустить поток чтения USB"))
     }
 
     override fun read(re: FloatArray, im: FloatArray, maxSamples: Int): Int {
         val bytes = maxSamples * 2
         if (buf.size < bytes) buf = ByteArray(bytes)
         val n = RtlSdrNative.read(h, buf, bytes, 500)
-        if (n < 0) throw SdrException(if (RtlSdrNative.lost(h)) "Приёмник отключён от USB" else "Поток чтения остановлен")
+        if (n < 0) throw SdrException(if (RtlSdrNative.lost(h)) tr("Приёмник отключён от USB") else tr("Поток чтения остановлен"))
         return U8.convert(buf, n, re, im)
     }
 

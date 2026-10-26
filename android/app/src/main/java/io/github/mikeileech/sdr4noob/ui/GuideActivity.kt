@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import io.github.mikeileech.sdr4noob.i18n.I18n
+import io.github.mikeileech.sdr4noob.i18n.tr
 
 /**
  * Справка — то же руководство для начинающих, что в версии для Windows (rtltv/guide, копируется в APK
@@ -42,7 +44,7 @@ class GuideActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Справка"
+        title = tr("Справка")
         web = WebView(this)
         web.setBackgroundColor(Ui.BG)
         web.settings.javaScriptEnabled = true   // интерактивная схема (pipeline/) — JavaScript и Canvas
@@ -75,7 +77,8 @@ class GuideActivity : Activity() {
             }
         }
         setContentView(web)
-        val page = intent.getStringExtra(EXTRA_PAGE) ?: "guide/index.html"
+        // при английском интерфейсе — английская страница (guide/en/…, android/en/…), если она есть в APK
+        val page = I18n.localizedAsset(this, intent.getStringExtra(EXTRA_PAGE) ?: "guide/index.html")
         if (savedInstanceState != null) web.restoreState(savedInstanceState) else web.loadUrl(ROOT + page)
     }
 

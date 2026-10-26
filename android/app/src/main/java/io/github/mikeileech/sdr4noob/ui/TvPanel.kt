@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.ui
 
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
@@ -24,17 +26,16 @@ import io.github.mikeileech.sdr4noob.dsp.TvChannel
 import io.github.mikeileech.sdr4noob.dsp.TvMode
 import io.github.mikeileech.sdr4noob.radio.RadioEngine
 import io.github.mikeileech.sdr4noob.radio.TvWorker
-import java.util.Locale
 import kotlin.math.roundToInt
 
-private fun f1(x: Double) = String.format(Locale.ROOT, "%.1f", x).replace('.', ',')
+private fun f1(x: Double) = num(x, 1)
 
 /** Спектр мультиплекса (весь канал, собранный из перестроек) или кадр аналогового ТВ. */
 class TvView(ctx: Context) : View(ctx) {
     var mux: MuxResult? = null
         set(v) { field = v; bmp = null; invalidate() }
     private var bmp: Bitmap? = null
-    var hint = "Выберите канал и режим"
+    var hint = tr("Выберите канал и режим")
         set(v) { field = v; invalidate() }
     private val d = resources.displayMetrics.density
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ui.ACCENT; style = Paint.Style.STROKE; strokeWidth = 1.5f * d }
@@ -84,9 +85,9 @@ class TvView(ctx: Context) : View(ctx) {
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         c.drawPath(path, line)
-        c.drawText(String.format(Locale.ROOT, "%.2f МГц", f0 / 1e6).replace('.', ','), 4 * d, height - 4 * d, txt)
+        c.drawText(tr("{f} МГц", "f" to num(f0 / 1e6, 2)), 4 * d, height - 4 * d, txt)
         txt.textAlign = Paint.Align.RIGHT
-        c.drawText(String.format(Locale.ROOT, "%.2f МГц", f1 / 1e6).replace('.', ','), width - 4 * d, height - 4 * d, txt)
+        c.drawText(tr("{f} МГц", "f" to num(f1 / 1e6, 2)), width - 4 * d, height - 4 * d, txt)
         txt.textAlign = Paint.Align.LEFT
     }
 }
@@ -116,15 +117,15 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
         view.addView(tv, Ui.lp(h = 0, weight = 1f))
         view.addView(info)
         val r0 = Ui.hbox(act)
-        planSpin.adapter = ArrayAdapter(act, android.R.layout.simple_spinner_dropdown_item, plans.map { it.name })
+        planSpin.adapter = ArrayAdapter(act, android.R.layout.simple_spinner_dropdown_item, plans.map { tr(it.name) })
         planSpin.setSelection(plans.indexOfFirst { it.key == prefs.getString("tv_plan", "RU") }.coerceAtLeast(0))
         r0.addView(planSpin, Ui.lp(0, weight = 1f))
         r0.addView(chSpin, Ui.lp(0, weight = 1f))
         view.addView(r0)
         val r1 = Ui.hbox(act)
-        r1.addView(Ui.button(act, "Цифровое") { run("measure") }, Ui.lp(0, weight = 1f))
-        r1.addView(Ui.button(act, "Аналоговое") { run("analog") }, Ui.lp(0, weight = 1f))
-        r1.addView(Ui.button(act, "Поиск каналов") { run("scan") }, Ui.lp(0, weight = 1f))
+        r1.addView(Ui.button(act, tr("Цифровое")) { run("measure") }, Ui.lp(0, weight = 1f))
+        r1.addView(Ui.button(act, tr("Аналоговое")) { run("analog") }, Ui.lp(0, weight = 1f))
+        r1.addView(Ui.button(act, tr("Поиск каналов")) { run("scan") }, Ui.lp(0, weight = 1f))
         view.addView(r1)
         planSpin.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
@@ -153,7 +154,7 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
     private fun fillChannels() {
         chans = plan.channels
         chSpin.adapter = ArrayAdapter(act, android.R.layout.simple_spinner_dropdown_item,
-            chans.map { "${it.name} · ${String.format(Locale.ROOT, "%.2f", it.center / 1e6).replace('.', ',')} МГц" })
+            chans.map { it.title + " · " + tr("{f} МГц", "f" to num(it.center / 1e6, 2)) })
         // по умолчанию — ДМВ 30 (546 МГц): там мультиплекс тестового эфира и первый мультиплекс во многих городах
         val want = prefs.getString("tv_channel", null)
         val idx = chans.indexOfFirst { it.name == want }.takeIf { it >= 0 } ?: chans.indexOfFirst { Math.abs(it.center - 546e6) < 1e5 }
@@ -189,16 +190,16 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
         if (m != "scan") prefs.edit().putString("tv_job", m).apply()      // поиск при следующем открытии не повторять
         tv.mux = null
         when (m) {
-            "analog" -> { tv.hint = "Аналоговое ТВ: ожидание кадра на ${ch.name}…"; w.analog(ch, std) }
-            "scan" -> { tv.hint = "Поиск каналов…"; scanStarted = false; askScan(w) }
-            else -> { tv.hint = "Измерение мультиплекса ${ch.name}: обход канала…"; w.measure(ch) }
+            "analog" -> { tv.hint = tr("Аналоговое ТВ: ожидание кадра на {ch}…", "ch" to ch.title); w.analog(ch, std) }
+            "scan" -> { tv.hint = tr("Поиск каналов…"); scanStarted = false; askScan(w) }
+            else -> { tv.hint = tr("Измерение мультиплекса {ch}: обход канала…", "ch" to ch.title); w.measure(ch) }
         }
         info.text = ""
     }
 
     private fun askScan(w: TvWorker) {
-        android.app.AlertDialog.Builder(act).setTitle("Поиск каналов — что искать")
-            .setItems(arrayOf("Цифровые мультиплексы (DVB-T/T2)", "Аналоговые станции")) { _, i ->
+        android.app.AlertDialog.Builder(act).setTitle(tr("Поиск каналов — что искать"))
+            .setItems(arrayOf(tr("Цифровые мультиплексы (DVB-T/T2)"), tr("Аналоговые станции"))) { _, i ->
                 scanStarted = true
                 w.scan(if (i == 0) TvMode.DIGITAL else TvMode.ANALOG, chans, std)
             }.setOnCancelListener { run("measure") }.show()
@@ -209,35 +210,37 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
         when (mode) {
             "analog" -> w.frame?.let { f ->
                 tv.showFrame(f)
-                info.text = "Синхронизация: строки ${(f.hlock * 100).roundToInt()} %, кадры ${if (f.vlock) "есть" else "нет"} · " +
-                    "уровень ${f1(f.levelDb)} dB · С/Ш ${f1(f.snrDb)} dB\nКартинка чёрно-белая: полоса приёмника меньше полосы " +
-                    "видеосигнала, цветовая поднесущая не помещается."
+                info.text = tr("Синхронизация: строки {h} %, кадры {v} · уровень {lvl} dB · С/Ш {snr} dB",
+                    "h" to (f.hlock * 100).roundToInt(), "v" to (if (f.vlock) tr("есть") else tr("нет")),
+                    "lvl" to f1(f.levelDb), "snr" to f1(f.snrDb)) + "\n" +
+                    tr("Картинка чёрно-белая: полоса приёмника меньше полосы видеосигнала, цветовая поднесущая не помещается.")
             }
             "scan" -> {
                 if (!scanStarted) return
                 val p = w.scanProgress
                 val res = w.scan
                 val found = res.filter { it.found == true }
-                info.text = (if (p != null) "Поиск: канал ${p.first + 1} из ${p.second}\n" else "Поиск завершён. ") +
-                    (if (found.isEmpty()) (if (p == null) "Ничего не найдено." else "")
-                    else "Найдено: " + found.joinToString(", ") { "${it.ch.name} (${f1(it.value)} dB)" })
-                tv.hint = if (p != null) "Поиск каналов… ${p.first + 1}/${p.second}" else "Выберите канал из найденных и режим"
+                info.text = (if (p != null) tr("Поиск: канал {i} из {n}", "i" to p.first + 1, "n" to p.second) + "\n"
+                    else tr("Поиск завершён.") + " ") +
+                    (if (found.isEmpty()) (if (p == null) tr("Ничего не найдено.") else "")
+                    else tr("Найдено: {list}", "list" to found.joinToString(", ") { "${it.ch.title} (${f1(it.value)} dB)" }))
+                tv.hint = if (p != null) tr("Поиск каналов…") + " ${p.first + 1}/${p.second}" else tr("Выберите канал из найденных и режим")
             }
             else -> w.mux?.let { m ->
                 tv.mux = m
                 val o = m.ofdm
                 val ofdm = when {
-                    o == null -> "анализ OFDM…"
-                    o.found -> "OFDM ${o.mode}" + (o.guard?.let { ", защитный интервал $it" } ?: "") +
-                        (o.freqOffsetHz?.let { " · уход частоты ${f1(it / 1e3)} кГц" } ?: "")
-                    else -> "OFDM не найден"
+                    o == null -> tr("анализ OFDM…")
+                    o.found -> "OFDM ${o.mode}" + (o.guard?.let { tr(", защитный интервал {g}", "g" to it) } ?: "") +
+                        (o.freqOffsetHz?.let { tr(" · уход частоты {f} кГц", "f" to f1(it / 1e3)) } ?: "")
+                    else -> tr("OFDM не найден")
                 }
                 info.text = when {
-                    m.present -> "Мультиплекс есть: C/N ${f1(m.cnDb)} dB · уровень ${f1(m.levelDb)} dB · " +
-                        "неравномерность ${f1(m.flatnessDb)} dB\n$ofdm"
-                    m.other -> "В канале сигнал, но не цифровой мультиплекс (аналоговая станция?)\n$ofdm"
-                    else -> "Мультиплекса нет: только шум\n$ofdm"
-                } + "\nДля приёма C/N нужно не меньше ~20 dB (DVB-T2); неравномерность > 6 dB — отражения или помеха."
+                    m.present -> tr("Мультиплекс есть: C/N {cn} dB · уровень {lvl} dB · неравномерность {flat} dB",
+                        "cn" to f1(m.cnDb), "lvl" to f1(m.levelDb), "flat" to f1(m.flatnessDb)) + "\n$ofdm"
+                    m.other -> tr("В канале сигнал, но не цифровой мультиплекс (аналоговая станция?)") + "\n$ofdm"
+                    else -> tr("Мультиплекса нет: только шум") + "\n$ofdm"
+                } + "\n" + tr("Для приёма C/N нужно не меньше ~20 dB (DVB-T2); неравномерность > 6 dB — отражения или помеха.")
             }
         }
     }

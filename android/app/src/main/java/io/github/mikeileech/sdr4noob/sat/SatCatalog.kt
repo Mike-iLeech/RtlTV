@@ -1,5 +1,8 @@
 package io.github.mikeileech.sdr4noob.sat
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 /**
  * Каталог спутников режима «Спутники» — перенос rtltv/satcat.py (данные как есть): метео, МКС, любительские FM,
  * SSB/CW-транспондеры, телеметрия и «Электро-Л» (геостационар).
@@ -48,7 +51,7 @@ data class Sat(
     val cat: String,
     val color: String,
     val txs: List<Tx> = emptyList(),
-    val status: String = "активен",
+    val status: String = N_("активен"),
     val note: String = "",
     /** Добавлен пользователем. */
     val user: Boolean = false,
@@ -64,21 +67,21 @@ data class Sat(
             null -> 0.0
             is Number -> x.toDouble()
             is String -> x.trim().ifEmpty { "0" }.toDouble()
-            else -> error("не число: $x")
+            else -> error(tr("не число: {x}", "x" to x))
         }
 
         private fun str(x: Any?, def: String): String = (x as? String)?.takeIf { it.isNotEmpty() } ?: def
 
         /** Из настроек (как Sat.from_dict): спутник пользователя. */
         fun fromMap(d: Map<String, Any?>): Sat {
-            val norad = num(d["norad"] ?: error("нет norad")).toInt()
+            val norad = num(d["norad"] ?: error(tr("нет norad"))).toInt()
             @Suppress("UNCHECKED_CAST")
             val txs = (d["txs"] as? List<Map<String, Any?>> ?: emptyList()).map { t ->
-                Tx((t["label"] as? String) ?: "", num(t["freq"] ?: error("нет freq")), (t["mode"] as? String) ?: "NFM",
+                Tx((t["label"] as? String) ?: "", num(t["freq"] ?: error(tr("нет freq"))), (t["mode"] as? String) ?: "NFM",
                     num(t["hi"]), num(t["bw"]), (t["note"] as? String) ?: "", (t["decoder"] as? String) ?: "")
             }
             return Sat(norad, str(d["name"], "NORAD $norad"), (d["cat"] as? String) ?: "other",
-                (d["color"] as? String) ?: "#e0e0e0", txs, (d["status"] as? String) ?: "добавлен вручную",
+                (d["color"] as? String) ?: "#e0e0e0", txs, (d["status"] as? String) ?: N_("добавлен вручную"),
                 (d["note"] as? String) ?: "", true, (d["tle"] as? List<*>)?.map { it.toString() } ?: emptyList())
         }
     }
@@ -86,12 +89,12 @@ data class Sat(
 
 object SatCatalog {
     val CATEGORIES: Map<String, String> = linkedMapOf(
-        "meteo" to "Метео",
-        "iss" to "МКС",
-        "fm" to "FM-ретрансляторы",
-        "ssb" to "SSB/CW-транспондеры",
-        "tlm" to "Телеметрия",
-        "other" to "Свои / другие",
+        "meteo" to N_("Метео"),
+        "iss" to N_("МКС"),
+        "fm" to N_("FM-ретрансляторы"),
+        "ssb" to N_("SSB/CW-транспондеры"),
+        "tlm" to N_("Телеметрия"),
+        "other" to N_("Свои / другие"),
     )
 
     /** Режимы демодуляции для прослушивания (RadioDemod). */
@@ -99,87 +102,87 @@ object SatCatalog {
 
     /** Цифровые декодеры приёма. */
     val DECODERS: Map<String, String> = linkedMapOf(
-        "voice" to "голос / звук",
-        "lrpt" to "LRPT («Метеор-М», снимки)",
-        "lrit" to "LRIT («Электро-Л», снимки)",
-        "iq" to "только приём и запись IQ",
+        "voice" to N_("голос / звук"),
+        "lrpt" to N_("LRPT («Метеор-М», снимки)"),
+        "lrit" to N_("LRIT («Электро-Л», снимки)"),
+        "iq" to N_("только приём и запись IQ"),
     )
 
     private fun mhz(x: Double) = x * 1e6
 
     val BUILTIN: List<Sat> = listOf(
         // --- метео
-        Sat(57166, "Метеор-М №2-3", "meteo", "#ffb84d",
-            listOf(Tx("LRPT (снимки)", mhz(137.900), "LRPT", note = "72k OQPSK"),
-                Tx("LRPT, резервная частота", mhz(137.100), "LRPT", note = "72k OQPSK")),
-            "активен", "антенна раскрылась не полностью — сигнал слабее №2-4"),
-        Sat(59051, "Метеор-М №2-4", "meteo", "#ff6a4d",
-            listOf(Tx("LRPT (снимки)", mhz(137.900), "LRPT", note = "72k OQPSK"),
-                Tx("LRPT, резервная частота", mhz(137.100), "LRPT", note = "72k OQPSK")), "активен"),
+        Sat(57166, N_("Метеор-М №2-3"), "meteo", "#ffb84d",
+            listOf(Tx(N_("LRPT (снимки)"), mhz(137.900), "LRPT", note = "72k OQPSK"),
+                Tx(N_("LRPT, резервная частота"), mhz(137.100), "LRPT", note = "72k OQPSK")),
+            N_("активен"), N_("антенна раскрылась не полностью — сигнал слабее №2-4")),
+        Sat(59051, N_("Метеор-М №2-4"), "meteo", "#ff6a4d",
+            listOf(Tx(N_("LRPT (снимки)"), mhz(137.900), "LRPT", note = "72k OQPSK"),
+                Tx(N_("LRPT, резервная частота"), mhz(137.100), "LRPT", note = "72k OQPSK")), N_("активен")),
         // --- МКС
-        Sat(25544, "МКС", "iss", "#7fd1ff",
-            listOf(Tx("Голос / SSTV", mhz(145.800), "NFM", bw = 15000.0, note = "SSTV — режим SSTV"),
-                Tx("APRS", mhz(145.825), "NFM", bw = 15000.0, note = "пакеты AFSK 1200"),
-                Tx("Кросс-бэнд репитер", mhz(437.800), "NFM", bw = 15000.0, note = "вверх 145,990 (67 Гц), при включении")),
-            "активна", "SSTV/голос 145,800 МГц — режим SSTV"),
+        Sat(25544, N_("МКС"), "iss", "#7fd1ff",
+            listOf(Tx(N_("Голос / SSTV"), mhz(145.800), "NFM", bw = 15000.0, note = N_("SSTV — режим SSTV")),
+                Tx("APRS", mhz(145.825), "NFM", bw = 15000.0, note = N_("пакеты AFSK 1200")),
+                Tx(N_("Кросс-бэнд репитер"), mhz(437.800), "NFM", bw = 15000.0, note = N_("вверх 145,990 (67 Гц), при включении"))),
+            N_("активна"), N_("SSTV/голос 145,800 МГц — режим SSTV")),
         // --- FM
         Sat(27607, "SO-50 (SaudiSat-1C)", "fm", "#9be37a",
-            listOf(Tx("FM-ретранслятор", mhz(436.795), "NFM", bw = 15000.0, note = "вверх 145,850 (67 Гц)")), "активен"),
+            listOf(Tx(N_("FM-ретранслятор"), mhz(436.795), "NFM", bw = 15000.0, note = N_("вверх 145,850 (67 Гц)"))), N_("активен")),
         Sat(43678, "PO-101 (Diwata-2)", "fm", "#c9f27a",
-            listOf(Tx("FM-ретранслятор", mhz(145.900), "NFM", bw = 15000.0, note = "вверх 437,500")),
-            "по расписанию", "включают по объявлениям операторов"),
+            listOf(Tx(N_("FM-ретранслятор"), mhz(145.900), "NFM", bw = 15000.0, note = N_("вверх 437,500"))),
+            N_("по расписанию"), N_("включают по объявлениям операторов")),
         Sat(43017, "AO-91 (Fox-1B)", "fm", "#7ae3c3",
-            listOf(Tx("FM-ретранслятор", mhz(145.960), "NFM", bw = 15000.0, note = "вверх 435,250 (без тона)")),
-            "только на солнце", "аккумулятор деградировал — работает на освещённой части витка"),
+            listOf(Tx(N_("FM-ретранслятор"), mhz(145.960), "NFM", bw = 15000.0, note = N_("вверх 435,250 (без тона)"))),
+            N_("только на солнце"), N_("аккумулятор деградировал — работает на освещённой части витка")),
         Sat(61781, "AO-123 (ASRTU-1)", "fm", "#e3d77a",
-            listOf(Tx("FM-ретранслятор", mhz(435.400), "NFM", bw = 15000.0, note = "вверх 145,850")), "активен"),
+            listOf(Tx(N_("FM-ретранслятор"), mhz(435.400), "NFM", bw = 15000.0, note = N_("вверх 145,850"))), N_("активен")),
         Sat(22825, "AO-27 (EYESAT-1)", "fm", "#a7a7a7",
-            listOf(Tx("FM-ретранслятор", mhz(436.795), "NFM", bw = 15000.0, note = "вверх 145,850")),
-            "нерегулярно", "аппарату 30+ лет, включается эпизодически"),
+            listOf(Tx(N_("FM-ретранслятор"), mhz(436.795), "NFM", bw = 15000.0, note = N_("вверх 145,850"))),
+            N_("нерегулярно"), N_("аппарату 30+ лет, включается эпизодически")),
         // --- SSB/CW
         Sat(44909, "RS-44 (DOSAAF-85)", "ssb", "#f27ab8",
-            listOf(Tx("Транспондер (инверт.)", mhz(435.610), "USB", hi = mhz(435.670), note = "вверх 145,935–145,995"),
-                Tx("CW-маяк", mhz(435.605), "CW")), "активен"),
+            listOf(Tx(N_("Транспондер (инверт.)"), mhz(435.610), "USB", hi = mhz(435.670), note = N_("вверх 145,935–145,995")),
+                Tx(N_("CW-маяк"), mhz(435.605), "CW")), N_("активен")),
         Sat(24278, "FO-29 (JAS-2)", "ssb", "#d07af2",
-            listOf(Tx("Транспондер (инверт.)", mhz(435.800), "USB", hi = mhz(435.900), note = "вверх 145,900–146,000"),
-                Tx("CW-маяк", mhz(435.795), "CW")), "по расписанию", "включает JARL, обычно по выходным"),
+            listOf(Tx(N_("Транспондер (инверт.)"), mhz(435.800), "USB", hi = mhz(435.900), note = N_("вверх 145,900–146,000")),
+                Tx(N_("CW-маяк"), mhz(435.795), "CW")), N_("по расписанию"), N_("включает JARL, обычно по выходным")),
         Sat(39444, "AO-73 (FUNcube-1)", "ssb", "#7a9bf2",
-            listOf(Tx("Транспондер (инверт.)", mhz(145.950), "USB", hi = mhz(145.970), note = "вверх 435,130–435,150"),
-                Tx("Телеметрия BPSK 1200", mhz(145.935), "USB")),
-            "в тени Земли", "транспондер работает в тени, телеметрия — на солнце"),
+            listOf(Tx(N_("Транспондер (инверт.)"), mhz(145.950), "USB", hi = mhz(145.970), note = N_("вверх 435,130–435,150")),
+                Tx(N_("Телеметрия BPSK 1200"), mhz(145.935), "USB")),
+            N_("в тени Земли"), N_("транспондер работает в тени, телеметрия — на солнце")),
         Sat(43803, "JO-97 (JY1Sat)", "ssb", "#b0b0f2",
-            listOf(Tx("Транспондер (инверт.)", mhz(145.855), "USB", hi = mhz(145.875), note = "вверх 435,100–435,120"),
-                Tx("Телеметрия BPSK 1200", mhz(145.840), "USB")), "нерегулярно"),
+            listOf(Tx(N_("Транспондер (инверт.)"), mhz(145.855), "USB", hi = mhz(145.875), note = N_("вверх 435,100–435,120")),
+                Tx(N_("Телеметрия BPSK 1200"), mhz(145.840), "USB")), N_("нерегулярно")),
         // --- телеметрия
         Sat(40908, "LilacSat-2 (CAS-3H)", "tlm", "#f2c27a",
-            listOf(Tx("Телеметрия BPSK 9600 / CW", mhz(437.200), "USB"), Tx("Телеметрия GFSK 4800", mhz(437.225), "NFM")),
-            "активен"),
+            listOf(Tx(N_("Телеметрия BPSK 9600 / CW"), mhz(437.200), "USB"), Tx(N_("Телеметрия GFSK 4800"), mhz(437.225), "NFM")),
+            N_("активен")),
         Sat(43880, "UWE-4", "tlm", "#7af2e0",
-            listOf(Tx("Телеметрия FSK 9600", mhz(435.600), "NFM", bw = 20000.0)), "активен"),
+            listOf(Tx(N_("Телеметрия FSK 9600"), mhz(435.600), "NFM", bw = 20000.0)), N_("активен")),
         Sat(59112, "SONATE-2", "tlm", "#f27a7a",
-            listOf(Tx("SSTV (Martin M1)", mhz(145.880), "NFM", bw = 15000.0), Tx("CW-маяк", mhz(145.840), "CW"),
-                Tx("Телеметрия GMSK 9600", mhz(437.025), "NFM", bw = 20000.0)), "активен"),
+            listOf(Tx("SSTV (Martin M1)", mhz(145.880), "NFM", bw = 15000.0), Tx(N_("CW-маяк"), mhz(145.840), "CW"),
+                Tx(N_("Телеметрия GMSK 9600"), mhz(437.025), "NFM", bw = 20000.0)), N_("активен")),
     )
 
     /** «Электро-Л» (геостационар, LRIT 1691 МГц): в каталоге для «Приёма со спутника», пролётов у них нет. */
     val GEO: List<Sat> = listOf(
-        Sat(67756, "Электро-Л №5", "meteo", "#ffd84d", listOf(Tx("LRIT (снимки)", mhz(1691.0), "LRIT", note = "BPSK 294k")),
-            "активен", "76° в. д."),
-        Sat(44903, "Электро-Л №3", "meteo", "#ffd84d", listOf(Tx("LRIT (снимки)", mhz(1691.0), "LRIT", note = "BPSK 294k")),
-            "перегоняется", "с 76° в. д. на 14,5° з. д."),
-        Sat(55506, "Электро-Л №4", "meteo", "#ffd84d", listOf(Tx("LRIT (снимки)", mhz(1691.0), "LRIT", note = "BPSK 294k")),
-            "активен", "165,8° в. д. — из России не виден"),
-        Sat(41105, "Электро-Л №2", "meteo", "#ffd84d", listOf(Tx("LRIT (снимки)", mhz(1691.0), "LRIT", note = "BPSK 294k")),
-            "заменяется №3", "14,5° з. д."),
+        Sat(67756, N_("Электро-Л №5"), "meteo", "#ffd84d", listOf(Tx(N_("LRIT (снимки)"), mhz(1691.0), "LRIT", note = "BPSK 294k")),
+            N_("активен"), N_("76° в. д.")),
+        Sat(44903, N_("Электро-Л №3"), "meteo", "#ffd84d", listOf(Tx(N_("LRIT (снимки)"), mhz(1691.0), "LRIT", note = "BPSK 294k")),
+            N_("перегоняется"), N_("с 76° в. д. на 14,5° з. д.")),
+        Sat(55506, N_("Электро-Л №4"), "meteo", "#ffd84d", listOf(Tx(N_("LRIT (снимки)"), mhz(1691.0), "LRIT", note = "BPSK 294k")),
+            N_("активен"), N_("165,8° в. д. — из России не виден")),
+        Sat(41105, N_("Электро-Л №2"), "meteo", "#ffd84d", listOf(Tx(N_("LRIT (снимки)"), mhz(1691.0), "LRIT", note = "BPSK 294k")),
+            N_("заменяется №3"), N_("14,5° з. д.")),
     )
     val GEO_NORADS: Set<Int> = GEO.map { it.norad }.toSet()
 
     /** Номинальные долготы «Электро-Л» (elektro.SATS): NORAD → (название, долгота °). */
     val ELEKTRO: Map<Int, Pair<String, Double>> = linkedMapOf(
-        67756 to ("Электро-Л №5" to 76.0),
-        44903 to ("Электро-Л №3" to -14.5),
-        55506 to ("Электро-Л №4" to 165.8),
-        41105 to ("Электро-Л №2" to -14.5),
+        67756 to (N_("Электро-Л №5") to 76.0),
+        44903 to (N_("Электро-Л №3") to -14.5),
+        55506 to (N_("Электро-Л №4") to 165.8),
+        41105 to (N_("Электро-Л №2") to -14.5),
     )
 
     /** «Метеоры» для автоприёма по расписанию (sat_window.METEORS). */
