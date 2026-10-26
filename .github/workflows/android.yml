@@ -1,0 +1,113 @@
+# Android-версия: тесты и сборка APK на каждый PR; по тегу vX.Y.Z — подписанный APK догружается в релиз,
+# который создаёт release.yml (Windows). Версия APK берётся из rtltv/__init__.py, как у Windows-сборки.
+# Ключ подписи — секреты репозитория ANDROID_KEYSTORE_B64 (base64 .jks) и ANDROID_KEYSTORE_PASS;
+# без них APK на PR подписывается отладочным ключом, а релиз по тегу не публикуется.
+name: android
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    permissions:
+      contents: write   # нужен только шагу «Публикация в релиз»
+    env:
+      TAG: ${{ github.ref_name }}
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # токен с правом записи нужен только шагу публикации (через GH_TOKEN)
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: NDK и CMake
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - name: Версия в rtltv/__init__.py совпадает с тегом
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          ver=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' ../rtltv/__init__.py)
+          [ "$ver" = "${TAG#v}" ] || { echo "rtltv.__version__ = $ver, а тег = $TAG"; exit 1; }
+
+      - name: Ключ подписи
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "ANDROID_KEYSTORE_PASS=$KS_PASS" >> "$GITHUB_ENV"
+          elif [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
+            echo "::error::нет секретов ANDROID_KEYSTORE_B64/ANDROID_KEYSTORE_PASS — релизный APK подписать нечем"; exit 1
+          else
+            echo "::notice::секретов подписи нет (PR из форка?) — APK подписан отладочным ключом"
+          fi
+
+      - name: Тесты
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Сборка APK
+        run: |
+          ./gradlew --no-daemon assembleRelease
+          ver=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' ../rtltv/__init__.py)
+          mkdir -p ../release
+          apk="../release/SDR4NOOB-$ver-android.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$apk" | head -3
+          unzip -l "$apk" | grep -q "lib/arm64-v8a/libsdr4noob.so" || { echo "в APK нет драйвера arm64"; exit 1; }
+          unzip -l "$apk" | grep -q "assets/guide/index.html" || { echo "в APK нет справки"; exit 1; }
+          ! unzip -p "$apk" 'assets/guide/img/*.svg' | grep -q '{{' || { echo "в SVG справки не подставлены цвета темы"; exit 1; }
+          (cd ../release && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
+          echo "APK=release/$(basename "$apk")" >> "$GITHUB_ENV"
+          echo "VER=$ver" >> "$GITHUB_ENV"
+
+      - name: APK как артефакт (PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SDR4NOOB-android-pr${{ github.event.number }}
+          path: release/
+          retention-days: 14
+
+      - name: Публикация в релиз
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: .
+        timeout-minutes: 60
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Релиз создаёт release.yml (Windows) после всех своих проверок: обновлятор Windows-версии берёт
+          # releases/latest, и релиз без zip сломал бы ему обновление. Поэтому APK только догружается —
+          # ждём, пока релиз появится (сборка Windows идёт ~20–30 мин); если она упала, релиза не будет.
+          for i in $(seq 1 110); do
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              gh release upload "$TAG" "$APK" "$APK.sha256" --clobber
+              exit $?
+            fi
+            sleep 30
+          done
+          echo "::error::релиз $TAG так и не появился (сборка Windows в release.yml не прошла?) — APK не опубликован"
+          exit 1
