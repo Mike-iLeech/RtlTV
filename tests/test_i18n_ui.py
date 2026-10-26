@@ -113,6 +113,48 @@ def test_settings_dialog_english(qapp, english, lang_selectable):
         d.deleteLater()
 
 
+def test_qt_translator_follows_language(qapp):
+    """Стандартные кнопки Qt: ru → en → ru снова по-русски (перевод Qt переставляется при каждой смене)."""
+    from PySide6.QtWidgets import QDialogButtonBox
+    old = i18n.language()
+    try:
+        i18n.set_language("ru")
+        i18n.install_qt_translator(qapp)
+
+        def yes():
+            box = QDialogButtonBox(QDialogButtonBox.Yes)
+            return box.buttons()[0].text().replace("&", "")
+        assert yes() == "Да"
+        i18n.set_language("en")
+        assert yes() == "Yes"
+        i18n.set_language("ru")
+        assert yes() == "Да"
+    finally:
+        i18n.set_language(old)
+
+
+def test_settings_save_keeps_language_unless_changed(qapp, monkeypatch, lang_selectable):
+    """Сохранение «Настроек» ради другого параметра язык не переключает (выбор языка не трогали)."""
+    from rtltv import launcher, settings_dialog
+    calls = []
+    monkeypatch.setattr(launcher, "switch_language", calls.append)
+    monkeypatch.setattr(i18n, "system_language", lambda: "ru")
+    old = i18n.language()
+    i18n.set_language("en")
+    try:
+        d = settings_dialog.SettingsDialog()
+        d._save()
+        qapp.processEvents()
+        assert calls == []
+        d = settings_dialog.SettingsDialog()
+        d.lang.setCurrentIndex(d.lang.findData("ru"))
+        d._save()
+        qapp.processEvents()
+        assert calls == ["ru"]
+    finally:
+        i18n.set_language(old)
+
+
 def test_settings_dialog_hides_language_until_ready(qapp, monkeypatch):
     monkeypatch.setattr(i18n, "ENGLISH_READY", False)
     monkeypatch.delenv("RTLTV_LANG", raising=False)

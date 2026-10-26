@@ -49,6 +49,7 @@ class SettingsDialog(QDialog):
             for code, name in i18n.LANGS.items():
                 self.lang.addItem(name, code)
             self.lang.setCurrentIndex(max(0, self.lang.findData(i18n.configured())))
+            self.lang_was = self.lang.currentData()
             g0l.addWidget(self.lang)
             note = QLabel(tr("Окна откроются заново на выбранном языке, текущий режим — тоже."))
             note.setObjectName("dim")
@@ -245,7 +246,8 @@ class SettingsDialog(QDialog):
         if self.lang is not None:
             app_s["language"] = self.lang.currentData()
             lang_new = i18n.resolve(app_s["language"])
-            if lang_new == i18n.language():
+            # язык меняется, только если его выбор поменяли здесь (иначе RTLTV_LANG/--lang не сбрасываются)
+            if self.lang.currentData() == self.lang_was or lang_new == i18n.language():
                 lang_new = None
         settings.save("app", app_s)
         self.accept()

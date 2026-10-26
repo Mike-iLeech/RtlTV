@@ -37,6 +37,7 @@ LOCALE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locale")
 _lang = None
 _cat = None
 _qt_translators = []
+_qt_app = None   # приложение, которому ставили перевод Qt (переставлять при смене языка)
 
 
 def system_language():
@@ -90,8 +91,8 @@ def set_language(code):
     global _lang, _cat
     _lang = code if code in LANGS else "ru"
     _cat = None
-    if _qt_translators:
-        install_qt_translator()
+    if _qt_app is not None:
+        install_qt_translator(_qt_app)
 
 
 def catalog(lang="en"):
@@ -165,9 +166,11 @@ def dec(s):
 def install_qt_translator(app=None):
     """Перевод стандартных кнопок и диалогов Qt (qtbase_ru.qm из PySide6) на язык интерфейса."""
     from PySide6.QtCore import QCoreApplication, QLibraryInfo, QTranslator
+    global _qt_app
     app = app or QCoreApplication.instance()
     if app is None:
         return
+    _qt_app = app
     for t in _qt_translators:
         app.removeTranslator(t)
     _qt_translators.clear()
