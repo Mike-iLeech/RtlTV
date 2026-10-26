@@ -8,7 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.LinearLayout
 import io.github.mikeileech.sdr4noob.dsp.Modulation
+import io.github.mikeileech.sdr4noob.radio.LrptWorker
 import io.github.mikeileech.sdr4noob.radio.RadioEngine
+import io.github.mikeileech.sdr4noob.radio.Storage
+import io.github.mikeileech.sdr4noob.sat.RxPlan
 import io.github.mikeileech.sdr4noob.sat.Geo
 import io.github.mikeileech.sdr4noob.sat.Orbit
 import io.github.mikeileech.sdr4noob.sat.Pass
@@ -36,6 +39,13 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
     private val ui = Handler(Looper.getMainLooper())
     val view: LinearLayout = Ui.vbox(act, 0)
     private val map = MapView(act)
+    private val picView = SstvView(act).apply { visibility = android.view.View.GONE }
+    private var lrpt: LrptWorker? = null
+    private var lrptCenter = 0.0
+    private var showPic = false
+    private val picBtn = Ui.button(act, "Снимок") { togglePic() }
+    private var saveBtn: android.view.View? = null
+    private var shownPic: io.github.mikeileech.sdr4noob.radio.LrptPicture? = null
     private val now = Ui.text(act, "Загрузка орбит (TLE)…", 13f)
     private val list = Ui.text(act, "", 12f).apply { maxLines = 5; typeface = android.graphics.Typeface.MONOSPACE }
     private val time = SimpleDateFormat("dd.MM HH:mm", Locale.ROOT)
@@ -56,8 +66,16 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
         map.setCenter(la, lo, 2)
         map.onItemClick = { key -> key.toIntOrNull()?.let { n -> SatCatalog.allSats().firstOrNull { it.norad == n }?.let(::choose) } }
         view.addView(map, Ui.lp(h = 0, weight = 1f))
+        view.addView(picView, Ui.lp(h = 0, weight = 1f))
         view.addView(now)
         view.addView(list)
+        val r0 = Ui.hbox(act)
+        picBtn.visibility = android.view.View.GONE
+        r0.addView(picBtn, Ui.lp(0, weight = 1f))
+        val save = Ui.button(act, "Сохранить снимок") { savePic() }.apply { visibility = android.view.View.GONE }
+        r0.addView(save, Ui.lp(0, weight = 1f))
+        saveBtn = save
+        view.addView(r0)
         val r = Ui.hbox(act)
         r.addView(Ui.button(act, "Спутник…") { pickSat() }, Ui.lp(0, weight = 1f))
         r.addView(Ui.button(act, "Пролёты…") { showPasses() }, Ui.lp(0, weight = 1f))
@@ -73,8 +91,56 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
     fun startFreq(): Long = (tx?.center ?: 145.8e6).toLong()
     fun startMode(): Modulation = tx?.let { runCatching { Modulation.valueOf(it.mode) }.getOrNull() } ?: Modulation.NFM
 
-    fun start(e: RadioEngine) { engine = e }
-    fun stop() { alive = false; engine = null }
+    fun start(e: RadioEngine) {
+        engine = e
+        tx?.let { if (it.kind == "lrpt") ui.post { startLrpt(it) } }
+    }
+    fun stop() { alive = false; stopLrpt(); engine = null }
+
+    /**
+     * Снимки «Метеора»: приёмник настраивается на 200 кГц ниже сигнала (как на ПК — уводит сигнал от пика
+     * постоянной составляющей), IQ 1,2 МГц идёт в декодер LRPT, доплер поправляется смещением в декодере.
+     */
+    private fun startLrpt(x: Tx) {
+        val e = engine ?: return
+        stopLrpt()
+        val fs = 1_200_000
+        e.setSampleRate(fs)
+        lrptCenter = x.center - RxPlan.IF_OFFSET
+        e.setCenter(lrptCenter.roundToLong())
+        val w = LrptWorker(fs) { msg -> ui.post { if (alive) toast(msg) } }
+        w.offsetHz = x.center - lrptCenter
+        lrpt = w
+        e.iqTap = w::feed
+        picBtn.visibility = android.view.View.VISIBLE
+        saveBtn?.visibility = android.view.View.VISIBLE
+    }
+
+    private fun stopLrpt() {
+        engine?.iqTap = null
+        lrpt?.stop(); lrpt = null
+        picBtn.visibility = android.view.View.GONE
+        saveBtn?.visibility = android.view.View.GONE
+        if (showPic) togglePic()
+    }
+
+    private fun togglePic() {
+        showPic = !showPic
+        map.visibility = if (showPic) android.view.View.GONE else android.view.View.VISIBLE
+        picView.visibility = if (showPic) android.view.View.VISIBLE else android.view.View.GONE
+        picBtn.text = if (showPic) "Карта" else "Снимок"
+        if (showPic) refresh()
+    }
+
+    private fun savePic() {
+        val p = lrpt?.picture ?: run { toast("Снимка пока нет: кадры ещё не приняты"); return }
+        val b = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
+        val name = "meteor_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(Date()) + "_${p.key}.png"
+        thread(name = "lrpt-save") {
+            val msg = try { "Снимок сохранён: " + Storage.savePng(act, Storage.METEOR, name, b) } catch (e: Exception) { "Снимок не сохранён: ${e.message}" }
+            ui.post { if (alive) toast(msg) }
+        }
+    }
 
     private fun load(force: Boolean) {
         now.text = if (force) "Обновление TLE с celestrak…" else now.text
@@ -140,11 +206,28 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
                 if (x != null && sel.norad !in SatCatalog.GEO_NORADS) {
                     val d = o.doppler(t, x.center, la, lo)
                     append(String.format(Locale.ROOT, " · доплер %+.1f кГц", d / 1e3).replace('.', ','))
-                    if (l.el > -2) retune(x, d)
+                    val w = lrpt
+                    if (w != null) w.offsetHz = x.center - lrptCenter + (if (l.el > -2) d else 0.0)
+                    else if (l.el > -2) retune(x, d)
                 }
                 if (l.el < 0) append(" · за горизонтом")
             }
-            if (x?.kind == "lrpt") append("\nСнимки «Метеора» (LRPT): декодер переносится; пока можно слушать/записать IQ.")
+            lrpt?.let { w ->
+                val s = w.stats
+                append("\nLRPT: ")
+                if (s == null) append("запуск…") else {
+                    append(if (s.sync) "синхронизация есть" else "поиск сигнала")
+                    append(" · кадров ${s.framesOk}/${s.frames} · строк ${s.lines}")
+                    if (s.channels.isNotEmpty()) append(" · каналы " + s.channels.joinToString(",") { (it - 63).toString() })
+                    append(String.format(Locale.ROOT, " · С/Ш %.1f dB", s.snrDb).replace('.', ','))
+                    if (s.mode.isNotEmpty()) append(" · ${s.mode}")
+                }
+                // растр — только для нового снимка и когда его видно (снимок пролёта — десятки МБ)
+                w.picture?.takeIf { it !== shownPic && showPic }?.let { p ->
+                    shownPic = p
+                    picView.bitmap = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
+                }
+            }
         }
         val next = passes.filter { it.los > t }.take(5)
         list.text = if (next.isEmpty()) tleStatus else next.joinToString("\n") { p ->
@@ -166,7 +249,9 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
             sat = s; tx = txs[i]; lastTuned = 0; tick = 0
             prefs.edit().putInt("sat_norad", s.norad).putInt("sat_tx", i).apply()
             val m = runCatching { Modulation.valueOf(txs[i].mode) }.getOrNull() ?: Modulation.NFM
+            stopLrpt()
             onTune(txs[i].center.toLong(), m, if (txs[i].bw > 0) txs[i].bw.roundToInt() else m.defaultBw)
+            if (txs[i].kind == "lrpt") startLrpt(txs[i])
             refresh()
         }
         if (txs.size == 1) pick(0)

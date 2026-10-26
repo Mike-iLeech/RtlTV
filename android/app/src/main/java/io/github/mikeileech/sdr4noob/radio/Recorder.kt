@@ -171,6 +171,7 @@ object Storage {
 
     // ---------------- картинки (SSTV, позже — спутники) ----------------
     const val SSTV = "SSTV"           // как paths.PICS_SSTV в настольной версии
+    const val METEOR = "Метеор"       // как paths.PICS_METEOR
 
     /** Где лежат картинки — для подсказок: Pictures/SDR4NOOB/SSTV. */
     fun picturesPath(sub: String) = "${Environment.DIRECTORY_PICTURES}/$ROOT/$sub"

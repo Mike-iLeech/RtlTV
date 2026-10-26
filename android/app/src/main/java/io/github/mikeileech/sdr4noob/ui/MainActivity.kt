@@ -127,7 +127,7 @@ class MainActivity : Activity() {
         modes.addView(Ui.button(this, "📍  APRS — метки любителей на карте (144,800 МГц)") { openRadio(RadioActivity.APP_APRS) })
         modes.addView(Ui.button(this, "📺  Телевидение: измеритель DVB-T/T2, аналоговая картинка, поиск каналов") { openRadio(RadioActivity.APP_TV) })
         modes.addView(Ui.button(this, "🛰  Спутники: пролёты, приём с доплером, «Метеор» LRPT") { openRadio(RadioActivity.APP_SAT) })
-        modes.addView(Ui.text(this, "Остальные режимы есть в версии для Windows и переносятся на Android по очереди.",
+        modes.addView(Ui.text(this, "Все режимы версии для Windows. Без приёмника каждый режим можно попробовать на тестовом сигнале.",
             12f, Ui.DIM), Ui.lp(top = Ui.dp(this, 4)))
         root.addView(modes, Ui.lp(top = Ui.dp(this, 12)))
 

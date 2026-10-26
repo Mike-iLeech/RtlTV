@@ -2,7 +2,7 @@
 спутники, ADS-B, APRS. Внутреннее имя пакета — rtltv (историческое: проект начинался как RtlTV)."""
 from .i18n import N_
 
-__version__ = "3.8.0"
+__version__ = "3.9.0"
 
 NAME = "SDR4NOOB"
 TAGLINE = N_("Всё в одном для начинающего радиолюбителя")  # на экран — tr(TAGLINE)
