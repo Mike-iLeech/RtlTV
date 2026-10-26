@@ -107,10 +107,11 @@ class DemoSource : SdrSource {
 
     private fun render(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int) {
         val t = produced.toDouble() / fs
+        // станции без нот (телеграф) — до выбора ноты: у них пустой список
+        if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         val step = (t / 0.4).toInt()
         val fl = st.notesL[step % st.notesL.size].toDouble()
         val fr = if (st.notesR.isEmpty()) fl else st.notesR[step % st.notesR.size].toDouble()
-        if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         val dl = inc(fl); val dr = inc(fr); val dp = inc(19_000.0)
         val rds = st.freq == 101_000_000L
         var pl = tonePh[4 * k]; var pr = tonePh[4 * k + 1]; var pp = tonePh[4 * k + 2]
