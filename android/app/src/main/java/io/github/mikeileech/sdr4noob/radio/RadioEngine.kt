@@ -179,7 +179,8 @@ class RadioEngine(
         demod = RadioDemod(rate, mode).also {
             it.stereo = stereoWanted; it.squelchDb = squelch; it.setBandwidth(bandwidth); it.agc.on = agcOn
         }
-        stopIqRec()   // в записи IQ одна частота дискретизации
+        // в записи IQ одна частота дискретизации
+        iqRec.getAndSet(null)?.let { it.close(); listener?.onRecordStopped("Запись IQ остановлена: сменена полоса обзора") }
         centerHz = vfoHz + offsetFor(rate)
         source.setFrequency(centerHz)
         demod.offsetHz = (vfoHz - centerHz).toDouble()

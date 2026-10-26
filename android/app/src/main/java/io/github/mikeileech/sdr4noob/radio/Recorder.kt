@@ -27,7 +27,10 @@ import kotlin.math.roundToInt
  * карта извлечена) или файл дорос до предела WAV в 4 ГБ — поток останавливается, причина — в [failed],
  * приложение при этом не падает.
  */
-class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int, private val onClose: () -> Unit = {}) {
+class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int,
+                /** Запись без разрывов (IQ): если диск не успел, остановиться, а не склеивать куски с дырами. */
+                private val strict: Boolean = false,
+                private val onClose: () -> Unit = {}) {
     companion object {
         /** Предел формата WAV: размер в заголовке — 32 бита. */
         const val LIMIT = 0xFFFFFFFFL - 44
@@ -56,7 +59,11 @@ class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int, p
     val alive get() = thread.isAlive && !closing && failed == null
 
     private fun offer(b: ByteBuffer, n: Int) {
-        if (!alive || !queue.offer(b)) dropped.addAndGet(n.toLong())
+        if (!alive) return
+        if (!queue.offer(b)) {
+            dropped.addAndGet(n.toLong())
+            if (strict && failed == null) { failed = "память телефона не успевает за потоком IQ — уменьшите полосу обзора"; close() }
+        }
     }
 
     /** Отсчёты float ±1 (чередование каналов), [n] — число значений (а не кадров). */
@@ -93,7 +100,7 @@ class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int, p
                 while (b.hasRemaining()) bytes += ch.write(b)
             }
         } catch (e: Throwable) {
-            failed = if (e.message?.contains("ENOSPC") == true || e.message?.contains("space", true) == true)
+            failed = if (failed != null) failed else if (e.message?.contains("ENOSPC") == true || e.message?.contains("space", true) == true)
                 "нет места на телефоне" else "ошибка записи: ${e.message ?: e.javaClass.simpleName}"
         } finally {
             queue.clear()

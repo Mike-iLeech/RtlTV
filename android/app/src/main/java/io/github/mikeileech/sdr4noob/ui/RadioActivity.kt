@@ -103,8 +103,8 @@ class RadioActivity : Activity() {
         askNotifications()
         // приём в фоне: сервис держит процесс, пока окно радио открыто (запуск — пока окно видно)
         if (engine != null) {
-            RadioService.onStop = { if (alive) finish() }
             serviceOn = RadioService.start(this, notifyText(), sourceId, wifi = sourceId.startsWith("tcp:"))
+            if (serviceOn) RadioService.onStop = { if (alive) finish() }
         }
     }
 
@@ -131,7 +131,8 @@ class RadioActivity : Activity() {
         e?.let { it.stopAudioRec(); it.stopIqRec(); it.stop() }   // stop снимает listener
         engine = null
         // сервис общий: вытесненное окно не трогает его — им пользуется новое окно радио
-        if (serviceOn && owner) { RadioService.onStop = null; RadioService.stop(this) }
+        if (owner) RadioService.onStop = null
+        if (serviceOn && owner) RadioService.stop(this)
         serviceOn = false
         super.onDestroy()
     }
@@ -404,7 +405,8 @@ class RadioActivity : Activity() {
         val sq = if (!e.squelchOpen) " · шумодав закрыт" else ""
         infoText.text = String.format(Locale.ROOT, "Уровень %.0f dBFS", e.levelDb) + st + sq +
             " · полоса " + Ui.mhz(e.sampleRate.toLong()).replace(" МГц", " МГц обзора")
-        val rec = listOfNotNull(e.audioRecording?.let { "звук ${it.seconds.toInt()} с" },
+        val rec = listOfNotNull(e.audioRecording?.let { w ->
+                "звук ${w.seconds.toInt()} с" + (w.dropped.get().takeIf { it > 0 }?.let { " (потеряно при записи: $it)" } ?: "") },
             e.iqRecording?.let { "IQ ${it.seconds.toInt()} с" }).joinToString(", ")
         statusText.text = e.label + (if (e.dropped > 0) " · потеряно отсчётов: ${e.dropped}" else "") +
             (if (rec.isNotEmpty()) " · ● запись: $rec" else "")
@@ -423,10 +425,11 @@ class RadioActivity : Activity() {
         if (e.audioRecording != null) {
             e.stopAudioRec(); recButton.text = "● Звук в WAV"; return
         }
+        if (!e.running) { toast("Приёмник не работает — записывать нечего"); return }
         var out: Storage.Out? = null
         try {
             out = Storage.open(this, Storage.AUDIO, Storage.audioName(e.vfoHz))
-            e.startAudioRec(WavWriter(out.channel, RadioDemod.AUDIO_RATE, 2, out.finish))
+            e.startAudioRec(WavWriter(out.channel, RadioDemod.AUDIO_RATE, 2, onClose = out.finish))
             recButton.text = "■ Стоп записи"
             toast("Запись звука: ${out.shownPath}")
         } catch (ex: Exception) {
@@ -438,10 +441,11 @@ class RadioActivity : Activity() {
     private fun toggleIqRec() {
         val e = engine ?: return
         if (e.iqRecording != null) { e.stopIqRec(); return }
+        if (!e.running) { toast("Приёмник не работает — записывать нечего"); return }
         var out: Storage.Out? = null
         try {
             out = Storage.open(this, Storage.IQ, Storage.iqName(e.centerHz, e.sampleRate))
-            e.startIqRec(WavWriter(out.channel, e.sampleRate, 2, out.finish))
+            e.startIqRec(WavWriter(out.channel, e.sampleRate, 2, strict = true, onClose = out.finish))
             val mbMin = e.sampleRate * 4L * 60 / 1_000_000
             toast("Запись IQ (≈$mbMin МБ в минуту; перестройка центра её остановит): ${out.shownPath}")
         } catch (ex: Exception) {

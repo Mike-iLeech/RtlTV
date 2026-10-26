@@ -132,7 +132,11 @@ object FreqMan {
 
     // ---------------- XML SDR# ----------------
     fun importSdrSharpXml(bytes: ByteArray): List<FreqEntry> {
-        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(ByteArrayInputStream(bytes))
+        // без DTD и внешних сущностей: чужой файл не раздует память и не прочитает лишнего
+        val f = DocumentBuilderFactory.newInstance()
+        runCatching { f.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+        f.isExpandEntityReferences = false
+        val doc = f.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
         val list = doc.getElementsByTagName("MemoryEntry")
         val out = ArrayList<FreqEntry>()
         for (i in 0 until list.length) {

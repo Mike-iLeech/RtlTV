@@ -33,6 +33,8 @@ class RadioService : Service() {
         @Volatile var onStop: (() -> Unit)? = null
 
         @Volatile private var source = ""
+        /** Сервис работает (уведомление можно обновлять). */
+        @Volatile private var live = false
 
         /** Запустить из видимого окна (Android 12+ запрещает запуск сервиса переднего плана из фона). */
         fun start(ctx: Context, text: String, sourceId: String, wifi: Boolean): Boolean {
@@ -48,6 +50,7 @@ class RadioService : Service() {
 
         /** Обновить текст уведомления (частота) без перезапуска сервиса. */
         fun update(ctx: Context, text: String) {
+            if (!live) return
             val nm = ctx.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             runCatching { nm.notify(ID, build(ctx, text)) }
         }
@@ -86,11 +89,13 @@ class RadioService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            live = false
             Handler(Looper.getMainLooper()).post { onStop?.invoke() }
             stopSelf()
             return START_NOT_STICKY
         }
         val n = build(this, intent?.getStringExtra(EXTRA_TEXT) ?: "Радио")
+        live = true
         if (Build.VERSION.SDK_INT >= 29) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         else startForeground(ID, n)
         if (wake == null) {
@@ -109,6 +114,7 @@ class RadioService : Service() {
     }
 
     override fun onDestroy() {
+        live = false
         runCatching { wake?.release() }
         runCatching { wifi?.release() }
         wake = null; wifi = null
