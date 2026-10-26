@@ -168,4 +168,63 @@ object Storage {
     /** Имя записи IQ, как iqfile.file_name: SDR4NOOB_20261024_101500Z_101200000Hz_2400000sps_IQ.wav (UTC). */
     fun iqName(centerHz: Long, fs: Int, now: Date = Date()) =
         "SDR4NOOB_" + stamp("yyyyMMdd_HHmmss", true, now) + "Z_${centerHz}Hz_${fs}sps_IQ.wav"
+
+    // ---------------- картинки (SSTV, позже — спутники) ----------------
+    const val SSTV = "SSTV"           // как paths.PICS_SSTV в настольной версии
+
+    /** Где лежат картинки — для подсказок: Pictures/SDR4NOOB/SSTV. */
+    fun picturesPath(sub: String) = "${Environment.DIRECTORY_PICTURES}/$ROOT/$sub"
+
+    /** Имя картинки, как в окне SSTV на ПК: sstv_20261024_101500_Martin_M1.png (местное время). */
+    fun sstvName(mode: String, now: Date = Date()) =
+        "sstv_" + stamp("yyyyMMdd_HHmmss", false, now) + "_" + mode.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("") + ".png"
+
+    /** Сохранить PNG в «Изображения/SDR4NOOB/[sub]»; возвращает путь для показа. */
+    fun savePng(context: Context, sub: String, name: String, bmp: android.graphics.Bitmap): String {
+        if (Build.VERSION.SDK_INT >= 29) {
+            val cr = context.contentResolver
+            val v = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, picturesPath(sub))
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+            val uri = cr.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v)
+                ?: throw IllegalStateException("MediaStore не создал файл")
+            try {
+                (cr.openOutputStream(uri) ?: throw IllegalStateException("MediaStore не открыл файл")).use {
+                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("PNG не записан")
+                }
+            } catch (e: Exception) {
+                runCatching { cr.delete(uri, null, null) }
+                throw e
+            }
+            cr.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            return "${picturesPath(sub)}/$name"
+        }
+        val dir = picturesDir(context, sub).apply { mkdirs() }
+        val f = File(dir, name)
+        FileOutputStream(f).use { if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("PNG не записан") }
+        return f.path
+    }
+
+    private fun picturesDir(context: Context, sub: String) =
+        File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir, "$ROOT/$sub")
+
+    /** Последние (до 60) картинки этой программы в «Изображения/SDR4NOOB/[sub]»: (имя, адрес), новые первыми. */
+    fun listPictures(context: Context, sub: String): List<Pair<String, Uri>> {
+        if (Build.VERSION.SDK_INT >= 29) {
+            val out = ArrayList<Pair<String, Uri>>()
+            val col = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            context.contentResolver.query(col, arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
+                "${MediaStore.MediaColumns.RELATIVE_PATH} = ?", arrayOf(picturesPath(sub) + "/"),
+                "${MediaStore.MediaColumns.DATE_ADDED} DESC")?.use { c ->
+                while (c.moveToNext() && out.size < 60)
+                    out += c.getString(1) to android.content.ContentUris.withAppendedId(col, c.getLong(0))
+            }
+            return out
+        }
+        return (picturesDir(context, sub).listFiles { f -> f.name.endsWith(".png") } ?: emptyArray())
+            .sortedByDescending { it.lastModified() }.take(60).map { it.name to Uri.fromFile(it) }
+    }
 }

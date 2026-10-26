@@ -122,12 +122,12 @@ class MainActivity : Activity() {
         val modes = Ui.card(this)
         modes.addView(Ui.text(this, "Режимы", 17f, bold = true))
         modes.addView(Ui.button(this, "📻  Радио и спектр: FM с RDS, NFM, AM, SSB, CW, DMR, водопад") { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
+        modes.addView(Ui.button(this, "🖼  SSTV — картинки с МКС и любителей (Robot, Martin, Scottie, PD)") { openRadio(RadioActivity.APP_SSTV) })
+        modes.addView(Ui.button(this, "✈  Самолёты ADS-B на карте (1090 МГц)") { openRadio(RadioActivity.APP_ADSB) })
+        modes.addView(Ui.button(this, "📍  APRS — метки любителей на карте (144,800 МГц)") { openRadio(RadioActivity.APP_APRS) })
         for ((name, plan) in listOf(
             "📺  Телевидение (измеритель DVB-T2, аналог)" to "в планах",
-            "🖼  SSTV — картинки с МКС и любителей" to "в планах",
             "🛰  Спутники: пролёты, «Метеор» LRPT" to "в планах",
-            "✈  Самолёты ADS-B на карте" to "в планах",
-            "📍  APRS — метки любителей на карте" to "в планах",
         )) {
             val b = Ui.button(this, "$name — $plan") {}
             b.isEnabled = false
@@ -210,8 +210,9 @@ class MainActivity : Activity() {
         if (::selectedText.isInitialized) selectedText.text = "Выбран: " + Receivers.describe(this, id)
     }
 
-    private fun openRadio() {
-        startActivity(Intent(this, RadioActivity::class.java).putExtra(RadioActivity.EXTRA_SOURCE, selected))
+    private fun openRadio(app: String? = null) {
+        startActivity(Intent(this, RadioActivity::class.java).putExtra(RadioActivity.EXTRA_SOURCE, selected)
+            .putExtra(RadioActivity.EXTRA_APP, app))
     }
 
     @Deprecated("Activity.onActivityResult")

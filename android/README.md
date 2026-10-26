@@ -44,14 +44,17 @@ android/app/src/main/
     hackrf_airspy_jni.c     JNI к libhackrf и libairspy (sdr_ring.h — кольцевой буфер отсчётов float)
   java/io/github/mikeileech/sdr4noob/
     sdr/                    приёмники: SdrSource, RtlUsbSource, UsbSources (HackRF, Airspy), RtlTcpSource,
-                            DemoSource, IqFile (записи IQ),
+                            DemoSource, AdsbDemoSource, IqFile (записи IQ),
                             UsbReceivers, Receivers
     dsp/                    Filters (КИХ-дециматоры, биквады, деэмфазис, смеситель), Spectrum (БПФ), RadioDemod,
                             Rds (декодер и кодер RDS), Agc (АРУ как в SDR#, комплексный КИХ),
-                            DmrCodes/Dmr (декодер и генератор DMR), DmrScan (поиск DMR), Ambe (mbelib)
+                            DmrCodes/Dmr (декодер и генератор DMR), DmrScan (поиск DMR), Ambe (mbelib),
+                            Sstv/SstvDecoder, Ax25/AprsDemod/AprsParse (APRS), Adsb/AdsbDemod/AdsbTracker
     radio/                  RadioEngine (поток чтения → спектр → демодулятор → звук), AudioOut (AudioTrack),
-                            RadioService (приём в фоне), FreqMan (менеджер частот), Recorder (WAV, «Загрузки»)
-    ui/                     MainActivity (лаунчер), RadioActivity, SpectrumView, GuideActivity (WebView)
+                            RadioService (приём в фоне), FreqMan (менеджер частот), Recorder (WAV, «Загрузки»,
+                            картинки), SstvWorker и Decoders (потоки декодеров SSTV, APRS, ADS-B), AircraftInfo
+    ui/                     MainActivity (лаунчер), RadioActivity (радио и режимы SSTV/APRS/ADS-B с панелями
+                            SstvPanel, AppPanels), MapView (карта OpenStreetMap), SpectrumView, GuideActivity
     update/                 UpdateCheck (GitHub releases/latest → ссылка на APK)
   assets/android/           страница справки об Android-версии
 ```
@@ -89,9 +92,9 @@ android/app/src/main/
 | 1 | Приём в фоне при выключенном экране (foreground-сервис mediaPlayback) | — | готово (3.6.0) |
 | 1б | Поиск DMR и голос DMR (mbelib через NDK), воспроизведение IQ-файлов | `dmr.py`, `dmrscan.py`, `iqfile.py` | готово (3.7.0) |
 | 2 | Драйверы HackRF (libhackrf через fd-прослойку) и Airspy (`airspy_open_fd`) | `devices.py` | готово (3.7.0) |
-| 2 | APRS (AFSK 1200, карта OSM) | `aprs.py`, `mapview.py` | в планах |
-| 3 | ADS-B на карте (нужна полоса 2 MS/s и демодулятор PPM) | `adsb.py`, `aircraft_info.py` | в планах |
-| 3 | SSTV | `sstv.py` | в планах |
+| 2 | APRS (AFSK 1200, карта OSM) | `aprs.py`, `mapview.py` | готово (3.8.0) |
+| 3 | ADS-B на карте (2,4 МГц обзора, демодулятор PPM) | `adsb.py`, `aircraft_info.py` | готово (3.8.0) |
+| 3 | SSTV | `sstv.py` | готово (3.8.0) |
 | 4 | Спутники: пролёты (SGP4), приём с доплером, «Метеор» LRPT (тяжёлый DSP — в C через NDK, как `lrpt_dsp.c`) | `satpass.py`, `satrx.py`, `lrpt.py` | в планах |
 | 4 | ТВ-измеритель | `digital.py`, `analog.py` | в планах |
 | — | Английский интерфейс (как i18n настольной версии), настройки и папка данных | `i18n.py`, `paths.py` | в планах |

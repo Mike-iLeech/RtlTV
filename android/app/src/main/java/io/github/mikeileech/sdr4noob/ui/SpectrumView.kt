@@ -197,8 +197,12 @@ class SpectrumView @JvmOverloads constructor(context: Context, attrs: AttributeS
     private var downCenter = 0L
     private var dragging = false
 
+    /** Касания не перестраивают приёмник (ADS-B: частота 1090 МГц задана). */
+    var locked = false
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(ev: MotionEvent): Boolean {
+        if (locked) return false
         val e = engine ?: return false
         if (rate == 0) return true
         when (ev.actionMasked) {

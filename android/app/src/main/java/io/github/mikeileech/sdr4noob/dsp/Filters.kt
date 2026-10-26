@@ -28,6 +28,30 @@ object Firwin {
         val s = h.sum()
         return FloatArray(taps) { (h[it] / s).toFloat() }
     }
+
+    /**
+     * КИХ полосовой фильтр окном Хэмминга [f1Hz]…[f2Hz] — как scipy.signal.firwin(taps, (f1, f2), pass_zero=False, fs=fs):
+     * h = r·sinc(r·m) − l·sinc(l·m) (частоты в долях Найквиста), умножение на окно, нормировка на единичное усиление
+     * в центре полосы ((l + r) / 2). Коэффициенты в double (для APRS, где расчёт идёт в double, как в numpy).
+     */
+    fun bandpass(taps: Int, f1Hz: Double, f2Hz: Double, fs: Double): DoubleArray {
+        val nyq = fs / 2
+        val l = f1Hz / nyq
+        val r = f2Hz / nyq
+        val alpha = 0.5 * (taps - 1)
+        fun sinc(x: Double) = if (x == 0.0) 1.0 else sin(PI * x) / (PI * x)
+        val h = DoubleArray(taps)
+        for (i in 0 until taps) {
+            val m = i - alpha
+            val w = 0.54 - 0.46 * cos(2 * PI * i / (taps - 1))
+            h[i] = (r * sinc(r * m) - l * sinc(l * m)) * w
+        }
+        val sf = 0.5 * (l + r)
+        var s = 0.0
+        for (i in 0 until taps) s += h[i] * cos(PI * (i - alpha) * sf)
+        for (i in 0 until taps) h[i] /= s
+        return h
+    }
 }
 
 /** Потоковый комплексный КИХ-дециматор: считаются только нужные выходные отсчёты. */

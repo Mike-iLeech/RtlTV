@@ -64,6 +64,11 @@ class RadioEngine(
     val squelchOpen get() = demod.squelchOpen
     @Volatile var dropped = 0L; private set
 
+    /** Звук радиорежима (стерео, 48 кГц) для декодеров SSTV и APRS; вызывается из потока приёма. */
+    @Volatile var audioTap: ((FloatArray, Int) -> Unit)? = null
+    /** Сырой IQ для декодеров без звука (ADS-B): при нём демодулятор и звук не работают. Поток приёма. */
+    @Volatile var iqTap: ((FloatArray, FloatArray, Int) -> Unit)? = null
+
     /** Движок остановлен, потому что запустили другой (второе окно радио): прежнему окну пора закрыться. */
     @Volatile var preempted = false
         private set
@@ -335,11 +340,14 @@ class RadioEngine(
                     }
                     listener?.onSpectrum()
                 }
+                val tap = iqTap
+                if (tap != null) { tap(re, im, n); dropped = source.droppedSamples; continue }
                 val sc = scan
                 if (sc != null) { scanStep(sc, re, im, n); dropped = source.droppedSamples; continue }
                 iqRec.get()?.writeIq(re, im, n)      // до демодулятора: он переносит частоту на месте
                 val frames = demod.process(re, im, n, aud)
                 audio.write(aud, frames)
+                audioTap?.invoke(aud, frames)
                 audioRec.get()?.write(aud, frames * 2)
                 checkRec(audioRec, "звука"); checkRec(iqRec, "IQ")
                 dropped = source.droppedSamples

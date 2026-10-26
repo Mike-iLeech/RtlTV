@@ -13,7 +13,7 @@
 #include "usb_fd_shim.h"
 
 #define TAG "sdr4noob"
-#define RING_SAMPLES (4u << 20)    /* 4 М отсчётов ≈ 0,4–1,6 с в зависимости от частоты */
+#define RING_SAMPLES (4u << 20)    /* 4 М отсчётов: 0,2 с при 20 МГц (HackRF), ~1,7 с при 2,5 МГц */
 
 /* ------------------------------------------------------------------ HackRF */
 typedef struct {
