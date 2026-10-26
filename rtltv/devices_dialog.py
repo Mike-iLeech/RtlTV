@@ -130,7 +130,7 @@ class DevicesDialog(QDialog):
         for hp in self.d["rtltcp"]:
             self.tcp.addItem(hp)
         self.sources.clear()
-        srcs = devices.available_sources()
+        srcs = devices.available_sources(refresh=True)   # «Устройства…» — всегда свежий опрос USB
         for _sid, label in srcs:
             self.sources.addItem(label)
         self.d["sources"] = [[sid, label] for sid, label in srcs]
