@@ -284,6 +284,8 @@ class _OverlayList(QListWidget):
                     it.setFont(f)
                 if color is not None:
                     it.setForeground(QColor(color))
+                else:   # строка могла быть бортом с цветом высоты — заголовку цвет по умолчанию
+                    it.setData(Qt.ForegroundRole, None)
         finally:
             self.setUpdatesEnabled(True)
         self.fit_height()

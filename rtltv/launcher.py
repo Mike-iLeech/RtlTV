@@ -26,11 +26,16 @@ MODES = [
 ]
 
 
-def warm_up():
+def warm_up(opts=None):
     """Пока пользователь выбирает режим — в фоне то, на что окно режима тратило ~4 с при открытии:
-    опрос USB-приёмников (devices.prefetch) и импорт scipy.signal (~1 с)."""
+    опрос USB-приёмников (devices.prefetch; с тестовым эфиром не нужен) и импорт scipy.signal (~1 с; не при
+    --mode — модуль режима импортируется сразу в главном потоке, два импорта scipy параллельно не нужны)."""
     from . import devices
-    devices.prefetch()
+    opts = opts or {}
+    if opts.get("source") != "test":
+        devices.prefetch()
+    if opts.get("direct"):
+        return
 
     def imp():
         try:
@@ -197,7 +202,7 @@ class Launcher(QWidget):
         if not self.opts.get("shot"):
             importlib.import_module("rtltv.update_ui").maybe_check_on_start(self)
         self.apply_theme()
-        warm_up()
+        warm_up(self.opts)
 
     def apply_theme(self):
         name = self.app_s.get("theme", "Тёмная")
@@ -231,7 +236,7 @@ class Launcher(QWidget):
         self._save_app(last=key)
         from . import devices
         if not self.cb_test.isChecked() and not devices.has_hardware():   # приёмник могли подключить после запуска
-            devices.scan_hardware(refresh=True)
+            devices.scan_hardware(refresh=True, max_age=5)   # фоновый опрос, если ещё идёт, — дождаться, не повторять
         opts = dict(self.opts)
         opts["theme"] = self.app_s.get("theme", "Тёмная")
         if self.cb_test.isChecked():

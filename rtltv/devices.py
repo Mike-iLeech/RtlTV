@@ -1208,21 +1208,24 @@ TEST_LABEL = "Тестовый генератор (без антенны)"
 # берут готовый список, а «Устройства…» и смена драйвера опрашивают заново.
 _hw_lock = threading.Lock()
 _hw_cache = None   # (ключ драйверов, [(id, подпись)], [(none, ошибка)])
+_hw_time = 0.0     # когда закончился последний опрос (time.monotonic)
 
 
 def _hw_key(d):
     return (d.get("rtl_dll"), find_driver("hackrf"), find_driver("airspy"))
 
 
-def scan_hardware(refresh=False):
+def scan_hardware(refresh=False, max_age=None):
     """USB-приёмники: ([(id, подпись)], [("none", ошибка)]). Повторный вызов отдаёт кэш, пока не сменился
-    драйвер; refresh=True — опросить заново. Потокобезопасно: окно, открытое во время фонового опроса,
-    дождётся его, а не опросит USB вторично."""
-    global _hw_cache
+    драйвер; refresh=True — опросить заново, но если опрос (например, фоновый, которого пришлось дождаться)
+    закончился меньше max_age секунд назад — взять его. Потокобезопасно: окно, открытое во время фонового
+    опроса, дождётся его, а не опросит USB вторично."""
+    global _hw_cache, _hw_time
     with _hw_lock:
         d = load_dev_settings()
         key = _hw_key(d)
-        if not refresh and _hw_cache is not None and _hw_cache[0] == key:
+        fresh = max_age is not None and time.monotonic() - _hw_time < max_age
+        if (not refresh or fresh) and _hw_cache is not None and _hw_cache[0] == key:
             return list(_hw_cache[1]), list(_hw_cache[2])
         apply_rtl_driver(d)
         out, errors = [], []
@@ -1240,6 +1243,7 @@ def scan_hardware(refresh=False):
             except Exception as e:  # noqa: BLE001
                 errors.append(("none", f"{DRIVER_KINDS[kind][0]}: {e}"))
         _hw_cache = (key, out, errors)
+        _hw_time = time.monotonic()
         return list(out), list(errors)
 
 

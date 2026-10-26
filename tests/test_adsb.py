@@ -501,3 +501,18 @@ def test_overlay_list_scroll_survives_refresh(monkeypatch):
     app.processEvents()
     assert lw.count() == 3 and lw.verticalScrollBar().maximum() == 0
     w.close()
+
+
+def test_overlay_header_row_drops_plane_color():
+    """Строки списка переиспользуются: бывшая строка борта, ставшая заголовком группы, теряет цвет высоты."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+    from rtltv.modes.adsb_window import _OverlayList
+    _app = QApplication.instance() or QApplication([])  # noqa: F841 — нужен для виджета
+    lw = _OverlayList()
+    lw.set_rows([("AFL1  3 000 м", "AB0001", "#ff0000", "", False)])
+    assert lw.item(0).data(Qt.ForegroundRole) is not None and lw.item(0).flags() & Qt.ItemIsSelectable
+    lw.set_rows([("Подозрительные (1)", None, None, "", True), ("AFL1  3 000 м", "AB0001", "#ff0000", "", False)])
+    head = lw.item(0)
+    assert head.data(Qt.ForegroundRole) is None and head.font().bold() and not head.flags() & Qt.ItemIsSelectable
+    assert head.data(Qt.UserRole) is None and lw.item(1).data(Qt.UserRole) == "AB0001"
