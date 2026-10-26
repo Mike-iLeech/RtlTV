@@ -19,10 +19,34 @@ def mac(monkeypatch):
 
 
 def test_arch_and_suffix(monkeypatch):
+    monkeypatch.setattr(updater_mac, "_rosetta", lambda: False)
     monkeypatch.setattr(updater_mac.platform, "machine", lambda: "arm64")
     assert updater_mac.asset_suffix() == "-macos-arm64.zip"
     monkeypatch.setattr(updater_mac.platform, "machine", lambda: "x86_64")
     assert updater_mac.asset_suffix() == "-macos-x86_64.zip"
+
+
+def test_rosetta_moves_to_arm64(monkeypatch):
+    """Intel-сборка, запущенная на Apple Silicon через Rosetta, обновляется до родной arm64."""
+    monkeypatch.setattr(updater_mac.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(updater_mac, "_rosetta", lambda: True)
+    assert updater_mac.arch() == "arm64"
+
+
+def test_last_install_failure(tmp_path, mac):
+    st = tmp_path / "install_update.status"
+    assert updater_mac.last_install_failure(str(tmp_path)) is None          # отметки нет
+    st.write_text("ok\n", encoding="utf-8")
+    assert updater_mac.last_install_failure(str(tmp_path)) is None and not st.exists()
+    st.write_text("fail нет доступа к /Applications/SDR4NOOB.app\n", encoding="utf-8")
+    assert updater_mac.last_install_failure(str(tmp_path)) == "нет доступа к /Applications/SDR4NOOB.app"
+    assert not st.exists()                                                  # сообщаем один раз
+    assert updater_mac.last_install_failure(str(tmp_path)) is None
+
+
+def test_last_install_failure_only_on_mac(monkeypatch):
+    monkeypatch.setattr(updater.osplat, "IS_MAC", False)
+    assert updater.last_install_failure() is None
 
 
 def test_bundle_path():
@@ -99,12 +123,13 @@ def test_prepare_keeps_symlinks(tmp_path, mac):
 
 def _run_script(tmp_path, new, app):
     sh = tmp_path / "install_update.sh"
-    sh.write_text(updater_mac.INSTALL_SH)
-    log = tmp_path / "log.txt"
+    sh.write_text(updater_mac.INSTALL_SH, encoding="utf-8")
+    log = tmp_path / "install_update.log"
     env = dict(os.environ, SDR4NOOB_NO_START="1")
     r = subprocess.run(["/bin/bash", str(sh), str(_dead_pid()), str(new), str(app), str(log), ""], env=env,
                        timeout=60)
-    return r.returncode, log.read_text() if log.exists() else ""
+    st = tmp_path / "install_update.status"
+    return r.returncode, (log.read_text(encoding="utf-8") if log.exists() else "") + "|" + (st.read_text(encoding="utf-8") if st.exists() else "")
 
 
 @on_mac
@@ -113,6 +138,8 @@ def test_install_script_replaces_bundle(tmp_path):
     new = _bundle(tmp_path / "rtltv-update-1", "new")
     code, log = _run_script(tmp_path, new, app)
     assert code == 0, log
+    assert log.endswith("|ok\n")
+    assert updater_mac.last_install_failure(str(tmp_path)) is None
     assert (app / "Contents" / "MacOS" / "SDR4NOOB").read_text() == "new"
     assert os.path.islink(app / "Contents" / "MacOS" / "link")
     assert not (tmp_path / "Applications" / "SDR4NOOB.app.old").exists()
@@ -123,5 +150,6 @@ def test_install_script_rolls_back(tmp_path):
     app = _bundle(tmp_path / "Applications", "old")
     code, log = _run_script(tmp_path, tmp_path / "нет-такого" / "SDR4NOOB.app", app)
     assert code == 1 and "откат" in log
+    assert "откат" in (updater_mac.last_install_failure(str(tmp_path)) or "")   # покажется при запуске
     assert (app / "Contents" / "MacOS" / "SDR4NOOB").read_text() == "old"
     assert not (tmp_path / "Applications" / "SDR4NOOB.app.old").exists()

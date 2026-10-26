@@ -19,7 +19,7 @@ ARCH="${ARCH:-$(uname -m)}"
 LIBUSB_VER="1.0.30"
 RTLSDR_TAG="v1.3.6"
 MBELIB_TAG="v1.3.0"
-export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"   # как у колёс PySide6 6.12 / numpy
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"   # колёса PySide6 6.12 — macosx_14_0
 
 ARCH_FLAGS=""
 IFS=';' read -ra _A <<< "$ARCH"
@@ -37,7 +37,7 @@ curl -fsSL -o libusb.tar.bz2 \
 tar xjf libusb.tar.bz2
 PREFIX="$WORK/prefix"
 (cd "libusb-$LIBUSB_VER" &&
-  ./configure --quiet --prefix="$PREFIX" --disable-shared --enable-static --with-pic \
+  ./configure --quiet --prefix="$PREFIX" --disable-shared --enable-static --with-pic --disable-dependency-tracking \
     CFLAGS="$CFLAGS_COMMON" LDFLAGS="$ARCH_FLAGS" &&
   make -s -j"$(sysctl -n hw.ncpu)" && make -s install)
 
@@ -61,6 +61,7 @@ if otool -L "$OUT/librtlsdr.dylib" | grep -q "libusb"; then
   echo "librtlsdr.dylib ссылается на внешнюю libusb — должна быть вшита статически"; otool -L "$OUT/librtlsdr.dylib"; exit 1
 fi
 cp rtl-sdr/COPYING "$OUT/librtlsdr-LICENSE.txt"
+cp "libusb-$LIBUSB_VER/COPYING" "$OUT/libusb-LICENSE.txt"   # LGPL-2.1: libusb вшита в librtlsdr.dylib
 
 # ---------------------------------------------------------------- mbelib
 echo "== mbelib $MBELIB_TAG"

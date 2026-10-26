@@ -46,7 +46,7 @@ PL="$APP/Contents/Info.plist"
 plutil -replace CFBundleDisplayName -string "SDR4NOOB" "$PL"
 plutil -replace CFBundleShortVersionString -string "$VER" "$PL"
 plutil -replace CFBundleVersion -string "$VER" "$PL"
-plutil -replace LSMinimumSystemVersion -string "12.0" "$PL"
+plutil -replace LSMinimumSystemVersion -string "14.0" "$PL"
 plutil -replace NSHighResolutionCapable -bool true "$PL"
 plutil -replace LSApplicationCategoryType -string "public.app-category.utilities" "$PL"
 plutil -replace NSHumanReadableCopyright -string "SDR4NOOB, GPL-3.0-or-later" "$PL"
@@ -72,6 +72,7 @@ rm -f "release/$NAME.zip" "release/$NAME.dmg"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "release/$NAME.zip"
 
 STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
 ditto "$APP" "$STAGE/SDR4NOOB.app"
 ln -s /Applications "$STAGE/Программы"
 for i in 1 2 3 4 5; do   # hdiutil на раннерах иногда отвечает «Resource busy»
@@ -86,7 +87,8 @@ if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
   codesign --force --timestamp --sign "$MACOS_SIGN_IDENTITY" "release/$NAME.dmg"
   if [ -n "${MACOS_NOTARY_PROFILE:-}" ]; then
     echo "== нотаризация"
-    xcrun notarytool submit "release/$NAME.dmg" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
+    xcrun notarytool submit "release/$NAME.dmg" --keychain-profile "$MACOS_NOTARY_PROFILE" \
+      ${MACOS_NOTARY_KEYCHAIN:+--keychain "$MACOS_NOTARY_KEYCHAIN"} --wait
     xcrun stapler staple "release/$NAME.dmg"
   fi
 fi

@@ -196,8 +196,9 @@ jobs:
           rm -f "$RUNNER_TEMP/cert.p12"
           echo "MACOS_SIGN_IDENTITY=$MACOS_SIGN_IDENTITY" >> "$GITHUB_ENV"
           if [ -n "$MACOS_NOTARY_APPLE_ID" ]; then
-            xcrun notarytool store-credentials sdr4noob --apple-id "$MACOS_NOTARY_APPLE_ID"               --password "$MACOS_NOTARY_PASSWORD" --team-id "$MACOS_NOTARY_TEAM_ID" --keychain "$kc"
+            xcrun notarytool store-credentials sdr4noob --apple-id "$MACOS_NOTARY_APPLE_ID" --password "$MACOS_NOTARY_PASSWORD" --team-id "$MACOS_NOTARY_TEAM_ID" --keychain "$kc"
             echo "MACOS_NOTARY_PROFILE=sdr4noob" >> "$GITHUB_ENV"
+            echo "MACOS_NOTARY_KEYCHAIN=$kc" >> "$GITHUB_ENV"
           fi
 
       - name: Сборка SDR4NOOB.app, dmg и zip
@@ -231,8 +232,10 @@ jobs:
 
   # Публикация по тегу: все сборки (Windows, macOS; Linux — так же, артефактом release-*) в один релиз.
   # APK собирает отдельный workflow и догружает в тот же релиз — кто первым, тот и создаёт его.
+  # Сбой сборки macOS не задерживает релиз Windows: публикуется то, что собралось (нужна только Windows);
+  # недостающее догружается повторным запуском упавшей сборки («Re-run failed jobs» перезапускает и publish).
   publish:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/') && needs.build.result == 'success' }}
     needs: [build, build-macos]
     runs-on: ubuntu-latest
     permissions:

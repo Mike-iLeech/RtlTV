@@ -367,7 +367,7 @@ def home_body():
     <p class="cta"><a class="btn big" href="{DOWNLOAD_URL}">Скачать для Windows и macOS</a>
     <a class="btn ghost big" href="install.html">Как установить</a>
     <a class="btn ghost big" href="{g}quickstart.html">Быстрый старт</a></p>
-    <p class="dim">Windows 10/11 x64 · macOS 12+ (Apple Silicon, Intel) · USB радиоприёмник (SDR), например RTL-SDR Blog V3/V4 (встроенный драйвер), HackRF, Airspy · без антенны есть
+    <p class="dim">Windows 10/11 x64 · macOS 14+ (Apple Silicon, Intel) · USB радиоприёмник (SDR), например RTL-SDR Blog V3/V4 (встроенный драйвер), HackRF, Airspy · без антенны есть
     тестовый эфир для знакомства</p>
   </div>
   {fig("launcher", "Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов.")}
@@ -464,7 +464,7 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="requirements">Системные требования<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>Windows 10 или 11, 64 бит</b> или <b>macOS 12 и новее</b> (Apple Silicon или Intel, <a href="install.html#macos">как установить</a>). Python ставить не нужно — всё внутри сборки.</li>
+<li><b>Windows 10 или 11, 64 бит</b> или <b>macOS 14 и новее</b> (Apple Silicon или Intel, <a href="install.html#macos">как установить</a>). Python ставить не нужно — всё внутри сборки.</li>
 <li><b>Приёмник:</b> USB радиоприёмник (SDR). Встроенный драйвер — для RTL-SDR Blog V4 (R828D) и V3 и других
 приёмников на RTL2832U (R820T/R820T2 и т. п.); также поддерживаются HackRF One и Airspy R2/Mini (с их DLL) и сетевой rtl_tcp.</li>
 <li><b>Windows: драйвер WinUSB</b> на приёмнике (RTL-SDR, HackRF, Airspy) — ставится один раз программой <a href="https://zadig.akeo.ie/">Zadig</a>
@@ -538,7 +538,7 @@ def install_body():
 <h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Что</th><th>Требование</th></tr>
-<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 12 и новее (Apple Silicon или Intel).</td></tr>
+<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 14 и новее (Apple Silicon или Intel).</td></tr>
 <tr><td>Приёмник</td><td>USB радиоприёмник (SDR): RTL-SDR Blog V4 или V3 и другие на RTL2832U (встроенный драйвер), HackRF One, Airspy R2/Mini
 (с их DLL); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
 <tr><td>Драйвер</td><td>Windows: WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
@@ -636,7 +636,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 оставить: им пользуются и другие SDR-программы.</p>
 
 <h2 id="macos">macOS<a class="anchor" href="#macos" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Нужна macOS 12 или новее, Mac на Apple Silicon (M1 и новее) или Intel. Приёмники — те же, что в Windows.
+<p>Нужна macOS 14 (Sonoma) или новее, Mac на Apple Silicon (M1 и новее) или Intel. Приёмники — те же, что в Windows.
 Драйвер ставить не нужно: встроенный librtlsdr (с libusb внутри) работает с RTL-SDR напрямую, Zadig не нужен.</p>
 <ol>
 <li>На <a href="{DOWNLOAD_URL}">странице последнего выпуска</a> скачайте образ

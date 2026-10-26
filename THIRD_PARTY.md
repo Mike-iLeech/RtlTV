@@ -17,6 +17,18 @@ SDR4NOOB распространяется под лицензией **GPL-3.0-or
 | **mbelib** (`mbelib.dll`) | ISC (`rtltv/driver/mbelib-LICENSE.txt`) | https://github.com/szechyjs/mbelib | Вокодер IMBE/AMBE для голоса DMR. Собирается `tools/build_mbelib.bat`. См. оговорку о патентах ниже. |
 | **lrpt_dsp** (`lrpt_dsp.dll`) | GPL-3.0-or-later (часть SDR4NOOB) | `tools/lrpt_dsp.c` | Свой код: демодулятор QPSK/OQPSK, Витерби, Рид — Соломон для «Метеор-М» LRPT. Собирается `tools/build_lrpt_dsp.bat`. |
 
+### Сборка для macOS
+
+В `SDR4NOOB.app` (образы `SDR4NOOB-<версия>-macos-<arm64|x86_64>.dmg` и `.zip`) те же компоненты собраны для
+macOS из исходников в CI скриптом `tools/build_macos_libs.sh` (лежат в `Contents/Frameworks/rtltv/driver`):
+
+| Компонент | Лицензия | Исходники | Примечание |
+|---|---|---|---|
+| **librtlsdr** (`librtlsdr.dylib`) | GPL-2.0-or-later (`librtlsdr-LICENSE.txt`) | https://github.com/rtlsdrblog/rtl-sdr-blog, тег v1.3.6 | Без изменений исходников; libusb вшита статически. |
+| **libusb** (внутри `librtlsdr.dylib`) | LGPL-2.1-or-later (`libusb-LICENSE.txt`) | https://github.com/libusb/libusb, выпуск 1.0.30 | Без изменений. Чтобы заменить libusb своей сборкой, пересоберите librtlsdr тем же скриптом (`LIBUSB_VER`). |
+| **mbelib** (`libmbelib.dylib`) | ISC (`mbelib-LICENSE.txt`) | https://github.com/szechyjs/mbelib, тег v1.3.0 | Без изменений. |
+| **lrpt_dsp** (`liblrpt_dsp.dylib`) | GPL-3.0-or-later (часть SDR4NOOB) | `tools/lrpt_dsp.c` | Свой код. |
+
 ### Оговорка о патентах AMBE
 
 Алгоритмы вокодеров AMBE/AMBE+2, которые реализует mbelib, в некоторых странах могут быть защищены
@@ -38,7 +50,8 @@ SDR4NOOB распространяется под лицензией **GPL-3.0-or
 | PortAudio (внутри sounddevice) | MIT | https://www.portaudio.com/ |
 | PyInstaller (только для сборки) | GPL-2.0-or-later с исключением для загрузчика: собранные программы могут распространяться под любой лицензией | https://pyinstaller.org/ |
 
-Qt и PySide6 подключаются динамически (DLL и модули в `_internal`), поэтому их можно заменить своей
+Qt и PySide6 подключаются динамически (DLL и модули в `_internal`; на macOS — фреймворки в
+`SDR4NOOB.app/Contents/Frameworks`), поэтому их можно заменить своей
 совместимой сборкой, как того требует LGPL-3.0. Исходники Qt: https://download.qt.io/ ,
 PySide6: https://code.qt.io/cgit/pyside/pyside-setup.git/ .
 

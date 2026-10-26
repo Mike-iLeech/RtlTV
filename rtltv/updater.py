@@ -192,6 +192,14 @@ def _app():
     return settings.load("app", {})
 
 
+def last_install_failure():
+    """macOS: причина неудачи прошлого обновления (показывается один раз) или None."""
+    if not osplat.IS_MAC:
+        return None
+    from . import updater_mac
+    return updater_mac.last_install_failure(os.path.join(paths.LOCAL, "updates"))
+
+
 def check_interval():
     return _app().get("update_check", "daily")
 

@@ -4,7 +4,7 @@
 
 macOS:
 - Версия для Mac: образ `SDR4NOOB-<версия>-macos-arm64.dmg` (Apple Silicon) и `…-macos-x86_64.dmg` (Intel),
-  macOS 12 и новее. Драйвер ОС не нужен: встроенный librtlsdr (rtl-sdr-blog, libusb вшита) работает с RTL-SDR
+  macOS 14 и новее. Драйвер ОС не нужен: встроенный librtlsdr (rtl-sdr-blog, libusb вшита) работает с RTL-SDR
   напрямую; HackRF и Airspy — через их библиотеки (`brew install hackrf airspy`) или загруженные `.dylib`.
 - Голосовой кодек DMR (mbelib) и декодер «Метеора» (lrpt_dsp) собираются для macOS из исходников в CI.
 - Файлы: настройки — `~/Library/Application Support/SDR4NOOB`, служебное — `…/SDR4NOOB/Service`, папка данных —

@@ -220,7 +220,7 @@ def driver_dep_hint():
     if IS_WIN:
         return "его зависимости (libusb-1.0.dll, pthreadVC2.dll) должны лежать в той же папке"
     if IS_MAC:
-        return "нужна библиотека libusb (brew install libusb)"
+        return "у библиотеки нет нужных ей зависимостей (для HackRF/Airspy из Homebrew: brew install libusb)"
     return "нужна библиотека libusb (пакет libusb-1.0-0)"
 
 

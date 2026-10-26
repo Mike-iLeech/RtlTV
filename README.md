@@ -91,7 +91,7 @@ Librtlsdr (сборка [rtl-sdr-blog](https://github.com/rtlsdrblog/rtl-sdr-blo
 
 ### macOS
 
-Требования: **macOS 12 или новее**, Mac на Apple Silicon (M1 и новее) или Intel; приёмники — те же.
+Требования: **macOS 14 (Sonoma) или новее**, Mac на Apple Silicon (M1 и новее) или Intel; приёмники — те же.
 Драйвер ставить не нужно: встроенный librtlsdr (с libusb внутри) работает с RTL-SDR напрямую, без Zadig.
 
 1. Скачайте со страницы [последнего выпуска](https://github.com/Mike-iLeech/SDR4NOOB/releases/latest) образ

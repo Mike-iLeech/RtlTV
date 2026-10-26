@@ -1219,8 +1219,11 @@ def _usb_raw_ioreg(text=None):
     """macOS: USB-устройства из `ioreg -p IOUSB -l -w0` в формате _usb_raw_setupapi."""
     if text is None:
         import subprocess
-        text = subprocess.run(["ioreg", "-p", "IOUSB", "-l", "-w0"], capture_output=True, text=True,
-                              timeout=10).stdout
+        try:
+            text = subprocess.run(["ioreg", "-p", "IOUSB", "-l", "-w0"], capture_output=True, text=True,
+                                  timeout=10).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []
     devs, cur = [], None
     for line in text.splitlines():
         if "+-o " in line:
@@ -1273,7 +1276,7 @@ def _driver_state(kind, svc):
             return st
         svc = "USB"   # неподдерживаемые модели: дальше общий текст «не поддерживается»
     s = (svc or "").lower()
-    zadig =f"Привяжите WinUSB через Zadig ({ZADIG_URL}): Options → List All Devices → нужное устройство → WinUSB."
+    zadig = f"Привяжите WinUSB через Zadig ({ZADIG_URL}): Options → List All Devices → нужное устройство → WinUSB."
     if kind == "rtl":
         if s == "winusb":
             return True, "WinUSB", "Готово: работает со встроенным драйвером SDR4NOOB."

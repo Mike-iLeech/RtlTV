@@ -24,6 +24,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from rtltv import devices, rtlsdr, settings  # noqa: E402
 
+win_only = pytest.mark.skipif(sys.platform != "win32", reason="имена и форматы DLL Windows (PE, hackrf.dll)")
+
 BUILTIN = rtlsdr._dll_path()
 VCVARS = r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 
@@ -231,6 +233,7 @@ def test_usb_this_machine_rtl_v4_winusb():
     assert rtl[0]["kind"] == "rtl"
 
 
+@win_only
 def test_usb_grouping_and_hints():
     raw = [
         (r"USB\VID_0BDA&PID_2838\00000001", r"USB\ROOT_HUB30\4&1", "usbccgp", "Составное USB устройство"),
@@ -253,6 +256,7 @@ def test_usb_grouping_and_hints():
 # ======================================================================
 #  Загрузка драйверов (DLL)
 # ======================================================================
+@win_only
 def test_import_rtl_dll_and_load_by_path(tmp_path):
     src_dir = tmp_path / "user"
     src_dir.mkdir()
@@ -280,6 +284,7 @@ def test_import_rtl_dll_and_load_by_path(tmp_path):
     assert rtlsdr.active_dll_path() == BUILTIN
 
 
+@win_only
 def test_reject_32bit_and_foreign_dll(tmp_path):
     p32 = tmp_path / "librtlsdr32.dll"
     data = bytearray(open(BUILTIN, "rb").read())
@@ -302,6 +307,7 @@ def test_reject_32bit_and_foreign_dll(tmp_path):
     assert not os.path.isdir(devices.DRIVERS_DIR) or not os.listdir(devices.DRIVERS_DIR)
 
 
+@win_only
 def test_missing_backend_messages():
     for sid, name in (("hackrf:0", "hackrf.dll"), ("airspy:0", "airspy.dll")):
         col = Collector()
