@@ -13,6 +13,7 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
+        android:name=".App"
         android:label="SDR4NOOB"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
@@ -42,6 +43,11 @@
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:label="Радио" />
+
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:label="Настройки" />
 
         <activity
             android:name=".ui.GuideActivity"

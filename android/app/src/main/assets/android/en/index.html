@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>SDR4NOOB for Android</title></head><body>
+<h1>SDR4NOOB for Android</h1>
+<p>The Android version works with <b>any USB radio receiver (SDR)</b> it has a driver for.
+Built-in drivers cover receivers based on the <b>RTL2832U</b> chip (for example, RTL-SDR Blog V4/V3 and DVB-T dongles
+with R820T/R828D, E4000, FC0012/FC0013 tuners), <b>HackRF</b> (One, Jawbreaker, rad1o) and <b>Airspy</b> R2/Mini.
+You don't need to install a separate driver app.</p>
+
+<h2>Connecting the receiver</h2>
+<ol>
+<li>You need an <b>OTG adapter</b> (USB-C or micro-USB → USB-A) or a USB-C to USB-C cable. On some
+phones OTG has to be turned on in the settings ("Connected devices" → "OTG").</li>
+<li>Plug in the receiver. Android offers to open SDR4NOOB — accept (you can tick "always").
+If you opened the app yourself, tap the receiver in the list and <b>allow access to the USB device</b>.</li>
+<li>Choose "Radio and spectrum". Tap the spectrum to tune to a station, drag to shift the band,
+tap the frequency to type it in, "Stations…" offers ready-made bands.</li>
+</ol>
+<table class="note" width="100%"><tr><td><b>Power.</b> The receiver draws 100–300 mA from the phone, and more with
+antenna power (bias-T) on. The battery drains noticeably faster; older phones may not supply enough current —
+an adapter with external power helps then.</td></tr></table>
+
+<h2>Other receivers</h2>
+<ul>
+<li><b>Network rtl_tcp.</b> The receiver is connected to a computer (or a Raspberry Pi) running
+<code>rtl_tcp -a 0.0.0.0</code>; in the app choose "Network rtl_tcp…" and enter an address like <code>192.168.1.10:1234</code>.</li>
+<li><b>HackRF and Airspy</b> run at 2 and 2.5 MHz respectively; their native sample rate is converted
+to the app's view bandwidth (as in the Windows version). HackRF draws noticeably more power from the phone — you need
+a phone with a good USB port or an adapter with external power.</li>
+<li><b>Airspy HF+, SDRplay, LimeSDR, PlutoSDR, FUNcube</b> are recognized over USB, but drivers for them in
+the Android version are still planned (some of them work in the Windows version).</li>
+<li><b>Test signal</b> — a few practice stations without a receiver: FM stereo with RDS on 101.0 MHz, FM on 102.6
+and 104.5 MHz, narrow FM on 145.500 and 145.525 MHz, AM on 999 kHz, USB on 14.230 MHz, Morse on 7.030 MHz,
+DMR on 446.1 MHz.</li>
+</ul>
+
+<h2>What this version can do</h2>
+<ul>
+<li>Spectrum and waterfall of the receiver band (up to 2.88 MHz).</li>
+<li>Radio: FM broadcast with stereo and RDS (station name, radio text), narrow FM (amateur, PMR, LPD), AM
+(airband, MW), upper and lower sideband (USB/LSB) and Morse (CW) with AGC; squelch, channel bandwidth, gain, bias-T,
+frequency correction in ppm.</li>
+<li><b>DMR</b> (the "DMR digital radio" mode): who is calling whom in each slot, group and private calls,
+event log, voice. Encrypted calls give no sound. <b>DMR search</b> — the ⋮ menu: the app sweeps a band
+and shows the channels found (color code CC, voice or beacon, last IDs); tap one to listen.</li>
+<li><b>IQ file</b> on the main screen — plays back a recording (your own or made with SDR4NOOB, SDR#, rtl_sdr on a PC).</li>
+<li><b>SSTV</b> (main screen): pictures from the ISS (145.800 MHz, ARISS sessions) and from amateurs on HF (14.230 MHz USB) —
+Robot, Martin, Scottie, PD, Wraase. The mode is detected from the VIS code; if the start was missed, pick the mode and
+press "Start now". Pictures are saved to "Pictures/SDR4NOOB/SSTV" (on Android 9 and older — to the app folder
+Android/data/…/files/Pictures, the path is shown after saving); a WAV file can be decoded as well.</li>
+<li><b>APRS</b>: amateur stations on a map (144.800 MHz) — positions, objects, weather, messages; packet log.</li>
+<li><b>ADS-B aircraft</b>: aircraft on a map from 1090 MHz signals — callsign, altitude, speed, heading, country and
+airline. You need a 1090 MHz antenna (a 6.9 cm whip will do); in a city you usually hear 100–250 km.
+The OpenStreetMap map is downloaded from the internet and cached on the phone; set the receiver location with "Home = map center".</li>
+<li><b>TV</b>: a DVB-T/T2 digital multiplex meter (the whole 8 MHz channel is assembled from several retunes:
+C/N, level, ripple, OFDM mode and guard interval), an analog picture (black and white: the receiver bandwidth
+is narrower than the video signal) and a channel scan over the channel plans of Russia, Europe, the UK and the USA.</li>
+<li><b>Satellites</b>: positions and ground tracks on a map, passes over you (orbits from celestrak TLEs — internet
+needed at least once), choice of satellite and transmitter; the frequency is corrected for Doppler automatically. <b>Meteor-M</b> (137.9 MHz):
+LRPT image reception — "Image" shows the picture, "Save image" puts it into "Pictures/SDR4NOOB/Метеор".
+Meteor needs a 137 MHz antenna (QFH or a V-dipole) and an open sky.</li>
+<li><b>Settings</b> (main screen): your own data folder, e.g. on a memory card — recordings and images then go
+there, into an SDR4NOOB subfolder; receiver location; update check; clearing the map and orbit cache.</li>
+<li><b>My frequencies</b> — your own station list in groups; import and export to CSV (the same file opens in
+SDR4NOOB on a PC and in Excel) and to SDR# XML.</li>
+<li><b>Recording</b> of audio (the "● Audio to WAV" button) and IQ (⋮ menu → "IQ recording") as 16-bit WAV — to "Download/SDR4NOOB/Звук".
+IQ takes a lot of space: at 1.2 MHz bandwidth about 290 MB per minute. IQ files open in SDR4NOOB on a PC and in SDR#.
+If the phone storage can't keep up with the IQ stream, recording stops (rather than gluing parts with gaps) — reduce
+the view bandwidth. While recording, the file is not visible in "Download"; if the app crashed, the unfinished recording
+stays hidden and Android deletes it by itself after a week.</li>
+<li><b>Background reception</b>: you can turn the screen off or switch to another app — the sound keeps playing. The
+notification shade shows the frequency and a "Stop" button. To close the radio, press "Back".</li>
+<li>The beginner's guide — the same as in the Windows version, including the interactive "Radio signal path" diagram.</li>
+<li>Interface language — Russian or English: "Language" on the main screen (by default — as in the system).</li>
+<li>Update check: when a new version is released, a link to the APK appears on the main screen.</li>
+</ul>
+
+<h2>What's next</h2>
+<p>All modes of the Windows version have been ported. Next — testing on different phones
+and receivers.</p>
+
+<p class="dim">Installing the APK: download <code>SDR4NOOB-&lt;version&gt;-android.apk</code> from the GitHub release page and
+allow your browser to install apps. An update installs over the old version, settings are kept.</p>
+</body></html>

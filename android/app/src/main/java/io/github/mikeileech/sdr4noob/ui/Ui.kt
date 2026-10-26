@@ -10,6 +10,8 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import io.github.mikeileech.sdr4noob.i18n.dec
+import io.github.mikeileech.sdr4noob.i18n.tr
 
 /** Мелкие помощники разметки: экраны собираются кодом, без XML. */
 object Ui {
@@ -49,10 +51,10 @@ object Ui {
            weight: Float = 0f, top: Int = 0) =
         LinearLayout.LayoutParams(w, h, weight).apply { topMargin = top }
 
-    /** «101,000 МГц», «446,00625 МГц»: не меньше трёх знаков после запятой, но без потери герц. */
+    /** «101,000 МГц», «446,00625 МГц» (по-английски «101.000 MHz»): не меньше трёх знаков после запятой, но без потери герц. */
     fun mhz(hz: Long): String {
         var s = String.format(java.util.Locale.ROOT, "%.6f", hz / 1e6)
         while (s.endsWith("0") && s.length - s.indexOf('.') > 4) s = s.dropLast(1)
-        return s.replace('.', ',') + " МГц"
+        return dec(s) + " " + tr("МГц")
     }
 }

@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -211,8 +212,8 @@ class AdsbTracker(var home: Pair<Double, Double>? = null, var keepS: Double? = A
                     a.lat = null; a.lon = null; a.dist = null; a.posSrc = null
                     a.trail.clear()
                 }
-                return reject(a, lat, lon, now, "позиция отброшена: ${Adsb.pyF(d, 0)} км от приёмника — " +
-                    "вероятно, подмена GNSS")
+                return reject(a, lat, lon, now, tr("позиция отброшена: {d} км от приёмника — вероятно, подмена GNSS",
+                    "d" to Adsb.pyF(d, 0)))
             }
         }
         // скачок проверяем от подтверждённой позиции; одиночную (src=single) пара вправе поправить
@@ -225,7 +226,7 @@ class AdsbTracker(var home: Pair<Double, Double>? = null, var keepS: Double? = A
                     Adsb.distanceKm(rl, rn, lat, lon) < 5.0 + 0.45 * (now - a.rawT)) a.jumpStreak += 1
                 else a.jumpStreak = 1
                 if (a.jumpStreak < Adsb.JUMP_ACCEPT) {
-                    val note = "скачок ${Adsb.pyF(jump, 0)} км за ${Adsb.pyF(max(dt, 0.1), 0)} с — отброшена"
+                    val note = tr("скачок {d} км за {t} с — отброшена", "d" to Adsb.pyF(jump, 0), "t" to Adsb.pyF(max(dt, 0.1), 0))
                     val streak = a.jumpStreak
                     reject(a, lat, lon, now, note)
                     a.jumpStreak = streak
@@ -247,7 +248,7 @@ class AdsbTracker(var home: Pair<Double, Double>? = null, var keepS: Double? = A
             a.dist = d
             maxRange = max(maxRange, d)
         }
-        if (src == "single") return "по одиночному сообщению (от приёмника, ждём пару)"
+        if (src == "single") return tr("по одиночному сообщению (от приёмника, ждём пару)")
         return null
     }
 
@@ -390,11 +391,14 @@ class AdsbProcessor(fs: Int = Adsb.FS, home: Pair<Double, Double>? = null,
     }
 
     companion object {
-        /** «перегрузка» — сильные кадры выше −3 dBFS или отсечки АЦП; «мало» — кадры слабее −30 dBFS. */
+        /**
+         * «перегрузка» — сильные кадры выше −3 dBFS или отсечки АЦП; «мало» — кадры слабее −30 dBFS.
+         * Значение — идентификатор состояния (его сравнивают), не текст для показа: переводить при показе.
+         */
         fun levelState(clip: Double, framesMax: Double?, framesP90: Double?): String = when {
-            clip > 1e-4 || (framesMax != null && framesMax > -3.0) -> "перегрузка"
-            framesP90 == null || framesP90 < -30.0 -> "мало"
-            else -> "норма"
+            clip > 1e-4 || (framesMax != null && framesMax > -3.0) -> "перегрузка"  // noqa: i18n
+            framesP90 == null || framesP90 < -30.0 -> "мало"  // noqa: i18n
+            else -> "норма"  // noqa: i18n
         }
     }
 }

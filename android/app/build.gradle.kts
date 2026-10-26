@@ -173,6 +173,11 @@ android {
 }
 
 tasks.named("preBuild") { dependsOn(fetchNativeDeps, copyGuide, copyIcon) }
+// I18nTest читает исходники и словарь перевода с диска — без этого правка одного словаря не перезапускает тесты
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/assets/locale").withPropertyName("i18nCatalog")
+    inputs.dir("src/main/java").withPropertyName("i18nSources")
+}
 tasks.configureEach {
     if (name.startsWith("configureCMake") || name.startsWith("buildCMake")) dependsOn(fetchNativeDeps)
 }

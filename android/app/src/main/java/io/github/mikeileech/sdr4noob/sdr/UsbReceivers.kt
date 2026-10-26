@@ -3,20 +3,35 @@ package io.github.mikeileech.sdr4noob.sdr
 import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 
-/** Какой драйвер нужен приёмнику. */
-enum class DriverKind(val title: String, val builtIn: Boolean) {
-    RTL("RTL2832U — встроенный драйвер (librtlsdr)", true),
-    HACKRF("HackRF — встроенный драйвер (libhackrf)", true),
-    AIRSPY("Airspy R2/Mini — встроенный драйвер (libairspy)", true),
-    AIRSPY_HF("Airspy HF+ — драйвер в планах", false),
-    SDRPLAY("SDRplay — нужен закрытый драйвер производителя", false),
-    LIME("LimeSDR — драйвер в планах", false),
-    PLUTO("ADALM-Pluto — драйвер в планах", false),
-    FUNCUBE("FUNcube — драйвер в планах", false),
+/**
+ * Какой драйвер нужен приёмнику. [chip] — латиницей, [note] — пояснение (помечено N_, переводится при показе).
+ * [title] — «RTL2832U — встроенный драйвер (librtlsdr)» на текущем языке, [status] — только пояснение.
+ */
+enum class DriverKind(val chip: String, val note: String, val builtIn: Boolean) {
+    RTL("RTL2832U", N_("встроенный драйвер (librtlsdr)"), true),
+    HACKRF("HackRF", N_("встроенный драйвер (libhackrf)"), true),
+    AIRSPY("Airspy R2/Mini", N_("встроенный драйвер (libairspy)"), true),
+    AIRSPY_HF("Airspy HF+", N_("драйвер в планах"), false),
+    SDRPLAY("SDRplay", N_("нужен закрытый драйвер производителя"), false),
+    LIME("LimeSDR", N_("драйвер в планах"), false),
+    PLUTO("ADALM-Pluto", N_("драйвер в планах"), false),
+    FUNCUBE("FUNcube", N_("драйвер в планах"), false),
+    ;
+
+    /** Пояснение на текущем языке («встроенный драйвер (librtlsdr)» / «built-in driver (librtlsdr)»). */
+    val status: String get() = tr(note)
+
+    /** «Чип — пояснение» на текущем языке; часть после « — » равна [status]. */
+    val title: String get() = "$chip — $status"
 }
 
-data class UsbModel(val vid: Int, val pid: Int?, val name: String, val kind: DriverKind)
+/** [rawName] — как в таблице (русские пояснения помечены N_); [name] — на текущем языке. */
+data class UsbModel(val vid: Int, val pid: Int?, val rawName: String, val kind: DriverKind) {
+    val name: String get() = tr(rawName)
+}
 
 /**
  * Известные USB радиоприёмники (SDR). Тот же список, что KNOWN_USB в rtltv/devices.py, плюс все
@@ -41,7 +56,7 @@ object UsbReceivers {
     )
 
     val models: List<UsbModel> = rtlIds.map { (v, p) ->
-        UsbModel(v, p, if (v == 0x0bda) "RTL-SDR (RTL2832U)" else "DVB-T донгл на RTL2832U", DriverKind.RTL)
+        UsbModel(v, p, if (v == 0x0bda) "RTL-SDR (RTL2832U)" else N_("DVB-T донгл на RTL2832U"), DriverKind.RTL)
     } + listOf(
         UsbModel(0x1D50, 0x6089, "HackRF One", DriverKind.HACKRF),
         UsbModel(0x1D50, 0x604B, "HackRF Jawbreaker", DriverKind.HACKRF),

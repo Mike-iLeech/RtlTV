@@ -12,7 +12,7 @@ class Fft(val n: Int) {
     private val rev = IntArray(n)
 
     init {
-        require(n >= 2 && n and (n - 1) == 0) { "размер БПФ — степень двойки" }
+        require(n >= 2 && n and (n - 1) == 0) { "размер БПФ — степень двойки" }   // noqa: i18n — проверка программиста
         for (i in 0 until n / 2) {
             cosT[i] = cos(2 * PI * i / n).toFloat()
             sinT[i] = -sin(2 * PI * i / n).toFloat()

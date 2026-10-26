@@ -19,7 +19,7 @@ class StreamResampler(fsIn: Int, fsOut: Int, private val k: Int = 24) {
     init {
         val g = gcd(fsOut.toLong(), fsIn.toLong())
         up = (fsOut / g).toInt(); down = (fsIn / g).toInt()
-        require(up <= 1000 && down <= 1000) { "слишком сложное отношение частот $fsOut/$fsIn" }
+        require(up <= 1000 && down <= 1000) { "слишком сложное отношение частот $fsOut/$fsIn" }   // noqa: i18n — проверка программиста
         val n = k * up
         val fc = 0.9 / maxOf(up, down) / 2          // в долях частоты дискретизации (после повышения)
         val m = (n - 1) / 2.0

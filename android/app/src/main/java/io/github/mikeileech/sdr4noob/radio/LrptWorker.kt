@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.radio
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.lrpt.AutoLrptReceiver
 import io.github.mikeileech.sdr4noob.lrpt.LrptGray
 import io.github.mikeileech.sdr4noob.lrpt.LrptStats
@@ -61,12 +62,18 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
         }
 
     /** Отдать снимок пролёта (если кадры были), закрыть приёмник и начать новый. */
-    private fun endPass(rx: AutoLrptReceiver, fs: Int): AutoLrptReceiver {
-        runCatching { rx.finish() }                                   // последние кадры из буферов
-        if (runCatching { rx.stats().framesOk }.getOrDefault(0) > 0) full(rx)?.let(onPassEnd)
-        rx.rxs.forEach { runCatching { it.close() } }               // нативные демодуляторы — сразу, не в finalize
+    private fun endPass(rx: AutoLrptReceiver, fs: Int, next: Boolean = true): AutoLrptReceiver? {
+        try {
+            runCatching { rx.finish() }                               // последние кадры из буферов
+            if (runCatching { rx.stats().framesOk }.getOrDefault(0) > 0) {
+                val p = runCatching { full(rx) }.getOrNull()
+                if (p != null) runCatching { onPassEnd(p) } else onError(tr("LRPT: снимок пролёта не сохранён — не хватило памяти"))
+            }
+        } finally {
+            rx.rxs.forEach { runCatching { it.close() } }           // нативные демодуляторы — сразу и всегда, не в finalize
+        }
         preview = null
-        return AutoLrptReceiver(fs.toDouble())
+        return if (next) AutoLrptReceiver(fs.toDouble()) else null
     }
 
     fun stop() { running = false; thread.interrupt() }
@@ -82,7 +89,7 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
             try {
                 val x = queue.poll(250, TimeUnit.MILLISECONDS)
                 while (true) { (commands.poll() ?: break).invoke(rx) }
-                if (rate != fs) { rx = endPass(rx, rate); fs = rate; off = Double.NaN; queue.clear(); continue }
+                if (rate != fs) { rx = endPass(rx, rate)!!; fs = rate; off = Double.NaN; queue.clear(); continue }
                 val o = offsetHz
                 if (o != off) { off = o; rx.setOffset(o) }
                 if (x != null) rx.feed(x, wantCons = false)
@@ -95,22 +102,23 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
                     val gap = (now - lastSync) / 1e9
                     if (st.framesOk > 0 && (gap > PASS_GAP_S || st.lines > MAX_LINES)) {
                         // пролёт кончился (или снимок слишком длинный): отдать целиком и начать заново
-                        rx = endPass(rx, fs); off = Double.NaN; lastSync = now
+                        rx = endPass(rx, fs)!!; off = Double.NaN; lastSync = now
                         continue
                     }
-                    if (wantPreview) preview = picture(rx, PREVIEW_LINES)
+                    // показ — не ценой приёма: не хватило памяти на превью — просто без него
+                    if (wantPreview) preview = try { picture(rx, PREVIEW_LINES) } catch (_: OutOfMemoryError) { null }
                 }
             } catch (_: InterruptedException) {
                 break
             } catch (e: Throwable) {
                 // сбой или нехватка памяти не роняют приложение: приём начинается заново
-                if (!reported) { reported = true; onError("LRPT: сбой декодера (${e.javaClass.simpleName}), приём начат заново") }
-                rx.rxs.forEach { runCatching { it.close() } }
-                rx = AutoLrptReceiver(fs.toDouble()); off = Double.NaN; preview = null
+                if (!reported) { reported = true; onError(tr("LRPT: сбой декодера ({err}), приём начат заново", "err" to e.javaClass.simpleName)) }
+                rx = runCatching { endPass(rx, fs)!! }.getOrElse { AutoLrptReceiver(fs.toDouble()) }   // принятое — сохранить
+                off = Double.NaN; preview = null
             }
         }
         // закрыли режим или сменили спутник посреди пролёта — принятое не пропадает
-        runCatching { endPass(rx, fs).rxs.forEach { it.close() } }
+        runCatching { endPass(rx, fs, next = false) }
     }
 
     /** Композит (или канал) снимка, уменьшенный до [maxLines] строк прореживанием. */

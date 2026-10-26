@@ -2,6 +2,7 @@ package io.github.mikeileech.sdr4noob.sdr
 
 import android.content.Context
 import android.hardware.usb.UsbManager
+import io.github.mikeileech.sdr4noob.i18n.tr
 
 /**
  * Выбор приёмника строкой (как source_id в rtltv/devices.py):
@@ -18,12 +19,12 @@ object Receivers {
     fun file(uri: String) = "file:$uri"
 
     fun describe(context: Context, id: String): String = when {
-        id == DEMO -> "Тестовый сигнал (без приёмника)"
-        id.startsWith("tcp:") -> "Сетевой rtl_tcp ${id.removePrefix("tcp:")}"
-        id.startsWith("file:") -> "Файл IQ: " + (android.net.Uri.parse(id.removePrefix("file:")).lastPathSegment?.substringAfterLast('/') ?: "запись")
+        id == DEMO -> tr("Тестовый сигнал (без приёмника)")
+        id.startsWith("tcp:") -> tr("Сетевой rtl_tcp {addr}", "addr" to id.removePrefix("tcp:"))
+        id.startsWith("file:") -> tr("Файл IQ: {name}", "name" to (android.net.Uri.parse(id.removePrefix("file:")).lastPathSegment?.substringAfterLast('/') ?: tr("запись")))
         id.startsWith("usb:") -> {
             val d = usbDevice(context, id)
-            d?.let { UsbReceivers.model(it.vendorId, it.productId)?.name } ?: "USB-приёмник (не подключён)"
+            d?.let { UsbReceivers.model(it.vendorId, it.productId)?.name } ?: tr("USB-приёмник (не подключён)")
         }
         else -> id
     }
@@ -37,17 +38,17 @@ object Receivers {
         id.startsWith("tcp:") -> RtlTcpSource.parse(id.removePrefix("tcp:")).let { (h, p) -> RtlTcpSource(h, p) }
         id.startsWith("file:") -> IqFileSource.forUri(context, android.net.Uri.parse(id.removePrefix("file:")))
         id.startsWith("usb:") -> {
-            val d = usbDevice(context, id) ?: throw SdrException("Приёмник отключён от USB")
+            val d = usbDevice(context, id) ?: throw SdrException(tr("Приёмник отключён от USB"))
             val m = UsbReceivers.model(d.vendorId, d.productId)
             when (m?.kind) {
                 DriverKind.RTL -> RtlUsbSource(context.applicationContext, d)
                 DriverKind.HACKRF -> HackRfUsbSource(context.applicationContext, d)
                 DriverKind.AIRSPY -> AirspyUsbSource(context.applicationContext, d)
-                null -> throw SdrException("Неизвестное USB-устройство %04x:%04x".format(d.vendorId, d.productId))
-                else -> throw SdrException("${m.name}: ${m.kind.title}. В Android-версии этот приёмник пока не работает — " +
-                    "он поддерживается в версии для Windows.")
+                null -> throw SdrException(tr("Неизвестное USB-устройство {id}", "id" to "%04x:%04x".format(d.vendorId, d.productId)))
+                else -> throw SdrException("${m.name}: ${m.kind.title}. " +
+                    tr("В Android-версии этот приёмник пока не работает — он поддерживается в версии для Windows."))
             }
         }
-        else -> throw SdrException("Неизвестный приёмник «$id»")
+        else -> throw SdrException(tr("Неизвестный приёмник «{id}»", "id" to id))
     }
 }

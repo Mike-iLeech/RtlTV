@@ -1,5 +1,8 @@
 package io.github.mikeileech.sdr4noob.ui
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
@@ -23,7 +26,6 @@ import io.github.mikeileech.sdr4noob.dsp.SstvLevel
 import io.github.mikeileech.sdr4noob.radio.RadioEngine
 import io.github.mikeileech.sdr4noob.radio.SstvWorker
 import io.github.mikeileech.sdr4noob.radio.Storage
-import java.util.Locale
 import kotlin.concurrent.thread
 
 /** Картинка SSTV: вписана в окно с сохранением пропорций, при приёме — линия текущей строки. */
@@ -43,7 +45,7 @@ class SstvView(ctx: Context) : View(ctx) {
         val b = bitmap
         if (b == null) {
             hint.textSize = 14f * resources.displayMetrics.density
-            c.drawText("Здесь появится картинка SSTV", width / 2f, height / 2f, hint)
+            c.drawText(tr("Здесь появится картинка SSTV"), width / 2f, height / 2f, hint)
             return
         }
         val s = minOf(width.toFloat() / b.width, height.toFloat() / b.height)
@@ -62,23 +64,25 @@ class SstvView(ctx: Context) : View(ctx) {
 class SstvPanel(private val act: Activity, private val prefs: android.content.SharedPreferences,
                 private val toast: (String) -> Unit) {
     companion object {
-        const val AUTO = "Авто (VIS)"
+        /** Значение «авто» в списке режимов и в настройке sstv_mode (сохраняется по-русски, показывается через tr). */
+        val AUTO = N_("Авто (VIS)")
+        /** Названия частот помечены N_ — показывать через tr(it.first). */
         val PRESETS = listOf(
-            Triple("КВ 20 м — 14,230 МГц (USB), главная частота SSTV", 14_230_000L, "USB"),
-            Triple("КВ 20 м — 14,233 МГц (USB)", 14_233_000L, "USB"),
-            Triple("КВ 40 м — 7,171 МГц (LSB)", 7_171_000L, "LSB"),
-            Triple("КВ 80 м — 3,730 МГц (LSB)", 3_730_000L, "LSB"),
-            Triple("КВ 15 м — 21,340 МГц (USB)", 21_340_000L, "USB"),
-            Triple("КВ 10 м — 28,680 МГц (USB)", 28_680_000L, "USB"),
-            Triple("МКС — 145,800 МГц (FM), сеансы ARISS", 145_800_000L, "NFM"),
-            Triple("2 м — 144,500 МГц (FM)", 144_500_000L, "NFM"),
+            Triple(N_("КВ 20 м — 14,230 МГц (USB), главная частота SSTV"), 14_230_000L, "USB"),
+            Triple(N_("КВ 20 м — 14,233 МГц (USB)"), 14_233_000L, "USB"),
+            Triple(N_("КВ 40 м — 7,171 МГц (LSB)"), 7_171_000L, "LSB"),
+            Triple(N_("КВ 80 м — 3,730 МГц (LSB)"), 3_730_000L, "LSB"),
+            Triple(N_("КВ 15 м — 21,340 МГц (USB)"), 21_340_000L, "USB"),
+            Triple(N_("КВ 10 м — 28,680 МГц (USB)"), 28_680_000L, "USB"),
+            Triple(N_("МКС — 145,800 МГц (FM), сеансы ARISS"), 145_800_000L, "NFM"),
+            Triple(N_("2 м — 144,500 МГц (FM)"), 144_500_000L, "NFM"),
         )
     }
 
     private val ui = Handler(Looper.getMainLooper())
     val view: LinearLayout = Ui.vbox(act, 0)
     private val image = SstvView(act)
-    private val status = Ui.text(act, "Ожидание VIS-кода…", 13f, Ui.DIM)
+    private val status = Ui.text(act, tr("Ожидание VIS-кода…"), 13f, Ui.DIM)
     private val modeSpin = Spinner(act)
     private val modes = listOf(AUTO) + Sstv.MODES.keys
     private var worker: SstvWorker? = null
@@ -92,7 +96,7 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
         view.addView(image, Ui.lp(h = 0, weight = 1f))
         view.addView(status)
         val r1 = Ui.hbox(act)
-        modeSpin.adapter = ArrayAdapter(act, android.R.layout.simple_spinner_dropdown_item, modes)
+        modeSpin.adapter = ArrayAdapter(act, android.R.layout.simple_spinner_dropdown_item, modes.map { if (it == AUTO) tr(it) else it })
         modeSpin.setSelection(modes.indexOf(prefs.getString("sstv_mode", AUTO)).coerceAtLeast(0))
         modeSpin.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
@@ -102,12 +106,12 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
         r1.addView(modeSpin, Ui.lp(0, weight = 1f))
-        r1.addView(Ui.button(act, "Начать сейчас") { manual() }, Ui.lp(0, weight = 1f))
-        r1.addView(Ui.button(act, "Сброс") { reset() }, Ui.lp(0, weight = 0.6f))
+        r1.addView(Ui.button(act, tr("Начать сейчас")) { manual() }, Ui.lp(0, weight = 1f))
+        r1.addView(Ui.button(act, tr("Сброс")) { reset() }, Ui.lp(0, weight = 0.6f))
         view.addView(r1)
         val r2 = Ui.hbox(act)
-        r2.addView(Ui.button(act, "Картинки…") { gallery() }, Ui.lp(0, weight = 1f))
-        r2.addView(Ui.button(act, "Из WAV-файла…") { pickWav() }, Ui.lp(0, weight = 1f))
+        r2.addView(Ui.button(act, tr("Картинки…")) { gallery() }, Ui.lp(0, weight = 1f))
+        r2.addView(Ui.button(act, tr("Из WAV-файла…")) { pickWav() }, Ui.lp(0, weight = 1f))
         view.addView(r2)
     }
 
@@ -132,7 +136,7 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
 
     private fun manual() {
         val m = modes[modeSpin.selectedItemPosition.coerceAtLeast(0)]
-        if (m == AUTO) { toast("Выберите конкретный режим SSTV"); return }
+        if (m == AUTO) { toast(tr("Выберите конкретный режим SSTV")); return }
         worker?.startManual(m)
     }
 
@@ -140,7 +144,7 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
         worker?.reset()
         curMode = null; lineText = "—"
         image.progress = null
-        status.text = "Ожидание VIS-кода…"
+        status.text = tr("Ожидание VIS-кода…")
     }
 
     private fun onEvents(events: List<SstvEvent>, lv: SstvLevel) {
@@ -150,42 +154,42 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
                 curMode = ev.mode
                 bmp = Bitmap.createBitmap(ev.width, ev.height, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF000000.toInt()) }
                 image.bitmap = bmp; image.progress = 0f
-                lineText = "строка 0 / ${ev.height}"
+                lineText = tr("строка {y} / {h}", "y" to 0, "h" to ev.height)
             }
             is SstvEvent.Line -> bmp?.let { b ->
                 if (ev.y in 0 until b.height && b.width == ev.width) {
                     b.setPixels(ev.rgb, 0, ev.width, 0, ev.y, minOf(ev.width, ev.rgb.size), 1)
                     image.progress = (ev.y + 1f) / b.height
-                    lineText = "строка ${ev.y + 1} / ${b.height}"
+                    lineText = tr("строка {y} / {h}", "y" to ev.y + 1, "h" to b.height)
                     image.invalidate()
                 }
             }
             is SstvEvent.Done -> {
                 val b = Bitmap.createBitmap(ev.image, ev.width, ev.height, Bitmap.Config.ARGB_8888)
                 bmp = b; image.bitmap = b; image.progress = null
-                save(b, ev.mode + if (ev.complete) "" else " (неполная)")
-                lineText = "готово"
+                save(b, ev.mode + if (ev.complete) "" else " (неполная)")  // noqa: i18n
+                lineText = tr("готово")
             }
             is SstvEvent.Lost -> {
                 image.progress = null
                 if (ev.lines > 0) {
                     val b = Bitmap.createBitmap(ev.image, ev.width, ev.height, Bitmap.Config.ARGB_8888)
                     bmp = b; image.bitmap = b
-                    save(b, ev.mode + " (неполная)")
+                    save(b, ev.mode + " (неполная)")  // noqa: i18n
                 }
-                lineText = "сигнал потерян"
+                lineText = tr("сигнал потерян")
             }
         }
         val mode = lv.mode ?: curMode
-        val tone = if (lv.freq > 0) String.format(Locale.ROOT, "%.0f Гц · синхро %.2f", lv.freq, lv.sync).replace('.', ',') else "—"
-        status.text = (if (mode != null) "$mode · $lineText" else "Ожидание VIS-кода…") + " · тон $tone"
+        val tone = if (lv.freq > 0) tr("{f} Гц · синхро {s}", "f" to num(lv.freq, 0), "s" to num(lv.sync, 2)) else "—"
+        status.text = (if (mode != null) "$mode · $lineText" else tr("Ожидание VIS-кода…")) + " · " + tr("тон {t}", "t" to tone)
     }
 
     private fun save(b: Bitmap, mode: String) {
         val name = Storage.sstvName(mode)
         thread(name = "sstv-save") {
-            val msg = try { "Картинка сохранена: " + Storage.savePng(act, Storage.SSTV, name, b) }
-            catch (e: Exception) { "Картинка не сохранена: ${e.message}" }
+            val msg = try { tr("Картинка сохранена: {path}", "path" to Storage.savePng(act, Storage.SSTV, name, b)) }
+            catch (e: Exception) { tr("Картинка не сохранена: {err}", "err" to e.message) }
             ui.post { if (!act.isDestroyed) toast(msg) }
         }
     }
@@ -195,10 +199,10 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
             val items = runCatching { Storage.listPictures(act, Storage.SSTV) }.getOrDefault(emptyList())
             ui.post {
                 if (act.isDestroyed) return@post
-                if (items.isEmpty()) { toast("Принятых картинок пока нет"); return@post }
-                AlertDialog.Builder(act).setTitle("Картинки SSTV (${Storage.picturesPath(Storage.SSTV)})")
+                if (items.isEmpty()) { toast(tr("Принятых картинок пока нет")); return@post }
+                AlertDialog.Builder(act).setTitle(tr("Картинки SSTV ({path})", "path" to Storage.whereLabel(act, Storage.SSTV, true)))
                     .setItems(items.map { it.first }.toTypedArray()) { _, i -> open(items[i].second) }
-                    .setNegativeButton("Закрыть", null).show()
+                    .setNegativeButton(tr("Закрыть"), null).show()
             }
         }
     }
@@ -208,7 +212,7 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
             val b = runCatching { act.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull()
             ui.post {
                 if (act.isDestroyed) return@post
-                if (b == null) { toast("Картинку не удалось открыть"); return@post }
+                if (b == null) { toast(tr("Картинку не удалось открыть")); return@post }
                 image.progress = null; image.bitmap = b
             }
         }
@@ -220,24 +224,24 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
     /** Декодировать выбранный WAV-файл (в фоне) и сохранить найденные картинки. */
     fun decodeWav(uri: Uri) {
         val mode = modes[modeSpin.selectedItemPosition.coerceAtLeast(0)].takeIf { it != AUTO }
-        status.text = "Декодирование файла…"
+        status.text = tr("Декодирование файла…")
         thread(name = "sstv-wav") {
             val res = runCatching { act.contentResolver.openInputStream(uri)!!.buffered(1 shl 16).use { SstvWorker.decodeWav(it, mode) } }
             ui.post {
                 if (act.isDestroyed) return@post
-                res.onFailure { status.text = "Файл не декодирован: ${it.message}"; return@post }
+                res.onFailure { status.text = tr("Файл не декодирован: {err}", "err" to it.message); return@post }
                 val imgs = res.getOrThrow()
                 for (ev in imgs) {
                     val (px, w, h, m) = when (ev) {
                         is SstvEvent.Done -> Quad(ev.image, ev.width, ev.height, ev.mode)
-                        is SstvEvent.Lost -> Quad(ev.image, ev.width, ev.height, ev.mode + " (неполная)")
+                        is SstvEvent.Lost -> Quad(ev.image, ev.width, ev.height, ev.mode + " (неполная)")  // noqa: i18n
                         else -> continue
                     }
                     val b = Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888)
                     image.progress = null; image.bitmap = b
-                    save(b, "файл $m")
+                    save(b, "файл $m")  // noqa: i18n
                 }
-                status.text = "Из файла получено картинок: ${imgs.size}"
+                status.text = tr("Из файла получено картинок: {n}", "n" to imgs.size)
             }
         }
     }

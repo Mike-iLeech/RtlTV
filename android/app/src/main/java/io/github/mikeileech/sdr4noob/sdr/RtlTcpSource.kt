@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 import java.io.DataInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -41,9 +43,9 @@ class RtlTcpSource(private val host: String, private val port: Int) : SdrSource 
                 else -> t to ""
             }
             val port = if (p.isEmpty()) defaultPort else p.toIntOrNull()
-                ?: throw SdrException("Неверный порт в «$text»")
+                ?: throw SdrException(tr("Неверный порт в «{text}»", "text" to text))
             if (h.isEmpty() || port !in 1..65535)
-                throw SdrException("Нужен адрес вида хост:порт, например 192.168.1.10:1234")
+                throw SdrException(tr("Нужен адрес вида хост:порт, например 192.168.1.10:1234"))
             return h to port
         }
     }
@@ -70,19 +72,19 @@ class RtlTcpSource(private val host: String, private val port: Int) : SdrSource 
             val din = DataInputStream(s.getInputStream())
             val head = ByteArray(12)
             try { din.readFully(head) } catch (e: IOException) {
-                throw SdrException("rtl_tcp $host:$port: сервер закрыл соединение (занят другим клиентом?)", e)
+                throw SdrException(tr("rtl_tcp {addr}: сервер закрыл соединение (занят другим клиентом?)", "addr" to "$host:$port"), e)
             }
             if (String(head, 0, 4, Charsets.US_ASCII) != "RTL0")
-                throw SdrException("$host:$port — это не сервер rtl_tcp")
+                throw SdrException(tr("{addr} — это не сервер rtl_tcp", "addr" to "$host:$port"))
             val tuner = ((head[4].toInt() and 0xFF) shl 24) or ((head[5].toInt() and 0xFF) shl 16) or
                 ((head[6].toInt() and 0xFF) shl 8) or (head[7].toInt() and 0xFF)
             gains = GAINS[tuner] ?: R82XX
-            label = "rtl_tcp $host:$port (${TUNERS[tuner] ?: "тюнер $tuner"})"
+            label = "rtl_tcp $host:$port (${TUNERS[tuner]?.let { tr(it) } ?: tr("тюнер {n}", "n" to tuner)})"
             sock = s; inp = din; out = s.getOutputStream()
         } catch (e: SdrException) {
             s.close(); throw e
         } catch (e: IOException) {
-            s.close(); throw SdrException("rtl_tcp: не удалось подключиться к $host:$port — ${e.message}", e)
+            s.close(); throw SdrException(tr("rtl_tcp: не удалось подключиться к {addr} — {err}", "addr" to "$host:$port", "err" to e.message), e)
         }
         send(CMD_RATE, sampleRate.toLong())
         send(CMD_FREQ, frequencyHz)
@@ -91,7 +93,7 @@ class RtlTcpSource(private val host: String, private val port: Int) : SdrSource 
     private fun send(cmd: Int, value: Long) {
         val v = value.toInt()
         val b = byteArrayOf(cmd.toByte(), (v ushr 24).toByte(), (v ushr 16).toByte(), (v ushr 8).toByte(), v.toByte())
-        try { out?.write(b); out?.flush() } catch (e: IOException) { throw SdrException("rtl_tcp: связь потеряна", e) }
+        try { out?.write(b); out?.flush() } catch (e: IOException) { throw SdrException(tr("rtl_tcp: связь потеряна"), e) }
     }
 
     override fun start() {}
@@ -109,9 +111,9 @@ class RtlTcpSource(private val host: String, private val port: Int) : SdrSource 
             } catch (e: SocketTimeoutException) {
                 break
             } catch (e: IOException) {
-                throw SdrException("rtl_tcp $host:$port: связь потеряна", e)
+                throw SdrException(tr("rtl_tcp {addr}: связь потеряна", "addr" to "$host:$port"), e)
             }
-            if (n < 0) throw SdrException("rtl_tcp $host:$port: сервер закрыл соединение")
+            if (n < 0) throw SdrException(tr("rtl_tcp {addr}: сервер закрыл соединение", "addr" to "$host:$port"))
             total += n
         }
         if (total % 2 == 1) { pendingByte = buf[total - 1]; odd = true; total-- }

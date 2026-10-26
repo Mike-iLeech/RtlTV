@@ -7,6 +7,9 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.LinearLayout
 import io.github.mikeileech.sdr4noob.dsp.Adsb
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.radio.AdsbWorker
 import io.github.mikeileech.sdr4noob.radio.AircraftInfo
 import io.github.mikeileech.sdr4noob.radio.AprsRx
@@ -25,7 +28,7 @@ object Home {
         p.edit().putFloat("home_lat", lat.toFloat()).putFloat("home_lon", lon.toFloat()).apply()
 }
 
-private fun fmt(x: Double, d: Int) = String.format(Locale.ROOT, "%.${d}f", x).replace('.', ',')
+private fun fmt(x: Double, d: Int) = num(x, d)
 
 /**
  * Панель APRS в окне радио (как окно APRS на ПК): декодер AFSK 1200 на звуке NFM, станции с координатами — на
@@ -34,17 +37,17 @@ private fun fmt(x: Double, d: Int) = String.format(Locale.ROOT, "%.${d}f", x).re
 class AprsPanel(private val act: Activity, private val prefs: SharedPreferences, private val toast: (String) -> Unit) {
     companion object {
         val PRESETS = listOf(
-            "APRS Россия и Европа — 144,800 МГц" to 144_800_000L,
-            "APRS США — 144,390 МГц" to 144_390_000L,
-            "APRS Австралия — 145,175 МГц" to 145_175_000L,
-            "МКС, цифровой ретранслятор — 145,825 МГц" to 145_825_000L,
+            N_("APRS Россия и Европа — 144,800 МГц") to 144_800_000L,
+            N_("APRS США — 144,390 МГц") to 144_390_000L,
+            N_("APRS Австралия — 145,175 МГц") to 145_175_000L,
+            N_("МКС, цифровой ретранслятор — 145,825 МГц") to 145_825_000L,
         )
     }
 
     private val ui = Handler(Looper.getMainLooper())
     val view: LinearLayout = Ui.vbox(act, 0)
     private val map = MapView(act)
-    private val status = Ui.text(act, "Ожидание пакетов APRS…", 13f, Ui.DIM)
+    private val status = Ui.text(act, tr("Ожидание пакетов APRS…"), 13f, Ui.DIM)
     private val last = Ui.text(act, "", 12f).apply { maxLines = 4 }
     private val log = ArrayList<AprsRx>()
     private var worker: AprsWorker? = null
@@ -61,10 +64,10 @@ class AprsPanel(private val act: Activity, private val prefs: SharedPreferences,
         view.addView(status)
         view.addView(last)
         val r = Ui.hbox(act)
-        r.addView(Ui.button(act, "Журнал…") { showLog() }, Ui.lp(0, weight = 1f))
-        r.addView(Ui.button(act, "Дом = центр карты") {
+        r.addView(Ui.button(act, tr("Журнал…")) { showLog() }, Ui.lp(0, weight = 1f))
+        r.addView(Ui.button(act, tr("Дом = центр карты")) {
             val (a, b) = map.center(); Home.set(prefs, a, b); map.setHome(a, b, intArrayOf(10, 30, 60))
-            toast("Место приёмника: ${fmt(a, 4)}, ${fmt(b, 4)}")
+            toast(tr("Место приёмника: {lat}, {lon}", "lat" to fmt(a, 4), "lon" to fmt(b, 4)))
         }, Ui.lp(0, weight = 1f))
         view.addView(r)
     }
@@ -90,7 +93,8 @@ class AprsPanel(private val act: Activity, private val prefs: SharedPreferences,
         val st = w.stations
         map.setItems("aprs", st.map { MapItem(it.name, it.lat, it.lon, MapItem.Kind.POINT, label = it.name, color = 0xFF4DD2FF.toInt()) })
         map.setTracks("aprs", st.filter { it.track.size > 1 }.map { MapTrack(it.track, 0xFF4DD2FF.toInt(), 1.5f) })
-        status.text = "Пакетов: ${w.total} · станций на карте: ${st.size} · последний — ${time.format(Date(got.last().timeMs))}"
+        status.text = tr("Пакетов: {n} · станций на карте: {st} · последний — {t}",
+            "n" to w.total, "st" to st.size, "t" to time.format(Date(got.last().timeMs)))
         last.text = log.takeLast(4).reversed().joinToString("\n") { "${it.packet.src}: ${it.text}" }
     }
 
@@ -99,17 +103,19 @@ class AprsPanel(private val act: Activity, private val prefs: SharedPreferences,
         val (hl, ho) = Home.get(prefs)
         val d = io.github.mikeileech.sdr4noob.dsp.Aprs.distanceKm(hl, ho, s.lat, s.lon)
         AlertDialog.Builder(act).setTitle(s.name)
-            .setMessage("${s.last.text}\n\n${fmt(s.lat, 5)}, ${fmt(s.lon, 5)} · ${fmt(d, 1)} км от вас" +
-                (s.symbol?.let { "\nЗначок: $it" } ?: "") + "\nПакетов: ${s.count} · последний ${time.format(Date(s.last.timeMs))}" +
+            .setMessage("${s.last.text}\n\n" +
+                tr("{lat}, {lon} · {d} км от вас", "lat" to fmt(s.lat, 5), "lon" to fmt(s.lon, 5), "d" to fmt(d, 1)) +
+                (s.symbol?.let { "\n" + tr("Значок: {s}", "s" to it) } ?: "") + "\n" +
+                tr("Пакетов: {n} · последний {t}", "n" to s.count, "t" to time.format(Date(s.last.timeMs))) +
                 "\n\n${s.last.packet.raw}")
-            .setPositiveButton("Закрыть", null).show()
+            .setPositiveButton(tr("Закрыть"), null).show()
     }
 
     private fun showLog() {
-        if (log.isEmpty()) { toast("Пакетов пока нет"); return }
+        if (log.isEmpty()) { toast(tr("Пакетов пока нет")); return }
         val items = log.reversed().map { "${time.format(Date(it.timeMs))}  ${it.packet.src}\n${it.text}" }.toTypedArray()
-        AlertDialog.Builder(act).setTitle("Журнал APRS (${log.size})").setItems(items, null)
-            .setPositiveButton("Закрыть", null).show()
+        AlertDialog.Builder(act).setTitle(tr("Журнал APRS ({n})", "n" to log.size)).setItems(items, null)
+            .setPositiveButton(tr("Закрыть"), null).show()
     }
 }
 
@@ -121,7 +127,7 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
     private val view0: LinearLayout = Ui.vbox(act, 0)
     val view: LinearLayout get() = view0
     private val map = MapView(act)
-    private val status = Ui.text(act, "Ожидание сообщений ADS-B…", 13f, Ui.DIM)
+    private val status = Ui.text(act, tr("Ожидание сообщений ADS-B…"), 13f, Ui.DIM)
     private val list = Ui.text(act, "", 12f).apply { maxLines = 5; typeface = android.graphics.Typeface.MONOSPACE }
     private var worker: AdsbWorker? = null
     private var engine: RadioEngine? = null
@@ -136,11 +142,11 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
         view0.addView(status)
         view0.addView(list)
         val r = Ui.hbox(act)
-        r.addView(Ui.button(act, "Борта…") { showPlanes() }, Ui.lp(0, weight = 1f))
-        r.addView(Ui.button(act, "Дом = центр карты") {
+        r.addView(Ui.button(act, tr("Борта…")) { showPlanes() }, Ui.lp(0, weight = 1f))
+        r.addView(Ui.button(act, tr("Дом = центр карты")) {
             val (a, b) = map.center(); Home.set(prefs, a, b); map.setHome(a, b, intArrayOf(50, 100, 200))
             worker?.setHome(a, b)
-            toast("Место приёмника: ${fmt(a, 4)}, ${fmt(b, 4)}")
+            toast(tr("Место приёмника: {lat}, {lon}", "lat" to fmt(a, 4), "lon" to fmt(b, 4)))
         }, Ui.lp(0, weight = 1f))
         view0.addView(r)
     }
@@ -168,19 +174,26 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
         val fresh = rows.filter { it.ageS < Adsb.STALE_S }
         map.setItems("planes", fresh.filter { it.lat != null && it.lon != null }.map {
             MapItem(it.hex, it.lat!!, it.lon!!, MapItem.Kind.PLANE, heading = it.track,
-                label = (it.callsign ?: it.hex) + (altM(it.alt)?.let { a -> "\n$a м" } ?: ""),
+                label = (it.callsign ?: it.hex) + (altM(it.alt)?.let { a -> "\n" + tr("{a} м", "a" to a) } ?: ""),
                 color = if (it.suspect) 0xFFFF6B6B.toInt() else if (it.onGround) 0xFFB0B0B0.toInt() else 0xFFFFD84D.toInt(),
                 trail = it.trail)
         })
         val lv = w.levels
-        val state = when (lv?.state) { null -> "—"; "мало" -> "слабый сигнал"; "перегрузка" -> "перегрузка — уменьшите усиление"; else -> lv.state }
-        status.text = "Бортов: ${fresh.size} (на карте ${fresh.count { it.lat != null }}) · сообщений ${w.proc.msgs} · уровень: $state"
+        val state = when (lv?.state) {
+            null -> "—"
+            "мало" -> tr("слабый сигнал")   // noqa: i18n
+            "перегрузка" -> tr("перегрузка — уменьшите усиление")   // noqa: i18n
+            "норма" -> tr("норма")   // noqa: i18n
+            else -> tr(lv.state)
+        }
+        status.text = tr("Бортов: {n} (на карте {m}) · сообщений {msgs} · уровень: {state}", "n" to fresh.size,
+            "m" to fresh.count { it.lat != null }, "msgs" to w.proc.msgs, "state" to state)
         list.text = fresh.take(5).joinToString("\n") { line(it) }
     }
 
     private fun line(p: PlaneRow) = String.format(Locale.ROOT, "%-8s %s %7s %6s %7s",
-        p.callsign ?: "—", p.hex, altM(p.alt)?.let { "$it м" } ?: "", kmh(p.gs)?.let { "$it км/ч" } ?: "",
-        p.dist?.let { fmt(it, 0) + " км" } ?: "")
+        p.callsign ?: "—", p.hex, altM(p.alt)?.let { tr("{a} м", "a" to it) } ?: "", kmh(p.gs)?.let { tr("{v} км/ч", "v" to it) } ?: "",
+        p.dist?.let { tr("{d} км", "d" to fmt(it, 0)) } ?: "")
 
     private fun showPlane(hex: String) {
         val p = worker?.planes?.firstOrNull { it.hex == hex } ?: return
@@ -189,33 +202,33 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
             append("ICAO ${p.hex}")
             c.country?.let { append(" · $it") }
             append('\n')
-            p.callsign?.let { append("Позывной: $it") }
+            p.callsign?.let { append(tr("Позывной: {c}", "c" to it)) }
             c.airline?.let { append(" · $it") }
-            if (c.isPrivate == true) append(" (частный или служебный борт)")
+            if (c.isPrivate == true) append(" (" + tr("частный или служебный борт") + ")")
             append('\n')
-            altM(p.alt)?.let { append("Высота: $it м\n") }
-            kmh(p.gs)?.let { append("Скорость: $it км/ч\n") }
-            p.track?.let { append("Курс: ${it.roundToInt()}°\n") }
-            p.vr?.let { append("Вертикальная: ${fmt(it * Adsb.FT / 60, 1)} м/с\n") }
-            p.squawk?.let { append("Сквок: $it\n") }
-            p.dist?.let { append("Расстояние: ${fmt(it, 1)} км\n") }
-            if (p.onGround) append("На земле\n")
-            if (p.suspect) append("Координаты подозрительны (возможна подмена GNSS)\n")
-            append("Сообщений: ${p.msgs}, последнее ${p.ageS.roundToInt()} с назад")
+            altM(p.alt)?.let { append(tr("Высота: {a} м", "a" to it) + "\n") }
+            kmh(p.gs)?.let { append(tr("Скорость: {v} км/ч", "v" to it) + "\n") }
+            p.track?.let { append(tr("Курс: {c}°", "c" to it.roundToInt()) + "\n") }
+            p.vr?.let { append(tr("Вертикальная: {v} м/с", "v" to fmt(it * Adsb.FT / 60, 1)) + "\n") }
+            p.squawk?.let { append(tr("Сквок: {s}", "s" to it) + "\n") }
+            p.dist?.let { append(tr("Расстояние: {d} км", "d" to fmt(it, 1)) + "\n") }
+            if (p.onGround) append(tr("На земле") + "\n")
+            if (p.suspect) append(tr("Координаты подозрительны (возможна подмена GNSS)") + "\n")
+            append(tr("Сообщений: {n}, последнее {s} с назад", "n" to p.msgs, "s" to p.ageS.roundToInt()))
         }
-        AlertDialog.Builder(act).setTitle(p.callsign ?: p.hex).setMessage(txt).setPositiveButton("Закрыть", null).show()
+        AlertDialog.Builder(act).setTitle(p.callsign ?: p.hex).setMessage(txt).setPositiveButton(tr("Закрыть"), null).show()
     }
 
     private fun showPlanes() {
         val rows = worker?.planes.orEmpty()
-        if (rows.isEmpty()) { toast("Бортов пока нет"); return }
-        AlertDialog.Builder(act).setTitle("Борта (${rows.size})")
-            .setItems(rows.map { line(it) + if (it.ageS >= Adsb.STALE_S) "  (давно)" else "" }.toTypedArray()) { _, i ->
+        if (rows.isEmpty()) { toast(tr("Бортов пока нет")); return }
+        AlertDialog.Builder(act).setTitle(tr("Борта ({n})", "n" to rows.size))
+            .setItems(rows.map { line(it) + if (it.ageS >= Adsb.STALE_S) "  (" + tr("давно") + ")" else "" }.toTypedArray()) { _, i ->
                 val p = rows[i]
                 if (p.lat != null && p.lon != null) map.setCenter(p.lat, p.lon)
                 map.selected = p.hex
                 showPlane(p.hex)
             }
-            .setPositiveButton("Закрыть", null).show()
+            .setPositiveButton(tr("Закрыть"), null).show()
     }
 }

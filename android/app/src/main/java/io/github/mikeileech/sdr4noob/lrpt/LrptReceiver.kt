@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.lrpt
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.abs
 
 /** Сводка приёма (stats() в lrpt.py). */
@@ -243,7 +244,7 @@ class LrptReceiver(fs: Double, oqpsk: Boolean = true, rs: Double? = null, nrzm: 
     }
 
     val modeText: String
-        get() = "${(demod.rs / 1000).toInt()}k ${if (demod.oqpsk) "OQPSK" else "QPSK"}" + (if (mode80k) " + перемежение" else "")
+        get() = "${(demod.rs / 1000).toInt()}k ${if (demod.oqpsk) "OQPSK" else "QPSK"}" + (if (mode80k) " + " + tr("перемежение") else "")
 
     private fun use(fr: List<Frame>) {
         for (f in fr) if (f.ok) for (p in demux.push(f.data.copyOf(892))) imager.push(p.apid, p.seq, p.payload)
@@ -284,7 +285,7 @@ class AutoLrptReceiver(fs: Double, modes: List<Pair<Boolean, Boolean>> = listOf(
 
     fun stats(): LrptStats {
         val st = rx.stats()
-        return st.copy(mode = if (chosen != null) rx.modeText else "поиск режима: " + rxs.joinToString(" / ") { it.modeText })
+        return st.copy(mode = if (chosen != null) rx.modeText else tr("поиск режима: {modes}", "modes" to rxs.joinToString(" / ") { it.modeText }))
     }
 }
 

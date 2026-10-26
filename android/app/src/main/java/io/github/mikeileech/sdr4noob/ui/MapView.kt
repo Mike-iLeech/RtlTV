@@ -17,6 +17,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -260,7 +261,7 @@ class MapView(ctx: Context) : View(ctx) {
         for (list in tracks.values) for (t in list) drawTrack(c, t)
         for (list in items.values) for (it in list) drawItem(c, it)
         pText.textSize = 10f * d; pText.color = Color.WHITE; pText.textAlign = Paint.Align.RIGHT
-        c.drawText("© участники OpenStreetMap", width - 6f * d, height - 6f * d, pText)
+        c.drawText(tr("© участники OpenStreetMap"), width - 6f * d, height - 6f * d, pText)
         pText.textAlign = Paint.Align.LEFT
     }
 
@@ -274,7 +275,7 @@ class MapView(ctx: Context) : View(ctx) {
             val r = (km * 1000 / mpp).toFloat()
             if (r < 15 || r > 6000) continue
             c.drawCircle(sx, sy, r, pLine)
-            c.drawText("$km км", sx + 3, sy - r - 3, pText)
+            c.drawText(tr("{km} км", "km" to km), sx + 3, sy - r - 3, pText)
         }
         pLine.pathEffect = null
         pFill.color = Ui.ACCENT

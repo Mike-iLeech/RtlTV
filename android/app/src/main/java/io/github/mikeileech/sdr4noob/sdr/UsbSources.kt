@@ -1,5 +1,8 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.dec
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
@@ -96,7 +99,7 @@ abstract class NativeRateSource(private val context: Context, private val device
     private var lastData = 0L
 
     final override fun start() {
-        if (nativeStart() != 0) throw SdrException("$name: не удалось запустить приём")
+        if (nativeStart() != 0) throw SdrException(tr("{name}: не удалось запустить приём", "name" to name))
         streaming = true; lastData = System.nanoTime()
     }
 
@@ -121,13 +124,13 @@ abstract class NativeRateSource(private val context: Context, private val device
 
     override fun open(sampleRate: Int, frequencyHz: Long) {
         val um = context.getSystemService(Context.USB_SERVICE) as UsbManager
-        if (!um.hasPermission(device)) throw SdrException("Нет разрешения на доступ к приёмнику по USB")
-        val c = um.openDevice(device) ?: throw SdrException("Android не открыл USB-устройство (отключено?)")
+        if (!um.hasPermission(device)) throw SdrException(tr("Нет разрешения на доступ к приёмнику по USB"))
+        val c = um.openDevice(device) ?: throw SdrException(tr("Android не открыл USB-устройство (отключено?)"))
         val err = IntArray(1)
         val handle = nativeOpen(c.fileDescriptor, err)
         if (handle == 0L) {
             c.close()
-            throw SdrException("Драйвер $name не открыл приёмник (код ${err[0]}). Переподключите его к USB.")
+            throw SdrException(tr("Драйвер {name} не открыл приёмник (код {code}). Переподключите его к USB.", "name" to name, "code" to err[0]))
         }
         conn = c; h = handle
         afterOpen()
@@ -146,7 +149,7 @@ abstract class NativeRateSource(private val context: Context, private val device
         val was = streaming
         if (was) { nativeStop(); streaming = false }
         val r = applyRate(native)
-        if (r != 0) throw SdrException("$name: частота дискретизации ${native / 1e6} МГц не принята (код $r)")
+        if (r != 0) throw SdrException(tr("{name}: частота дискретизации {rate} МГц не принята (код {code})", "name" to name, "rate" to dec("${native / 1e6}"), "code" to r))
         if (was) start()
         rs = if (native == fs) null else StreamResampler(native, fs)
         if (h != 0L) nativeFlush()          // отсчёты старой частоты не пускать в новый пересчёт (как _flush на ПК)
@@ -158,11 +161,11 @@ abstract class NativeRateSource(private val context: Context, private val device
         val want = if (r == null) maxSamples else ((maxSamples - 2).toLong() * r.down / r.up).toInt().coerceAtLeast(1)
         if (raw.size < 2 * want) raw = FloatArray(2 * want)
         val n = nativeRead(raw, want, 500)
-        if (n < 0) throw SdrException("$name: приёмник отключён или поток остановлен")
+        if (n < 0) throw SdrException(tr("{name}: приёмник отключён или поток остановлен", "name" to name))
         val now = System.nanoTime()
         if (n == 0) {
             if (streaming && now - lastData > NO_DATA_MS * 1_000_000L)
-                throw SdrException("$name: нет данных от приёмника дольше ${NO_DATA_MS / 1000} с — переподключите его")
+                throw SdrException(tr("{name}: нет данных от приёмника дольше {sec} с — переподключите его", "name" to name, "sec" to NO_DATA_MS / 1000))
             return 0
         }
         lastData = now

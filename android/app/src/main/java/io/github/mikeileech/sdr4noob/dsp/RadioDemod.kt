@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -15,13 +17,13 @@ import kotlin.math.sqrt
  * и шаг настройки, Гц.
  */
 enum class Modulation(val title: String, val defaultBw: Int, val minBw: Int, val maxBw: Int, val step: Int) {
-    WFM("ЧМ вещание (WFM)", 200_000, 50_000, 220_000, 100_000),
-    NFM("Узкая ЧМ (NFM)", 12_500, 5_000, 25_000, 12_500),
-    AM("АМ", 10_000, 3_000, 20_000, 5_000),
-    USB("Верхняя боковая (USB)", 2_800, 1_500, 4_000, 100),
-    LSB("Нижняя боковая (LSB)", 2_800, 1_500, 4_000, 100),
-    CW("Телеграф (CW)", 500, 100, 1_500, 10),
-    DMR("Цифровая рация DMR", 12_500, 12_500, 12_500, 12_500),
+    WFM(N_("ЧМ вещание (WFM)"), 200_000, 50_000, 220_000, 100_000),
+    NFM(N_("Узкая ЧМ (NFM)"), 12_500, 5_000, 25_000, 12_500),
+    AM(N_("АМ"), 10_000, 3_000, 20_000, 5_000),
+    USB(N_("Верхняя боковая (USB)"), 2_800, 1_500, 4_000, 100),
+    LSB(N_("Нижняя боковая (LSB)"), 2_800, 1_500, 4_000, 100),
+    CW(N_("Телеграф (CW)"), 500, 100, 1_500, 10),
+    DMR(N_("Цифровая рация DMR"), 12_500, 12_500, 12_500, 12_500),
 }
 
 /**
@@ -40,7 +42,7 @@ class RadioDemod(val fs: Int, mode: Modulation = Modulation.WFM) {
         const val SSB_LOW = 100.0     // нижний край звуковой полосы SSB, Гц (от несущей)
     }
 
-    init { require(fs % CH_RATE == 0) { "частота дискретизации $fs не кратна 240 кГц" } }
+    init { require(fs % CH_RATE == 0) { tr("частота дискретизации {fs} не кратна 240 кГц", "fs" to fs) } }
 
     var mode: Modulation = mode
         private set

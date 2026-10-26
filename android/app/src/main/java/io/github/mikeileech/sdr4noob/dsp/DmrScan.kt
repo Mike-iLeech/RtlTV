@@ -1,5 +1,8 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -25,14 +28,14 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
         const val CH_FS = 48_000
         const val DC_SHIFT = 3125.0
         val BANDS = listOf(
-            Triple("70 см любительский 430–440 МГц", 430.0e6, 440.0e6),
-            Triple("PMR446 446,0–446,2 МГц", 446.0e6, 446.2e6),
-            Triple("Служебные 400–470 МГц", 400.0e6, 470.0e6),
-            Triple("2 м любительский 144–146 МГц", 144.0e6, 146.0e6),
-            Triple("Служебные 136–174 МГц", 136.0e6, 174.0e6),
+            Triple(N_("70 см любительский 430–440 МГц"), 430.0e6, 440.0e6),
+            Triple(N_("PMR446 446,0–446,2 МГц"), 446.0e6, 446.2e6),
+            Triple(N_("Служебные 400–470 МГц"), 400.0e6, 470.0e6),
+            Triple(N_("2 м любительский 144–146 МГц"), 144.0e6, 146.0e6),
+            Triple(N_("Служебные 136–174 МГц"), 136.0e6, 174.0e6),
         )
-        val KIND_NAMES = mapOf("dmr" to "DMR", "analog" to "аналог ЧМ", "digital" to "другой цифровой",
-            "narrow" to "узкий цифровой", "wide" to "широкополосный", "carrier" to "несущая")
+        val KIND_NAMES = mapOf("dmr" to "DMR", "analog" to N_("аналог ЧМ"), "digital" to N_("другой цифровой"),
+            "narrow" to N_("узкий цифровой"), "wide" to N_("широкополосный"), "carrier" to N_("несущая"))
 
         /** Центры окон перестройки, чтобы полезные ±40 % полосы покрыли [lo, hi] (как plan_windows). */
         fun planWindows(lo0: Double, hi0: Double, fs: Int): List<Long> {
@@ -63,9 +66,9 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
                 var head = "DMR"
                 if (cc.isNotEmpty()) head += " CC" + cc.joinToString("/")
                 if (mode.isNotEmpty()) head += " ($mode)"
-                "$head · $label" + if (encrypted) " · шифр" else ""
+                "$head · $label" + if (encrypted) tr(" · шифр") else ""
             }
-            else -> label.ifEmpty { KIND_NAMES[kind] ?: kind }
+            else -> label.ifEmpty { KIND_NAMES[kind]?.let { tr(it) } ?: kind }
         }
     }
 
@@ -149,7 +152,7 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
                 fc = sf / sw
             }
             val level = rel[pk]
-            if (width >= 4) { out.add(note(fc, "wide", level, "широкополосный (≥25 кГц)")); continue }
+            if (width >= 4) { out.add(note(fc, "wide", level, tr("широкополосный (≥25 кГц)"))); continue }
             out.add(classify(fc, channelFm(re, im, n, fc - freq), level))
         }
         return out
@@ -195,11 +198,11 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
         if (st.locked && dec.stats["syncs"]!! >= 1) return noteDmr(fc, dec, st, events, level)
         val mean = fm.average()
         val dev = sqrt(fm.sumOf { (it - mean) * (it - mean) } / max(1, fm.size))
-        if (dev < 150.0) return note(fc, "carrier", level, "несущая без модуляции")
+        if (dev < 150.0) return note(fc, "carrier", level, tr("несущая без модуляции"))
         val l48 = baudLine(fm, 4800.0); val l24 = baudLine(fm, 2400.0)
-        if (l48 > 8.0 && l48 > l24) return note(fc, "digital", level, "цифровой 4FSK 4800 Бод без DMR-синхры (P25/NXDN?)")
-        if (l24 > 8.0) return note(fc, "narrow", level, "узкополосный цифровой 2400 Бод (dPMR/NXDN?)")
-        return note(fc, "analog", level, "аналоговая ЧМ (или другой цифровой)")
+        if (l48 > 8.0 && l48 > l24) return note(fc, "digital", level, tr("цифровой 4FSK 4800 Бод без DMR-синхры (P25/NXDN?)"))
+        if (l24 > 8.0) return note(fc, "narrow", level, tr("узкополосный цифровой 2400 Бод (dPMR/NXDN?)"))
+        return note(fc, "analog", level, tr("аналоговая ЧМ (или другой цифровой)"))
     }
 
     private fun base(f: Double, level: Double): Entry {
@@ -236,12 +239,12 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
             if (ev.encrypted) e.encrypted = true
         }
         val types = ArrayList<String>()
-        if (voice) types.add("голос")
-        if (dec.stats["csbk"]!! >= 3 && !voice) types.add("управляющий канал") else if (dec.stats["csbk"]!! > 0) types.add("CSBK")
-        if (events.any { it.type == "data" }) types.add("данные")
+        if (voice) types.add(tr("голос"))
+        if (dec.stats["csbk"]!! >= 3 && !voice) types.add(tr("управляющий канал")) else if (dec.stats["csbk"]!! > 0) types.add("CSBK")
+        if (events.any { it.type == "data" }) types.add(tr("данные"))
         if (types.isEmpty()) {
             val lasts = st.slots.values.map { it.last }.toSet()
-            types.add(if (lasts.all { it in setOf("Idle", "", "Терминатор") }) "маяк/дежурный" else "служебные пакеты")
+            types.add(if (lasts.all { it in setOf("Idle", "", N_("Терминатор")) }) tr("маяк/дежурный") else tr("служебные пакеты"))
         }
         for (t in types) if (t !in e.types) e.types.add(t)
         e.label = types.joinToString(" · ")
@@ -264,5 +267,5 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
     /** Сколько найдено каналов DMR (для строки состояния). */
     fun dmrFound(): Int = dmrCount
 
-    private fun fmtMhz(f: Double) = String.format(java.util.Locale.ROOT, "%.5f МГц", f / 1e6).replace('.', ',')
+    private fun fmtMhz(f: Double) = tr("{f} МГц", "f" to num(f / 1e6, 5))
 }

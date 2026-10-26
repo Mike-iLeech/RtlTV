@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.dsp.Sstv.F_BLACK
 import io.github.mikeileech.sdr4noob.dsp.Sstv.F_LEADER
 import io.github.mikeileech.sdr4noob.dsp.Sstv.F_SPAN
@@ -73,7 +74,7 @@ internal class SstvDemod(fs: Double, private val fc: Double = 1700.0, cutoff: Do
     private val mixSin: DoubleArray?
 
     init {
-        require(fs >= 6000) { "частота дискретизации слишком мала для SSTV" }
+        require(fs >= 6000) { tr("частота дискретизации слишком мала для SSTV") }
         D = max(1, Math.rint(fs / 12000.0).toInt())
         fsInt = fs / D
         val ntaps = max(31, Math.rint(fs / 48000.0 * 96).toInt() or 1)
