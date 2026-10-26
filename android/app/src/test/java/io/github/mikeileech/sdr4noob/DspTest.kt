@@ -230,8 +230,28 @@ class DspTest {
         val t0 = System.nanoTime()
         assertEquals(120_000, src.read(re, im, 120_000))
         var got = 0
-        while (System.nanoTime() - t0 < 300_000_000L) got += src.read(re, im, 120_000)
+        var reads = 0
+        while (System.nanoTime() - t0 < 300_000_000L) {
+            val k = src.read(re, im, 120_000)
+            assertTrue("только полные блоки: $k", k == 0 || k == 120_000)   // не крутить обработку на мелочи
+            got += k; reads++
+        }
+        assertTrue("источник спит, а не опрашивается вхолостую: $reads", reads < 60)
         assertTrue("темп реального времени после простоя: $got", got in 400_000..1_200_000)
+    }
+
+    /** Каждая станция тестового эфира отрисовывается (у телеграфа нет нот — раньше было деление на ноль). */
+    @Test fun demoSourceRendersEveryStation() {
+        val fs = 960_000
+        for (f in longArrayOf(101_000_000, 145_500_000, 999_000, 14_230_000, 7_030_000)) {
+            val src = DemoSource()
+            src.open(fs, f + 100_000)
+            src.start()
+            val t0 = DemoSource::class.java.getDeclaredField("t0").apply { isAccessible = true }
+            t0.setLong(src, t0.getLong(src) - 100_000_000L)
+            val re = FloatArray(fs / 20); val im = FloatArray(fs / 20)
+            assertEquals("станция $f", fs / 20, src.read(re, im, fs / 20))
+        }
     }
 
     @Test fun demoSourceStationIsReceivedInStereo() {

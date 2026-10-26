@@ -116,7 +116,7 @@ class MainActivity : Activity() {
 
         val modes = Ui.card(this)
         modes.addView(Ui.text(this, "Режимы", 17f, bold = true))
-        modes.addView(Ui.button(this, "📻  Радио и спектр: FM, NFM, AM, водопад") { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
+        modes.addView(Ui.button(this, "📻  Радио и спектр: FM с RDS, NFM, AM, SSB, CW, водопад") { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
         for ((name, plan) in listOf(
             "📺  Телевидение (измеритель DVB-T2, аналог)" to "в планах",
             "🖼  SSTV — картинки с МКС и любителей" to "в планах",

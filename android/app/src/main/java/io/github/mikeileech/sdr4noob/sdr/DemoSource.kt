@@ -1,11 +1,12 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.dsp.RdsEncoder
 import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * Тестовый эфир без приёмника (как --test в настольной версии): несколько станций с ЧМ-стерео,
- * узкой ЧМ и АМ, плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
+ * Тестовый эфир без приёмника (как --test в настольной версии, rtltv/radiotest.py): ЧМ-стерео с RDS,
+ * узкая ЧМ, АМ, SSB (USB) и телеграф, плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
  */
 class DemoSource : SdrSource {
     private class Station(val freq: Long, val kind: Char, val notesL: IntArray, val notesR: IntArray, val level: Float)
@@ -27,7 +28,29 @@ class DemoSource : SdrSource {
             Station(145_500_000, 'N', intArrayOf(1000, 0, 1000, 0), intArrayOf(), 0.25f),   // узкая ЧМ: тон с паузами
             Station(145_525_000, 'N', intArrayOf(600, 800), intArrayOf(), 0.10f),
             Station(999_000, 'A', intArrayOf(400, 500, 600), intArrayOf(), 0.30f),           // АМ на СВ
+            Station(14_230_000, 'U', intArrayOf(700, 1200, 1900), intArrayOf(), 0.15f),     // USB: тоны над несущей
+            Station(7_030_000, 'C', intArrayOf(), intArrayOf(), 0.10f),                     // телеграф
         )
+
+        /** RDS станции 101,0 МГц (PS и радиотекст — как в тестовом эфире настольной версии). */
+        val RDS = RdsEncoder(RdsEncoder.groups(0x7A01, "SDR4NOOB", "Тестовый эфир SDR4NOOB: музыка в стерео", pty = 10))
+
+        // телеграф: «CQ CQ DE SDR4NOOB» азбукой Морзе, 18 слов/мин (точка 1,2/18 с)
+        private val MORSE = mapOf('A' to ".-", 'B' to "-...", 'C' to "-.-.", 'D' to "-..", 'E' to ".", 'N' to "-.",
+            'O' to "---", 'Q' to "--.-", 'R' to ".-.", 'S' to "...", '4' to "....-")
+        private val KEY: BooleanArray = run {
+            val out = ArrayList<Boolean>()
+            for (ch in "CQ CQ DE SDR4NOOB ") {
+                if (ch == ' ') { repeat(4) { out.add(false) }; continue }
+                for (sym in MORSE.getValue(ch)) {
+                    repeat(if (sym == '-') 3 else 1) { out.add(true) }
+                    out.add(false)
+                }
+                repeat(2) { out.add(false) }
+            }
+            out.toBooleanArray()
+        }
+        private const val DOT_S = 1.2 / 18
     }
 
     override val label = "Тестовый сигнал (без приёмника)"
@@ -53,12 +76,12 @@ class DemoSource : SdrSource {
         // отстали больше чем на секунду (поток стоял) — не догоняем, а продолжаем с текущего момента
         if (due - produced > fs) produced = due - maxSamples
         val lag = due - produced
-        if (lag <= 0) {
-            val waitMs = (-lag + maxSamples / 4) * 1000L / fs
-            Thread.sleep(maxOf(1L, waitMs))
+        // отдаём полными блоками, как приёмник: иначе поток обработки крутился бы без сна на крошечных порциях
+        if (lag < maxSamples) {
+            Thread.sleep(maxOf(1L, (maxSamples - lag) * 1000L / fs))
             return 0
         }
-        val n = minOf(lag, maxSamples.toLong()).toInt()
+        val n = maxSamples
         noise(re, im, n)
         for ((k, st) in STATIONS.withIndex()) {
             val off = st.freq - center
@@ -84,10 +107,13 @@ class DemoSource : SdrSource {
 
     private fun render(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int) {
         val t = produced.toDouble() / fs
+        // станции без нот (телеграф) — до выбора ноты: у них пустой список
+        if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         val step = (t / 0.4).toInt()
         val fl = st.notesL[step % st.notesL.size].toDouble()
         val fr = if (st.notesR.isEmpty()) fl else st.notesR[step % st.notesR.size].toDouble()
         val dl = inc(fl); val dr = inc(fr); val dp = inc(19_000.0)
+        val rds = st.freq == 101_000_000L
         var pl = tonePh[4 * k]; var pr = tonePh[4 * k + 1]; var pp = tonePh[4 * k + 2]
         var cp = carPh[k]
         val dc = inc(off)
@@ -100,7 +126,9 @@ class DemoSource : SdrSource {
                     val r = if (fr > 0) s(pr) else 0f
                     val pil = s(pp)
                     val s38 = s(pp * 2)
-                    val mpx = 0.45f * (l + r) * 0.5f + 0.1f * pil + 0.45f * (l - r) * 0.5f * s38
+                    var mpx = 0.45f * (l + r) * 0.5f + 0.1f * pil + 0.45f * (l - r) * 0.5f * s38
+                    // RDS: двухфазные символы 1187,5 бит/с на поднесущей 57 кГц (3-я гармоника пилота), 3 %
+                    if (rds) mpx += 0.03f * RDS.value(t + i.toDouble() / fs) * s(pp * 3)
                     cp += dc + (mpx * dev).toInt()
                     re[i] += a * c(cp); im[i] += a * s(cp)
                     pl += dl; pr += dr; pp += dp
@@ -126,6 +154,28 @@ class DemoSource : SdrSource {
         }
         tonePh[4 * k] = pl; tonePh[4 * k + 1] = pr; tonePh[4 * k + 2] = pp
         carPh[k] = cp
+    }
+
+    /** USB — сумма тонов над несущей (аналитический сигнал), телеграф — несущая по манипуляции. */
+    private fun renderSsb(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int, t: Double) {
+        val a = st.level
+        if (st.kind == 'U') {
+            for ((j, f) in st.notesL.withIndex()) {
+                val d = inc(off + f)
+                var ph = tonePh[4 * k + j]
+                for (i in 0 until n) { re[i] += a * c(ph); im[i] += a * s(ph); ph += d }
+                tonePh[4 * k + j] = ph
+            }
+            return
+        }
+        val d = inc(off)
+        var ph = carPh[k]
+        for (i in 0 until n) {
+            val el = ((t + i.toDouble() / fs) / DOT_S).toLong()
+            if (KEY[(el % KEY.size).toInt()]) { re[i] += a * c(ph); im[i] += a * s(ph) }
+            ph += d
+        }
+        carPh[k] = ph
     }
 
     override fun setFrequency(hz: Long) { center = hz }
