@@ -1,12 +1,13 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.dsp.DmrGen
 import io.github.mikeileech.sdr4noob.dsp.RdsEncoder
 import kotlin.math.PI
 import kotlin.math.sin
 
 /**
  * Тестовый эфир без приёмника (как --test в настольной версии, rtltv/radiotest.py): ЧМ-стерео с RDS,
- * узкая ЧМ, АМ, SSB (USB) и телеграф, плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
+ * узкая ЧМ, АМ, SSB (USB), телеграф и DMR (групповой и индивидуальный вызовы), плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
  */
 class DemoSource : SdrSource {
     private class Station(val freq: Long, val kind: Char, val notesL: IntArray, val notesR: IntArray, val level: Float)
@@ -30,7 +31,11 @@ class DemoSource : SdrSource {
             Station(999_000, 'A', intArrayOf(400, 500, 600), intArrayOf(), 0.30f),           // АМ на СВ
             Station(14_230_000, 'U', intArrayOf(700, 1200, 1900), intArrayOf(), 0.15f),     // USB: тоны над несущей
             Station(7_030_000, 'C', intArrayOf(), intArrayOf(), 0.10f),                     // телеграф
+            Station(446_100_000, 'D', intArrayOf(), intArrayOf(), 0.15f),                   // DMR, BS, CC 1
         )
+
+        /** Сигнал DMR — мгновенная частота, Гц, 48 кГц, ~13 с по кругу (генератор как в rtltv/dmr.py). */
+        private val DMR_FREQ: FloatArray by lazy { DmrGen.testSignal() }
 
         /** RDS станции 101,0 МГц (PS и радиотекст — как в тестовом эфире настольной версии). */
         val RDS = RdsEncoder(RdsEncoder.groups(0x7A01, "SDR4NOOB", "Тестовый эфир SDR4NOOB: музыка в стерео", pty = 10))
@@ -107,10 +112,12 @@ class DemoSource : SdrSource {
 
     private fun render(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int) {
         val t = produced.toDouble() / fs
+        // станции без нот (телеграф, DMR) — до выбора ноты: у них пустой список
+        if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
+        if (st.kind == 'D') { renderDmr(k, st, off, re, im, n, t); return }
         val step = (t / 0.4).toInt()
         val fl = st.notesL[step % st.notesL.size].toDouble()
         val fr = if (st.notesR.isEmpty()) fl else st.notesR[step % st.notesR.size].toDouble()
-        if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         val dl = inc(fl); val dr = inc(fr); val dp = inc(19_000.0)
         val rds = st.freq == 101_000_000L
         var pl = tonePh[4 * k]; var pr = tonePh[4 * k + 1]; var pp = tonePh[4 * k + 2]
@@ -153,6 +160,19 @@ class DemoSource : SdrSource {
         }
         tonePh[4 * k] = pl; tonePh[4 * k + 1] = pr; tonePh[4 * k + 2] = pp
         carPh[k] = cp
+    }
+
+    private fun renderDmr(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int, t: Double) {
+        val sig = DMR_FREQ
+        val a = st.level
+        var ph = carPh[k]
+        val k48 = 48_000.0
+        for (i in 0 until n) {
+            val idx = (((t + i.toDouble() / fs) * k48).toLong() % sig.size).toInt()
+            ph += inc(off + sig[idx])
+            re[i] += a * c(ph); im[i] += a * s(ph)
+        }
+        carPh[k] = ph
     }
 
     /** USB — сумма тонов над несущей (аналитический сигнал), телеграф — несущая по манипуляции. */

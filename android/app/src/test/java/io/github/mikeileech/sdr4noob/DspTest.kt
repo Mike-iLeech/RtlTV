@@ -240,6 +240,20 @@ class DspTest {
         assertTrue("темп реального времени после простоя: $got", got in 400_000..1_200_000)
     }
 
+    /** Каждая станция тестового эфира отрисовывается (у телеграфа и DMR нет нот — раньше было деление на ноль). */
+    @Test fun demoSourceRendersEveryStation() {
+        val fs = 960_000
+        for (f in longArrayOf(101_000_000, 145_500_000, 999_000, 14_230_000, 7_030_000, 446_100_000)) {
+            val src = DemoSource()
+            src.open(fs, f + 100_000)
+            src.start()
+            val t0 = DemoSource::class.java.getDeclaredField("t0").apply { isAccessible = true }
+            t0.setLong(src, t0.getLong(src) - 100_000_000L)
+            val re = FloatArray(fs / 20); val im = FloatArray(fs / 20)
+            assertEquals("станция $f", fs / 20, src.read(re, im, fs / 20))
+        }
+    }
+
     @Test fun demoSourceStationIsReceivedInStereo() {
         val fs = 1_200_000
         val src = DemoSource()

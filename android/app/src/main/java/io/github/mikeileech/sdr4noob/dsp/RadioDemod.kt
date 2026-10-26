@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 
 /**
  * Виды модуляции радиорежима — как MODES в rtltv/radio.py: полоса по умолчанию, допустимый диапазон полосы
- * и шаг настройки, Гц. DMR — в планах.
+ * и шаг настройки, Гц.
  */
 enum class Modulation(val title: String, val defaultBw: Int, val minBw: Int, val maxBw: Int, val step: Int) {
     WFM("ЧМ вещание (WFM)", 200_000, 50_000, 220_000, 100_000),
@@ -21,6 +21,7 @@ enum class Modulation(val title: String, val defaultBw: Int, val minBw: Int, val
     USB("Верхняя боковая (USB)", 2_800, 1_500, 4_000, 100),
     LSB("Нижняя боковая (LSB)", 2_800, 1_500, 4_000, 100),
     CW("Телеграф (CW)", 500, 100, 1_500, 10),
+    DMR("Цифровая рация DMR", 12_500, 12_500, 12_500, 12_500),
 }
 
 /**
@@ -59,6 +60,11 @@ class RadioDemod(val fs: Int, mode: Modulation = Modulation.WFM) {
     @Volatile var squelchOpen = true; private set
     val rds = RdsDecoder(CH_RATE)
     val agc = Agc(AUDIO_RATE)
+    /** Декодер DMR (создаётся при переходе в режим DMR); события — в [dmrEvents] для интерфейса. */
+    var dmr: DmrDecoder? = null; private set
+    val dmrEvents = java.util.concurrent.ConcurrentLinkedQueue<DmrEvent>()
+    /** Синтезатор голоса DMR (mbelib); в юнит-тестах можно подменить. */
+    var ambeFactory: () -> AmbeSynth = { MbeSynth() }
 
     private val mixer = Mixer(fs.toDouble())
     private val dec1 = ComplexDecimator(fs / CH_RATE, 108_000.0, fs.toDouble(), 16)
@@ -134,6 +140,7 @@ class RadioDemod(val fs: Int, mode: Modulation = Modulation.WFM) {
                 audioLp = BiquadChain.lowpass4(3400.0, AUDIO_RATE.toDouble())
             }
             Modulation.AM -> audioHp = BiquadChain.highpass2(60.0, AUDIO_RATE.toDouble())
+            Modulation.DMR -> if (dmr == null) dmr = DmrDecoder(ambeFactory)
             else -> {}
         }
         buildBw()
@@ -186,7 +193,12 @@ class RadioDemod(val fs: Int, mode: Modulation = Modulation.WFM) {
         val k = when (mode) {
             Modulation.NFM -> nfm(n2)
             Modulation.AM -> am(n2)
+            Modulation.DMR -> { dmrDemod(n2); n2 }
             else -> ssbDemod(n2)
+        }
+        if (mode == Modulation.DMR) {   // у DMR свой «шумодав» — звук только при декодированном голосе
+            for (i in 0 until k) { val v = mono[i]; audio[2 * i] = v; audio[2 * i + 1] = v }
+            return k
         }
         squelch(k)
         for (i in 0 until k) { val v = mono[i] * sqGain; audio[2 * i] = v; audio[2 * i + 1] = v }
@@ -278,6 +290,17 @@ class RadioDemod(val fs: Int, mode: Modulation = Modulation.WFM) {
         audioHp!!.process(mono, n); audioLp!!.process(mono, n)
         for (i in 0 until n) mono[i] *= 0.7f
         return n
+    }
+
+    /** Мгновенная частота в Гц → декодер DMR → звук 48 кГц (как _nfm в radio.py для режима DMR). */
+    private fun dmrDemod(n: Int) {
+        discriminate(r2, i2, n, mono, (AUDIO_RATE / (2 * PI)).toFloat())
+        val d = dmr
+        if (d == null) { mono.fill(0f, 0, n); return }
+        val (out, ev) = d.process(mono, n)
+        System.arraycopy(out, 0, mono, 0, n)
+        dmrEvents.addAll(ev)
+        while (dmrEvents.size > 200) dmrEvents.poll()
     }
 
     /** Огибающая → ФВЧ (убирает несущую сразу) → ФНЧ → АРУ. */

@@ -57,6 +57,7 @@ class RadioActivity : Activity() {
             "Любители 20 м (USB)" to (14_230_000L to Modulation.USB),
             "Любители 40 м (LSB)" to (7_100_000L to Modulation.LSB),
             "Телеграф 40 м (CW)" to (7_030_000L to Modulation.CW),
+            "DMR, рации PMR (446,1 МГц)" to (446_100_000L to Modulation.DMR),
         )
     }
 
@@ -320,6 +321,7 @@ class RadioActivity : Activity() {
         Modulation.USB -> 14_230_000L
         Modulation.LSB -> 7_100_000L
         Modulation.CW -> 7_030_000L
+        Modulation.DMR -> 446_100_000L
     }
 
     private fun setMode(m: Modulation, freq: Long? = null, bw: Int? = null) {
@@ -338,7 +340,7 @@ class RadioActivity : Activity() {
     private fun applyModeUi() {
         spectrum.snapHz = when (mode) {
             Modulation.WFM -> 100_000L; Modulation.NFM -> 6_250L; Modulation.AM -> 1_000L
-            Modulation.USB, Modulation.LSB -> 100L; Modulation.CW -> 10L
+            Modulation.USB, Modulation.LSB -> 100L; Modulation.CW -> 10L; Modulation.DMR -> 6_250L
         }
         val bw = engine?.bandwidth ?: mode.defaultBw
         spectrum.channelBw = bw
@@ -410,6 +412,7 @@ class RadioActivity : Activity() {
             e.iqRecording?.let { "IQ ${it.seconds.toInt()} с" }).joinToString(", ")
         statusText.text = e.label + (if (e.dropped > 0) " · потеряно отсчётов: ${e.dropped}" else "") +
             (if (rec.isNotEmpty()) " · ● запись: $rec" else "")
+        if (mode == Modulation.DMR) { showDmr(e); return }
         // RDS (только ЧМ-вещание)
         if (mode == Modulation.WFM && e.rds.synced || mode == Modulation.WFM && e.rds.ps.isNotEmpty()) {
             val r = e.rds.state()
@@ -417,6 +420,31 @@ class RadioActivity : Activity() {
                 .filterNotNull().filter { it.isNotEmpty() }.joinToString(" · ").let { "RDS: $it" }
             rdsText.visibility = View.VISIBLE
         } else rdsText.visibility = View.GONE
+    }
+
+    /** DMR: синхронизация, кто говорит в слотах, последние события журнала (как панель DMR на ПК). */
+    private val dmrLog = ArrayDeque<String>()
+    private fun showDmr(e: RadioEngine) {
+        val d = e.dmr
+        if (d == null) { rdsText.visibility = View.GONE; return }
+        while (true) {
+            val ev = e.dmrEvents.poll() ?: break
+            dmrLog.addFirst("${java.text.SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(java.util.Date())} " +
+                (if (ev.slot > 0) "слот ${ev.slot}: " else "") + ev.text)
+            while (dmrLog.size > 5) dmrLog.removeLast()
+        }
+        val st = d.status()
+        val head = if (!st.locked) "DMR: нет синхронизации" else {
+            val sl = st.slots.entries.joinToString(" · ") { (n, s) ->
+                "слот $n: " + if (s.active) "${if (s.src != 0) s.src else "?"} → ${if (s.group) "TG " else ""}${if (s.dst != 0) s.dst else "?"}" +
+                    (if (s.encrypted) " (шифр.)" else "") else s.last.ifEmpty { "—" }
+            }
+            "DMR ${st.mode}, синхро ${st.sync} %, CC ${st.slots.values.firstNotNullOfOrNull { it.cc } ?: "?"} · $sl" +
+                (if (!st.mbelib) " · голос: нет mbelib" else "")
+        }
+        rdsText.maxLines = 7
+        rdsText.text = (listOf(head) + dmrLog).joinToString("\n")
+        rdsText.visibility = View.VISIBLE
     }
 
     // ---------------- запись ----------------

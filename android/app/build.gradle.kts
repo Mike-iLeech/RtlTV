@@ -14,7 +14,7 @@ val appVersion: String = Regex("""__version__\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"""
 val appVersionCode: Int = appVersion.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 // ---------------------------------------------------------------------------------------------
-// Исходники драйвера: libusb и librtlsdr (сборка rtl-sdr-blog — с поддержкой RTL-SDR Blog V4),
+// Исходники драйвера: libusb и librtlsdr (сборка rtl-sdr-blog — с поддержкой RTL-SDR Blog V4) и mbelib,
 // закреплённые по SHA-256. Скачиваются один раз в android/deps и собираются CMake под каждую ABI.
 // ---------------------------------------------------------------------------------------------
 data class NativeDep(val name: String, val url: String, val sha256: String, val dir: String)
@@ -24,6 +24,9 @@ val nativeDeps = listOf(
         "fea36f34f9156400209595e300840767ab1a385ede1dc7ee893015aea9c6dbaf", "libusb-1.0.30"),
     NativeDep("rtl-sdr-blog", "https://github.com/rtlsdrblog/rtl-sdr-blog/archive/refs/tags/V1.4.0.tar.gz",
         "89520433e63b1a1371b45d8deea198cad9dbd1f0d55cc3a706aafb7b187bd325", "rtl-sdr-blog-1.4.0"),
+    // вокодер AMBE+2 для голоса DMR (тот же mbelib, что rtltv/driver/mbelib.dll на ПК)
+    NativeDep("mbelib", "https://github.com/szechyjs/mbelib/archive/9a04ed5c78176a9965f3d43f7aa1b1f5330e771f.tar.gz",
+        "c7d6ebbbf3ca44bc10ee0755dede7f74fd65c31d1568d4174f29a68ae2f92278", "mbelib-9a04ed5c78176a9965f3d43f7aa1b1f5330e771f"),
 )
 val depsDir: File = rootDir.resolve("deps")
 

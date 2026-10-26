@@ -139,6 +139,9 @@ class RadioEngine(
 
     /** RDS текущей станции (поля читаются из потока интерфейса — только для показа). */
     val rds get() = demod.rds
+    /** Декодер DMR (в режиме DMR) и очередь его событий для журнала. */
+    val dmr get() = demod.dmr
+    val dmrEvents get() = demod.dmrEvents
 
     // запись: писатели подменяются атомарно, поток приёма берёт текущий на каждый блок
     private val audioRec = AtomicReference<WavWriter?>()
