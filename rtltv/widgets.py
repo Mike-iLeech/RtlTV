@@ -791,6 +791,7 @@ class FreqDisplay(QWidget):
         p = QPainter(self)
         p.fillRect(self.rect(), QColor(self.bg))
         f = QFont("Consolas")
+        f.setStyleHint(QFont.TypeWriter)   # нет Consolas (macOS, Linux) — любой моноширинный
         f.setPixelSize(int(self.height() * 0.62))
         f.setBold(True)
         p.setFont(f)

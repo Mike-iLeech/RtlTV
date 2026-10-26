@@ -27,7 +27,7 @@ def test_arch_and_suffix(monkeypatch):
 
 def test_bundle_path():
     exe = os.path.join(os.sep, "Applications", "SDR4NOOB.app", "Contents", "MacOS", "SDR4NOOB")
-    assert updater_mac.bundle_path(exe) == os.path.join(os.sep, "Applications", "SDR4NOOB.app")
+    assert updater_mac.bundle_path(exe) == os.path.abspath(os.path.join(os.sep, "Applications", "SDR4NOOB.app"))
     assert updater_mac.bundle_path(os.path.join(os.sep, "opt", "x", "python3")) is None
 
 

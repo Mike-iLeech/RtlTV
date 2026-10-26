@@ -459,6 +459,7 @@ class RadioWindow(ModeWindow):
         rb.setContentsMargins(0, 0, 0, 0)
         self.rds_ps = QLabel("RDS —")
         f = QFont("Consolas")
+        f.setStyleHint(QFont.TypeWriter)   # нет Consolas (macOS, Linux) — любой моноширинный
         f.setPointSize(13)
         f.setBold(True)
         self.rds_ps.setFont(f)

@@ -50,6 +50,11 @@ plutil -replace LSMinimumSystemVersion -string "12.0" "$PL"
 plutil -replace NSHighResolutionCapable -bool true "$PL"
 plutil -replace LSApplicationCategoryType -string "public.app-category.utilities" "$PL"
 plutil -replace NSHumanReadableCopyright -string "SDR4NOOB, GPL-3.0-or-later" "$PL"
+# тексты запросов доступа macOS (папка данных по умолчанию — ~/Documents/SDR4NOOB; rtl_tcp — по локальной сети)
+plutil -replace NSDocumentsFolderUsageDescription -string \
+  "SDR4NOOB хранит записи, снимки, звук и журналы в папке «Документы/SDR4NOOB» (её можно сменить в настройках)." "$PL"
+plutil -replace NSLocalNetworkUsageDescription -string \
+  "Подключение к сетевому приёмнику SDR (rtl_tcp) в вашей локальной сети." "$PL"
 for f in LICENSE THIRD_PARTY.md README.md CHANGELOG.md; do cp "$f" "$APP/Contents/Resources/"; done
 
 # Info.plist и Resources изменены после PyInstaller — подпись пакета ставится заново
