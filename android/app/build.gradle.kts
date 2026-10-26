@@ -75,7 +75,8 @@ val guideAssets: File = layout.buildDirectory.dir("generated/guideAssets").get()
 // Цвета тёмной темы — из rtltv/themes.py («Тёмная»): SVG-схемы справки содержат шаблоны {{fg}}, {{panel}} …,
 // которые окно справки на ПК подставляет при показе (render_svg), а здесь — при сборке.
 val darkTheme: Map<String, String> = repoRoot.resolve("rtltv/themes.py").readText().let { src ->
-    val body = Regex(""""Тёмная": dict\((.*?)cmap""", RegexOption.DOT_MATCHES_ALL).find(src)?.groupValues?.get(1)
+    // ключ темы может быть обёрнут в N_() для перевода: N_("Тёмная"): dict(...)
+    val body = Regex("""(?:N_\()?"Тёмная"\)?: dict\((.*?)cmap""", RegexOption.DOT_MATCHES_ALL).find(src)?.groupValues?.get(1)
         ?: error("не нашёл тему «Тёмная» в rtltv/themes.py")
     Regex("""(\w+)="(#[0-9a-fA-F]{6})"""").findAll(body).associate { it.groupValues[1] to it.groupValues[2] }
 }
