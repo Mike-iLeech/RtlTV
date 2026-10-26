@@ -95,8 +95,8 @@ android/app/src/main/
 | 2 | APRS (AFSK 1200, карта OSM) | `aprs.py`, `mapview.py` | готово (3.8.0) |
 | 3 | ADS-B на карте (2,4 МГц обзора, демодулятор PPM) | `adsb.py`, `aircraft_info.py` | готово (3.8.0) |
 | 3 | SSTV | `sstv.py` | готово (3.8.0) |
-| 4 | Спутники: пролёты (SGP4), приём с доплером, «Метеор» LRPT (тяжёлый DSP — в C через NDK, как `lrpt_dsp.c`) | `satpass.py`, `satrx.py`, `lrpt.py` | в планах |
-| 4 | ТВ-измеритель | `digital.py`, `analog.py` | в планах |
+| 4 | Спутники: пролёты (SGP4), приём с доплером, «Метеор» LRPT (тяжёлый DSP — в C через NDK, как `lrpt_dsp.c`) | `satpass.py`, `satrx.py`, `lrpt.py` | готово (3.9.0) |
+| 4 | ТВ-измеритель | `digital.py`, `analog.py` | готово (3.9.0) |
 | — | Английский интерфейс (как i18n настольной версии), настройки и папка данных | `i18n.py`, `paths.py` | в планах |
 
 ## Сборка

@@ -90,7 +90,9 @@ class AdsbWorker(fs: Int, home: Pair<Double, Double>, private val onError: (Stri
     @Volatile var levels: AdsbLevels? = null; private set
     @Volatile var dropped = 0L; private set
     val proc = AdsbProcessor(fs, home)
-    private val thread = Thread({ loop() }, "adsb").apply { isDaemon = true; start() }
+    /** Частота дискретизации потока (запись IQ может задать свою). Поток декодера применит её сам. */
+    @Volatile var rate = fs
+    private val thread = Thread({ loop() }, "adsb").apply { isDaemon = true; start() }   // последним: поля уже заданы
 
     fun feed(re: FloatArray, im: FloatArray, n: Int) {
         if (!running || n <= 0) return
@@ -101,24 +103,24 @@ class AdsbWorker(fs: Int, home: Pair<Double, Double>, private val onError: (Stri
 
     fun stop() { running = false; thread.interrupt() }
 
-    /** Частота дискретизации потока (запись IQ может задать свою). Поток декодера применит её сам. */
-    @Volatile var rate = fs
-
     private fun loop() {
         var lastPub = 0L
         var fs = rate
         var reported = false
+        var fails = 0
         while (running) {
             try {
                 val b = queue.poll(250, TimeUnit.MILLISECONDS)
                 if (rate != fs) { fs = rate; proc.setRate(fs) }
-                if (b != null) proc.process(b.first, b.second, b.first.size)
+                if (b != null) { proc.process(b.first, b.second, b.first.size); fails = 0 }
                 val now = System.nanoTime()
                 if (now - lastPub > 500_000_000L) { lastPub = now; publish() }
             } catch (_: InterruptedException) {
                 break
             } catch (e: Exception) {
-                // сбой на одном блоке не роняет приложение; таблица бортов сохраняется
+                // сбой на одном блоке не роняет приложение; таблица бортов сохраняется. Сбои подряд — состояние
+                // демодулятора испорчено: пересоздать его
+                if (++fails >= 5) { fails = 0; runCatching { proc.setRate(fs) } }
                 if (!reported) { reported = true; onError("ADS-B: сбой декодера (${e.javaClass.simpleName}), блок пропущен") }
             }
         }

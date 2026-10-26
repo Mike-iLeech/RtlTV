@@ -70,7 +70,7 @@ class SstvWorker(private val onEvents: (List<SstvEvent>, SstvLevel) -> Unit, pri
          * Декодировать звук из WAV (как sstv.decode_file): принятые и оборванные картинки. Файл читается блоками
          * по 0,05 с и сразу идёт в декодер — длина файла памяти не занимает.
          */
-        fun decodeWav(input: InputStream): List<SstvEvent> {
+        fun decodeWav(input: InputStream, forceMode: String? = null): List<SstvEvent> {
             var dec: SstvDecoder? = null
             var rate = 0
             val out = ArrayList<SstvEvent>()
@@ -78,7 +78,7 @@ class SstvWorker(private val onEvents: (List<SstvEvent>, SstvLevel) -> Unit, pri
             WavPcm.stream(input, { fs ->
                 if (fs < 6000) throw IOException("частота дискретизации $fs Гц слишком мала для SSTV (нужно от 6 кГц)")
                 rate = fs
-                dec = SstvDecoder(fs.toDouble())
+                dec = SstvDecoder(fs.toDouble()).also { it.forceMode = forceMode }   // режим без VIS (обрезано начало)
                 maxOf(1, fs / 20)
             }) { x, n -> keep(dec!!.process(x, 0, n)) }
             val d = dec ?: return out

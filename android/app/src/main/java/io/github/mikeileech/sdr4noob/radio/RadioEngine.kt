@@ -44,6 +44,8 @@ class RadioEngine(
     val label get() = source.label
     val gains get() = source.gains
     val hasBiasTee get() = source.hasBiasTee
+    /** Можно ли перестраивать (у записи IQ центр и полоса заданы файлом). */
+    val retunable get() = source.retunable
 
     private val commands = ConcurrentLinkedQueue<() -> Unit>()
     private var thread: Thread? = null
@@ -341,7 +343,7 @@ class RadioEngine(
                     listener?.onSpectrum()
                 }
                 val tap = iqTap
-                if (tap != null) { tap(re, im, n); dropped = source.droppedSamples; continue }
+                if (tap != null) { iqRec.get()?.writeIq(re, im, n); tap(re, im, n); checkRec(iqRec, "IQ"); dropped = source.droppedSamples; continue }
                 val sc = scan
                 if (sc != null) { scanStep(sc, re, im, n); dropped = source.droppedSamples; continue }
                 iqRec.get()?.writeIq(re, im, n)      // до демодулятора: он переносит частоту на месте

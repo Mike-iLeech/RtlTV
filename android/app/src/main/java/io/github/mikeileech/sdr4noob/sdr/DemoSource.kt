@@ -12,7 +12,7 @@ import kotlin.math.sin
 /**
  * Тестовый эфир без приёмника (как --test в настольной версии, rtltv/radiotest.py): ЧМ-стерео с RDS,
  * узкая ЧМ, АМ, SSB (USB), телеграф, DMR (групповой и индивидуальный вызовы), APRS (144,800 МГц) и SSTV
- * (145,800 МГц, Robot 36), плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
+ * (145,800 МГц, Robot 36), «Метеор-М» LRPT (137,900 МГц, снимок полосами), плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
  */
 class DemoSource : SdrSource {
     private class Station(val freq: Long, val kind: Char, val notesL: IntArray, val notesR: IntArray, val level: Float)
@@ -39,6 +39,7 @@ class DemoSource : SdrSource {
             Station(446_100_000, 'D', intArrayOf(), intArrayOf(), 0.15f),                   // DMR, BS, CC 1
             Station(144_800_000, 'P', intArrayOf(), intArrayOf(), 0.20f),                   // APRS, AFSK 1200
             Station(145_800_000, 'V', intArrayOf(), intArrayOf(), 0.20f),                   // SSTV, Robot 36
+            Station(137_900_000, 'M', intArrayOf(), intArrayOf(), 0.06f),                   // «Метеор» LRPT
         )
 
         /** APRS: три станции у Москвы (позиция, объект, погода), затем тишина — ~12 с по кругу, 48 кГц. */
@@ -103,6 +104,8 @@ class DemoSource : SdrSource {
 
     override fun open(sampleRate: Int, frequencyHz: Long) {
         fs = sampleRate; center = frequencyHz
+        // звук APRS и SSTV (~36 с Robot 36) считается заранее в фоне, а не в потоке приёма при первой встрече
+        Thread({ runCatching { APRS_AUDIO.size; SSTV_AUDIO.size } }, "demo-warmup").apply { isDaemon = true; start() }
     }
 
     override fun start() { t0 = System.nanoTime(); produced = 0 }
@@ -148,6 +151,7 @@ class DemoSource : SdrSource {
         if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         if (st.kind == 'D') { renderDmr(k, st, off, re, im, n, t); return }
         if (st.kind == 'P' || st.kind == 'V') { renderAudioFm(k, st, off, re, im, n, t); return }
+        if (st.kind == 'M') { renderLrpt(k, st, off, re, im, n); return }
         val step = (t / 0.4).toInt()
         val fl = st.notesL[step % st.notesL.size].toDouble()
         val fr = if (st.notesR.isEmpty()) fl else st.notesR[step % st.notesR.size].toDouble()
@@ -219,6 +223,26 @@ class DemoSource : SdrSource {
             val idx = (((t + i.toDouble() / fs) * 48_000.0).toLong() % sig.size).toInt()
             ph += dc + (sig[idx] * dev).toInt()
             re[i] += a * c(ph); im[i] += a * s(ph)
+        }
+        carPh[k] = ph
+    }
+
+    private var lrpt: LrptDemoGen? = null
+    private var lrptFs = 0
+    private var lr = FloatArray(0); private var li = FloatArray(0)
+
+    /** «Метеор» LRPT: сигнал генератора, перенесённый на частоту станции. */
+    private fun renderLrpt(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int) {
+        if (lrpt == null || lrptFs != fs) { lrpt = LrptDemoGen(fs); lrptFs = fs }
+        if (lr.size < n) { lr = FloatArray(n); li = FloatArray(n) }
+        lrpt!!.next(n, lr, li)
+        val a = st.level
+        var ph = carPh[k]
+        val d = inc(off)
+        for (i in 0 until n) {
+            val c = c(ph); val s = s(ph)
+            re[i] += a * (lr[i] * c - li[i] * s); im[i] += a * (lr[i] * s + li[i] * c)
+            ph += d
         }
         carPh[k] = ph
     }
