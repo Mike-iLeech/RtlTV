@@ -219,9 +219,10 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
 
     /** Декодировать выбранный WAV-файл (в фоне) и сохранить найденные картинки. */
     fun decodeWav(uri: Uri) {
+        val mode = modes[modeSpin.selectedItemPosition.coerceAtLeast(0)].takeIf { it != AUTO }
         status.text = "Декодирование файла…"
         thread(name = "sstv-wav") {
-            val res = runCatching { act.contentResolver.openInputStream(uri)!!.buffered(1 shl 16).use { SstvWorker.decodeWav(it) } }
+            val res = runCatching { act.contentResolver.openInputStream(uri)!!.buffered(1 shl 16).use { SstvWorker.decodeWav(it, mode) } }
             ui.post {
                 if (act.isDestroyed) return@post
                 res.onFailure { status.text = "Файл не декодирован: ${it.message}"; return@post }

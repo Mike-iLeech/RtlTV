@@ -103,6 +103,8 @@ class DemoSource : SdrSource {
 
     override fun open(sampleRate: Int, frequencyHz: Long) {
         fs = sampleRate; center = frequencyHz
+        // звук APRS и SSTV (~36 с Robot 36) считается заранее в фоне, а не в потоке приёма при первой встрече
+        Thread({ runCatching { APRS_AUDIO.size; SSTV_AUDIO.size } }, "demo-warmup").apply { isDaemon = true; start() }
     }
 
     override fun start() { t0 = System.nanoTime(); produced = 0 }
