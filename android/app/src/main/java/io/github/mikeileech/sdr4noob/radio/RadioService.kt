@@ -33,12 +33,14 @@ class RadioService : Service() {
         @Volatile var onStop: (() -> Unit)? = null
 
         @Volatile private var source = ""
+        @Volatile private var app: String? = null
         /** Сервис работает (уведомление можно обновлять). */
         @Volatile private var live = false
 
         /** Запустить из видимого окна (Android 12+ запрещает запуск сервиса переднего плана из фона). */
-        fun start(ctx: Context, text: String, sourceId: String, wifi: Boolean): Boolean {
+        fun start(ctx: Context, text: String, sourceId: String, wifi: Boolean, appMode: String? = null): Boolean {
             source = sourceId
+            app = appMode
             val i = Intent(ctx, RadioService::class.java).putExtra(EXTRA_TEXT, text).putExtra(EXTRA_WIFI, wifi)
             return try {
                 if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
@@ -65,6 +67,7 @@ class RadioService : Service() {
             // нет — откроется новое с тем же приёмником
             val open = PendingIntent.getActivity(ctx, 0, Intent(ctx, RadioActivity::class.java)
                 .putExtra(RadioActivity.EXTRA_SOURCE, source)
+                .putExtra(RadioActivity.EXTRA_APP, app)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP), flags)
             val stop = PendingIntent.getService(ctx, 1, Intent(ctx, RadioService::class.java).setAction(ACTION_STOP), flags)
             @Suppress("DEPRECATION")

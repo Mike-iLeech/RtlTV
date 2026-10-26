@@ -112,6 +112,8 @@ class RadioActivity : Activity() {
         val defMode = when (app) { APP_SSTV -> "USB"; APP_APRS, APP_ADSB -> "NFM"; else -> "WFM" }
         mode = runCatching { Modulation.valueOf(prefs.getString("mode", defMode)!!) }.getOrDefault(Modulation.WFM)
         if (app == APP_ADSB || app == APP_APRS) mode = Modulation.NFM
+        // SSTV в тестовом эфире передаётся на 145,800 МГц ЧМ (как МКС): сразу туда, пока пользователь не выбрал сам
+        if (app == APP_SSTV && sourceId == Receivers.DEMO && !prefs.contains("mode")) mode = Modulation.NFM
         title = when (app) {
             APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> "Самолёты ADS-B · "; else -> ""
         } + Receivers.describe(this, sourceId)
@@ -122,7 +124,7 @@ class RadioActivity : Activity() {
         askNotifications()
         // приём в фоне: сервис держит процесс, пока окно радио открыто (запуск — пока окно видно)
         if (engine != null) {
-            serviceOn = RadioService.start(this, notifyText(), sourceId, wifi = sourceId.startsWith("tcp:"))
+            serviceOn = RadioService.start(this, notifyText(), sourceId, wifi = sourceId.startsWith("tcp:"), appMode = app)
             if (serviceOn) RadioService.onStop = { if (alive) finish() }
         }
     }
@@ -202,6 +204,7 @@ class RadioActivity : Activity() {
         root.addView(rdsText)
 
         spectrum = SpectrumView(this)
+        spectrum.locked = app == APP_ADSB
         root.addView(spectrum, Ui.lp(h = 0, weight = 1f, top = Ui.dp(this, 4)))
         val common = getSharedPreferences("sdr4noob", MODE_PRIVATE)    // место приёмника — общее для режимов
         val panel = when (app) {
@@ -702,7 +705,7 @@ class RadioActivity : Activity() {
         menu.add(0, 4, 0, "Полоса канала…")
         menu.add(0, 5, 0, "АРУ звука (AM, SSB, CW)").setCheckable(true).isChecked = prefs.getBoolean("agc", true)
         menu.add(0, 6, 0, "Запись IQ (базовая полоса)")
-        menu.add(0, 7, 0, "Поиск DMR…")
+        if (app == null) menu.add(0, 7, 0, "Поиск DMR…")
         menu.add(0, 2, 0, "Поправка частоты (ppm)…")
         menu.add(0, 3, 0, "Справка")
         return true
@@ -737,7 +740,8 @@ class RadioActivity : Activity() {
                         prefs.edit().putInt("ppm", p).apply(); engine?.setPpm(p)
                     }.setNegativeButton("Отмена", null).show()
             }
-            3 -> startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE, "guide/mode-radio.html"))
+            3 -> startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE,
+                when (app) { APP_SSTV -> "guide/mode-sstv.html"; APP_APRS -> "guide/mode-aprs.html"; APP_ADSB -> "guide/mode-adsb.html"; else -> "guide/mode-radio.html" }))
             4 -> {
                 val e = engine ?: return true
                 val steps = listOf(0.25, 0.5, 0.75, 1.0, 1.5, 2.0).map { (mode.defaultBw * it).toInt() }

@@ -79,7 +79,7 @@ class AppsTest {
         )
         val x = Afsk.encodePackets(frames, gap = 0.5)
         val got = CopyOnWriteArrayList<AprsRx>()
-        val w = AprsWorker { got.addAll(it) }
+        val w = AprsWorker({ got.addAll(it) })
         var i = 0
         while (i < x.size) {
             val n = minOf(2400, x.size - i)

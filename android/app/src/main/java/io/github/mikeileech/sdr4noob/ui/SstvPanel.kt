@@ -117,7 +117,7 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
     fun start(e: RadioEngine) {
         stop()
         alive = true
-        val w = SstvWorker { ev, lv -> ui.post { if (alive) onEvents(ev, lv) } }
+        val w = SstvWorker({ ev, lv -> ui.post { if (alive) onEvents(ev, lv) } }, { msg -> ui.post { if (alive) toast(msg) } })
         w.setForceMode(modes[modeSpin.selectedItemPosition.coerceAtLeast(0)].takeIf { it != AUTO })
         worker = w; engine = e
         e.audioTap = w::feed
@@ -204,9 +204,14 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
     }
 
     private fun open(uri: Uri) {
-        val b = runCatching { act.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull()
-        if (b == null) { toast("Картинку не удалось открыть"); return }
-        image.progress = null; image.bitmap = b
+        thread(name = "sstv-open") {
+            val b = runCatching { act.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull()
+            ui.post {
+                if (act.isDestroyed) return@post
+                if (b == null) { toast("Картинку не удалось открыть"); return@post }
+                image.progress = null; image.bitmap = b
+            }
+        }
     }
 
     var onPickWav: (() -> Unit)? = null

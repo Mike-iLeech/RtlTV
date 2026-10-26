@@ -22,7 +22,7 @@ class AprsStation(val name: String, val lat: Double, val lon: Double, val symbol
  * → кадры AX.25 → разбор. Новые пакеты уходят в [onPackets] из потока декодера; станции с координатами —
  * в [stations] (готовая копия, читать можно из любого потока).
  */
-class AprsWorker(private val onPackets: (List<AprsRx>) -> Unit) {
+class AprsWorker(private val onPackets: (List<AprsRx>) -> Unit, private val onError: (String) -> Unit = {}) {
     private val queue = ArrayBlockingQueue<FloatArray>(200)
     @Volatile private var running = true
     @Volatile var stations: List<AprsStation> = emptyList(); private set
@@ -38,13 +38,15 @@ class AprsWorker(private val onPackets: (List<AprsRx>) -> Unit) {
     fun stop() { running = false; thread.interrupt() }
 
     private fun loop() {
-        val dem = AfskDemodulator(48_000.0)
-        try {
-            while (running) {
+        var dem = AfskDemodulator(48_000.0)
+        var reported = false
+        while (running) {
+            try {
                 val x = queue.poll(250, TimeUnit.MILLISECONDS) ?: continue
                 val got = ArrayList<AprsRx>()
                 for (f in dem.process(x)) {
-                    val p = Aprs.parseFrame(f.data) ?: continue
+                    // испорченный кадр не должен останавливать приём остальных
+                    val p = try { Aprs.parseFrame(f.data) } catch (_: Exception) { null } ?: continue
                     got += AprsRx(System.currentTimeMillis(), p, Aprs.describe(p), f.fixed)
                 }
                 if (got.isEmpty()) continue
@@ -52,8 +54,12 @@ class AprsWorker(private val onPackets: (List<AprsRx>) -> Unit) {
                 for (rx in got) note(rx)
                 stations = byName.values.sortedByDescending { it.last.timeMs }
                 onPackets(got)
+            } catch (_: InterruptedException) {
+                break
+            } catch (e: Exception) {
+                dem = AfskDemodulator(48_000.0)      // сбой демодулятора не роняет приложение: начать заново
+                if (!reported) { reported = true; onError("APRS: сбой декодера (${e.javaClass.simpleName}), декодер перезапущен") }
             }
-        } catch (_: InterruptedException) {
         }
     }
 
@@ -77,7 +83,7 @@ class PlaneRow(val icao: Int, val hex: String, val callsign: String?, val alt: I
  * Декодер ADS-B на своём потоке (как поток AdsbProcessor на ПК): IQ 2,4 МГц от движка через [feed]
  * (копия блока; если поток не успевает — блок отбрасывается), борта — в [planes] после каждой порции.
  */
-class AdsbWorker(fs: Int, home: Pair<Double, Double>) {
+class AdsbWorker(fs: Int, home: Pair<Double, Double>, private val onError: (String) -> Unit = {}) {
     private val queue = ArrayBlockingQueue<Pair<FloatArray, FloatArray>>(40)
     @Volatile private var running = true
     @Volatile var planes: List<PlaneRow> = emptyList(); private set
@@ -95,16 +101,26 @@ class AdsbWorker(fs: Int, home: Pair<Double, Double>) {
 
     fun stop() { running = false; thread.interrupt() }
 
+    /** Частота дискретизации потока (запись IQ может задать свою). Поток декодера применит её сам. */
+    @Volatile var rate = fs
+
     private fun loop() {
         var lastPub = 0L
-        try {
-            while (running) {
+        var fs = rate
+        var reported = false
+        while (running) {
+            try {
                 val b = queue.poll(250, TimeUnit.MILLISECONDS)
+                if (rate != fs) { fs = rate; proc.setRate(fs) }
                 if (b != null) proc.process(b.first, b.second, b.first.size)
                 val now = System.nanoTime()
                 if (now - lastPub > 500_000_000L) { lastPub = now; publish() }
+            } catch (_: InterruptedException) {
+                break
+            } catch (e: Exception) {
+                // сбой на одном блоке не роняет приложение; таблица бортов сохраняется
+                if (!reported) { reported = true; onError("ADS-B: сбой декодера (${e.javaClass.simpleName}), блок пропущен") }
             }
-        } catch (_: InterruptedException) {
         }
     }
 

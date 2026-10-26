@@ -72,7 +72,7 @@ class AprsPanel(private val act: Activity, private val prefs: SharedPreferences,
     fun start(e: RadioEngine) {
         stop()
         alive = true
-        val w = AprsWorker { got -> ui.post { if (alive) onPackets(got) } }
+        val w = AprsWorker({ got -> ui.post { if (alive) onPackets(got) } }, { msg -> ui.post { if (alive) toast(msg) } })
         worker = w; engine = e
         e.audioTap = w::feed
     }
@@ -125,14 +125,13 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
     private val list = Ui.text(act, "", 12f).apply { maxLines = 5; typeface = android.graphics.Typeface.MONOSPACE }
     private var worker: AdsbWorker? = null
     private var engine: RadioEngine? = null
-    private var follow = true
+    private val ui = Handler(Looper.getMainLooper())
 
     init {
         val (la, lo) = Home.get(prefs)
         map.setHome(la, lo, intArrayOf(50, 100, 200))
         map.setCenter(la, lo, 7)
         map.onItemClick = { key -> map.selected = key; showPlane(key) }
-        map.onUserMove = { follow = false }
         view0.addView(map, Ui.lp(h = 0, weight = 1f))
         view0.addView(status)
         view0.addView(list)
@@ -148,7 +147,7 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
 
     fun start(e: RadioEngine) {
         stop()
-        val w = AdsbWorker(e.sampleRate, Home.get(prefs))
+        val w = AdsbWorker(e.sampleRate, Home.get(prefs)) { msg -> ui.post { if (worker != null) toast(msg) } }
         worker = w; engine = e
         e.iqTap = w::feed
     }
@@ -164,6 +163,7 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
     /** Вызывается раз в ~0,5 с из потока интерфейса. */
     fun refresh() {
         val w = worker ?: return
+        engine?.let { if (it.sampleRate != w.rate) w.rate = it.sampleRate }   // запись IQ задаёт свою частоту
         val rows = w.planes
         val fresh = rows.filter { it.ageS < Adsb.STALE_S }
         map.setItems("planes", fresh.filter { it.lat != null && it.lon != null }.map {
@@ -212,7 +212,7 @@ class AdsbPanel(private val act: Activity, private val prefs: SharedPreferences,
         AlertDialog.Builder(act).setTitle("Борта (${rows.size})")
             .setItems(rows.map { line(it) + if (it.ageS >= Adsb.STALE_S) "  (давно)" else "" }.toTypedArray()) { _, i ->
                 val p = rows[i]
-                if (p.lat != null && p.lon != null) { map.setCenter(p.lat, p.lon); follow = false }
+                if (p.lat != null && p.lon != null) map.setCenter(p.lat, p.lon)
                 map.selected = p.hex
                 showPlane(p.hex)
             }

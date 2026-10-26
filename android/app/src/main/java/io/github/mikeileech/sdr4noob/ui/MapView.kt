@@ -53,7 +53,8 @@ class MapView(ctx: Context) : View(ctx) {
     companion object {
         const val TILE = 256
         private const val TILE_URL = "https://tile.openstreetmap.org/%d/%d/%d.png"
-        private const val USER_AGENT = "SDR4NOOB (personal SDR receiver; Android)"
+        private val USER_AGENT = "SDR4NOOB/${io.github.mikeileech.sdr4noob.BuildConfig.VERSION_NAME} " +
+            "(Android; +https://github.com/Mike-iLeech/SDR4NOOB)"
         private val pool = Executors.newFixedThreadPool(2) { r -> Thread(r, "map-tiles").apply { isDaemon = true } }
 
         fun lonLatToPx(lon: Double, lat0: Double, z: Int): Pair<Double, Double> {
@@ -85,7 +86,10 @@ class MapView(ctx: Context) : View(ctx) {
         set(v) { field = v; invalidate() }
 
     private val cacheDir = File(ctx.cacheDir, "tiles")
-    private val mem = object : LruCache<Long, Bitmap>(160) {}
+    // ~24 МБ растров (тайл 256×256 ARGB — 256 КБ): хватает на экран и соседние масштабы
+    private val mem = object : LruCache<Long, Bitmap>(96 * 256 * 1024) {
+        override fun sizeOf(key: Long, value: Bitmap) = value.byteCount
+    }
     private val pending = HashSet<Long>()
     private val failed = HashSet<Long>()
     private val main = Handler(Looper.getMainLooper())
@@ -149,8 +153,8 @@ class MapView(ctx: Context) : View(ctx) {
                 }
                 // старый тайл лучше, чем никакого (нет сети)
                 if (bmp == null && f.exists()) bmp = BitmapFactory.decodeFile(f.path)
-            } catch (_: Exception) {
-                if (f.exists()) bmp = runCatching { BitmapFactory.decodeFile(f.path) }.getOrNull()
+            } catch (_: Throwable) {          // в том числе нехватка памяти: тайл просто не нарисуется
+                bmp = null
             }
             val b = bmp
             main.post {
