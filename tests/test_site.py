@@ -98,7 +98,7 @@ def test_screens_small():
 
 
 def test_interactive_pipeline_on_site():
-    """Интерактивная схема копируется на сайт как есть, на неё ведут кнопка в «Пути радиосигнала» и главная."""
+    """Интерактивная схема копируется на сайт как есть, на неё ведут ссылка в конспекте «Путь сигнала» и главная."""
     _build()
     src_dir = os.path.join(ROOT, "rtltv", "guide", "pipeline")
     dst_dir = os.path.join(DOCS, "guide", "pipeline")
@@ -106,7 +106,7 @@ def test_interactive_pipeline_on_site():
         with open(os.path.join(src_dir, name), "rb") as a, open(os.path.join(dst_dir, name), "rb") as b:
             assert a.read() == b.read(), name
     page = _read("guide/pipeline.html")
-    assert re.search(r'<a class="btn big" href="pipeline/index.html">', page)
+    assert 'href="pipeline/index.html"' in page and 'class="btn big"' not in page   # ссылка, не кнопка
     assert 'href="guide/pipeline/index.html"' in _read("index.html")
     assert "guide/pipeline/index.html" in _read("sitemap.xml")
     assert bs.interactive_dirs() == ["pipeline"]

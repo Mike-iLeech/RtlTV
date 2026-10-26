@@ -143,6 +143,7 @@ class SatRadioEngine(RadioEngine):
 
 class SatWindow(ModeWindow):
     tleLoaded = Signal(object, str)
+    passesReady = Signal(int, object)
 
     def __init__(self, opts=None):
         super().__init__(opts, "SDR4NOOB — Спутники: пролёты, приём со спутников, снимки, прослушивание")
@@ -189,6 +190,8 @@ class SatWindow(ModeWindow):
         self.bridge = _Bridge()
         self.bridge.event.connect(self._on_event)
         self.tleLoaded.connect(self._on_tle)
+        self.passesReady.connect(self._on_passes)
+        self._passes_gen = 0
         self._build()
         self.engine.level.connect(lambda db, _a, _s: self.l_level.set_value(db, f"{db:.0f} dB"))
         self.engine.error.connect(lambda m: self.statusBar().showMessage("Приёмник: " + m, 10000))
@@ -727,10 +730,31 @@ class SatWindow(ModeWindow):
         self._save()
 
     def _recalc_passes(self):
+        """Пролёты на 36 ч считаются в фоне (0,5–0,8 с SGP4 на все орбиты — раньше это был рывок интерфейса
+        при загрузке TLE, смене дома и раз в 10 мин); результат приходит сигналом, устаревший отбрасывается."""
         lat, lon = self.lat.value(), self.lon.value()
-        self.passes = satpass.all_passes(list(self.orbits.values()), lat, lon, hours=36, min_el=0.0)
+        orbits = list(self.orbits.values())
+        self._passes_gen += 1
+        gen = self._passes_gen
         self._passes_t = time.time()
+
+        def run():
+            try:
+                res = satpass.all_passes(orbits, lat, lon, hours=36, min_el=0.0)
+            except Exception:  # noqa: BLE001 — не уронить поток; таблица останется прежней
+                return
+            try:
+                self.passesReady.emit(gen, res)
+            except RuntimeError:   # окно уже удалено
+                pass
+        threading.Thread(target=run, name="sat-passes", daemon=True).start()
+
+    def _on_passes(self, gen, passes):
+        if gen != self._passes_gen:
+            return
+        self.passes = passes
         self._fill_table()
+        self._update_next(time.time())
 
     def _fill_table(self):
         self.table.setUpdatesEnabled(False)
@@ -895,6 +919,10 @@ class SatWindow(ModeWindow):
     # ================= дом и карта =================
     def _apply_home(self, save=True):
         lat, lon = self.lat.value(), self.lon.value()
+        key = (lat, lon, self.min_el.value())
+        if save and key == getattr(self, "_home_key", None):
+            return   # editingFinished приходит и при простой потере фокуса — ничего не изменилось
+        self._home_key = key
         self.map.set_home(lat, lon, ())
         circ = [dict(points=satpass.visibility_circle(lat, lon, 830, 0), color="#4fb3ff", width=1.2, dash=True)]
         if self.min_el.value() > 0:

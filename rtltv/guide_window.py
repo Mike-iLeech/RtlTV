@@ -35,7 +35,7 @@ TOC = [
         ("legal", "Закон и этика эфира"),
     ]),
     ("Основы радиоприёма", [
-        ("pipeline", "Путь радиосигнала"),
+        ("pipeline", "Путь сигнала: шаги и уровни"),
         ("sdr", "Приёмники SDR"),
         ("decibels", "Единицы и децибелы"),
         ("gain", "Усиление и АРУ"),
@@ -75,6 +75,24 @@ def guide_dir():
         if os.path.isdir(frozen):
             return frozen
     return here
+
+
+# Интерактивные разделы — пункты в корне оглавления (сразу после «Содержания»), открываются прямо в окне
+# справки без промежуточной страницы с кнопкой: (id, заголовок, подпапка руководства с index.html).
+# Отдельно от TOC: TOC — это HTML-страницы, из них же собираются поиск и сайт.
+INTERACTIVE = [
+    ("signal", "Путь радиосигнала", "pipeline"),
+]
+
+
+def interactive_dir(pid):
+    """Подпапка интерактивного раздела по его id («signal» → «pipeline») или None."""
+    return next((d for k, _t, d in INTERACTIVE if k == pid), None)
+
+
+def interactive_id(folder):
+    """id интерактивного раздела по подпапке («pipeline» → «signal») или None."""
+    return next((k for k, _t, d in INTERACTIVE if d == folder), None)
 
 
 def pages():
@@ -465,7 +483,7 @@ class GuideWindow(QWidget):
         self.tree.setHeaderHidden(True)
         self.tree.setIndentation(14)
         self.items = {}
-        for key, val in TOC:
+        for key, val in TOC[:1] + [(k, t) for k, t, _d in INTERACTIVE] + TOC[1:]:
             if isinstance(val, list):
                 grp = QTreeWidgetItem([key])
                 grp.setFlags(Qt.ItemIsEnabled)
@@ -629,13 +647,22 @@ class GuideWindow(QWidget):
         self._web_page = os.path.basename(os.path.dirname(path))
         self.pages.setCurrentWidget(self.web)
         self._web_title()
+        self._select_tree(interactive_id(self._web_page))
         self._sync_nav()
         self.raise_()
         self.activateWindow()
         return True
 
+    def _select_tree(self, pid):
+        it = self.items.get(pid)
+        if it is not None:
+            self.tree.blockSignals(True)
+            self.tree.setCurrentItem(it)
+            self.tree.blockSignals(False)
+
     def _web_title(self):
-        title = page_title(self._web_page or self.current_page())
+        key = interactive_id(self._web_page)
+        title = next((t for k, t, _d in INTERACTIVE if k == key), None) or page_title(self._web_page or self.current_page())
         self.title.setText(f"{title} — интерактивная схема")
         self.setWindowTitle(f"SDR4NOOB — руководство: {title} (схема)")
 
@@ -677,6 +704,7 @@ class GuideWindow(QWidget):
         self._set_web_active(True)
         self.pages.setCurrentWidget(self.web)
         self._web_title()
+        self._select_tree(interactive_id(self._web_page))
         self._sync_nav()
 
     def go_back(self):
@@ -746,6 +774,10 @@ class GuideWindow(QWidget):
         pid, _, frag = str(page or "index").partition("#")
         pid = pid[:-5] if pid.endswith(".html") else pid
         pid = ALIASES.get(pid, pid)
+        folder = interactive_dir(pid)
+        if folder:
+            self.show_interactive(os.path.join(guide_dir(), folder, "index.html"), frag)
+            return
         if not os.path.exists(page_path(pid)):
             pid = "index"
         url = QUrl.fromLocalFile(page_path(pid))
@@ -780,11 +812,7 @@ class GuideWindow(QWidget):
         else:
             self.title.setText(page_title(pid))
             self.setWindowTitle(f"SDR4NOOB — руководство: {page_title(pid)}")
-        it = self.items.get(pid)
-        if it is not None:
-            self.tree.blockSignals(True)
-            self.tree.setCurrentItem(it)
-            self.tree.blockSignals(False)
+        self._select_tree(interactive_id(self._web_page) if self.web_shown() else pid)
         self._highlight()
 
     def _tree_clicked(self, item, _col=0):

@@ -75,6 +75,8 @@ def main():
         opts["mode"] = "digital"
     if a.auto:
         opts["auto"] = True
+    if a.mode or a.digital or a.freq:
+        opts["direct"] = True   # окно режима откроется сразу — лаунчеру незачем греть импорты в фоне
     from .themes import DEFAULT_THEME
     launcher = Launcher(opts)
     if a.mode or a.digital or a.freq:
