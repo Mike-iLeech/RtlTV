@@ -956,7 +956,7 @@ class SatWindow(ModeWindow):
     def _src_index(self):
         src = self.src_combo.currentData()
         if src == "none":
-            self.statusBar().showMessage("Нет устройства: подключите донгл или выберите демо-генератор.", 8000)
+            self.statusBar().showMessage("Нет устройства: подключите приёмник или выберите демо-генератор.", 8000)
             return None
         return src
 

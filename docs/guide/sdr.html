@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.1</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -46,10 +46,10 @@
 <h2 id="what">Что такое SDR<a class="anchor" href="#what" aria-label="Ссылка на этот раздел">#</a></h2>
 <p><b>SDR</b> (Software Defined Radio, программно-определяемое радио) — приёмник, в котором железо только
 переносит кусок эфира на низкую частоту и оцифровывает его, а всё остальное — фильтры, демодуляция,
-декодирование — делает программа. Поэтому один и тот же приёмник (например, недорогой донгл RTL-SDR) за пару секунд превращается из FM-приёмника
+декодирование — делает программа. Поэтому один и тот же приёмник (например, недорогой RTL-SDR) за пару секунд превращается из FM-приёмника
 в декодер самолётов или метеоспутника.</p>
 <p><figure class="diagram"><picture><source srcset="img/sdr-chain-dark.svg" media="(prefers-color-scheme: dark)"><img src="img/sdr-chain.svg" alt="Схема" width="720" height="180" loading="lazy"></picture></figure></p>
-<p>Донгл отдаёт в компьютер поток <b>I/Q-отсчётов</b> — пар чисел, которые описывают и амплитуду, и фазу
+<p>Приёмник отдаёт в компьютер поток <b>I/Q-отсчётов</b> — пар чисел, которые описывают и амплитуду, и фазу
 сигнала. Благодаря паре (а не одному числу) программа отличает частоты выше центра от частот ниже центра,
 и на <a href="spectrum.html">спектре</a> видно полосу шириной, равной частоте дискретизации.</p>
 
@@ -121,8 +121,8 @@ RTL2832U оцифровывает с частотой 28,8 МГц и децим�
 <tr><td>LimeSDR (USB)</td><td>0,1–3800 МГц</td><td>до 61 МГц</td><td>12 бит</td><td>да (2×2)</td><td>от $300</td></tr>
 <tr><td>ADALM-Pluto (PlutoSDR)</td><td>325–3800 МГц (с доработкой 70–6000)</td><td>до 20 МГц</td><td>12 бит</td><td>да (1×1)</td><td>≈ $220</td></tr>
 </table></div>
-<p class="dim">* Ориентир на 2026 г. без доставки и пошлин; в России цены выше. Основной приёмник SDR4NOOB — донглы на
-RTL2832U (первые три строки). Через меню <b>«Режим → Устройства…»</b> можно подключить и другие: HackRF One и
+<p class="dim">* Ориентир на 2026 г. без доставки и пошлин; в России цены выше. Программа работает с любым USB радиоприёмником (SDR);
+для приёмников на RTL2832U (первые три строки) драйвер встроен. Через меню <b>«Режим → Устройства…»</b> можно подключить и другие: HackRF One и
 Airspy R2/Mini (нужна их DLL), а также сетевой <b>rtl_tcp</b> (в том числе rsp_tcp для SDRplay).</p>
 <p><b>Совет новичку:</b> RTL-SDR Blog V4 — лучший выбор для начала. Переходить на 12–14-битный приёмник стоит,
 когда упрётесь в перегрузку от мощных станций рядом (центр города, рядом с телебашней) или захотите видеть
@@ -158,7 +158,7 @@ Airspy R2/Mini (нужна их DLL), а также сетевой <b>rtl_tcp</b
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.3.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.3.1 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
