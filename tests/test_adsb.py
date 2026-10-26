@@ -508,7 +508,8 @@ def test_overlay_header_row_drops_plane_color():
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
     from rtltv.modes.adsb_window import _OverlayList
-    _app = QApplication.instance() or QApplication([])  # noqa: F841 — нужен для виджета
+    app = QApplication.instance() or QApplication([])
+    assert app is not None   # приложение Qt нужно виджету (и ссылку держим до конца теста)
     lw = _OverlayList()
     lw.set_rows([("AFL1  3 000 м", "AB0001", "#ff0000", "", False)])
     assert lw.item(0).data(Qt.ForegroundRole) is not None and lw.item(0).flags() & Qt.ItemIsSelectable
