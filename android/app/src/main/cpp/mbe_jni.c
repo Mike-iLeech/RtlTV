@@ -44,9 +44,11 @@ JNIEXPORT jint JNICALL JNI(decode)(JNIEnv *env, jobject self, jlong h, jbyteArra
 	char err_str[64];
 	float buf[160];
 	int errs = 0, errs2 = 0;
-	if (!s)
+	if (!s || (*env)->GetArrayLength(env, fr) < 96 || (*env)->GetArrayLength(env, out) < 160)
 		return -1;
 	(*env)->GetByteArrayRegion(env, fr, 0, 96, (jbyte *)ambe_fr);
+	if ((*env)->ExceptionCheck(env))
+		return -1;
 	memset(ambe_d, 0, sizeof(ambe_d));
 	memset(err_str, 0, sizeof(err_str));
 	mbe_processAmbe3600x2450Framef(buf, &errs, &errs2, err_str, ambe_fr, ambe_d, &s->cur, &s->prev, &s->prev_enh, 3);

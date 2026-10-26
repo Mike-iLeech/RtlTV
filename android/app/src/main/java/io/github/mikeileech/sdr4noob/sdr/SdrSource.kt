@@ -21,6 +21,8 @@ interface SdrSource {
     /** Запись (файл IQ): частоту дискретизации и центр задаёт источник, перестраивать их нельзя. */
     val fixedRate: Int? get() = null
     val fixedCenter: Long? get() = null
+    /** Можно ли перестраивать центр (для поиска DMR). Читается из потока интерфейса — не должно открывать устройство. */
+    val retunable: Boolean get() = true
 
     fun open(sampleRate: Int, frequencyHz: Long)
     fun start()

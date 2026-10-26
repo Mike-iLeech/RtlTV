@@ -19,7 +19,6 @@ typedef struct {
 	size_t head, fill;
 	int64_t dropped;
 	int running;           /* приём идёт (stop сбрасывает) */
-	int lost;              /* драйвер сообщил об ошибке/отключении */
 } sdr_ring;
 
 static int ring_init(sdr_ring *r, size_t cap)
@@ -109,17 +108,7 @@ static void ring_set_running(sdr_ring *r, int on)
 	r->running = on;
 	if (on) {
 		r->head = r->fill = 0;
-		r->lost = 0;
 	}
-	pthread_cond_broadcast(&r->cond);
-	pthread_mutex_unlock(&r->lock);
-}
-
-static void ring_lost(sdr_ring *r)
-{
-	pthread_mutex_lock(&r->lock);
-	r->lost = 1;
-	r->running = 0;
 	pthread_cond_broadcast(&r->cond);
 	pthread_mutex_unlock(&r->lock);
 }

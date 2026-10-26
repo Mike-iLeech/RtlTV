@@ -2,9 +2,11 @@ package io.github.mikeileech.sdr4noob
 
 import io.github.mikeileech.sdr4noob.radio.WavWriter
 import io.github.mikeileech.sdr4noob.sdr.IqFileReader
+import io.github.mikeileech.sdr4noob.sdr.IqFileSource
 import io.github.mikeileech.sdr4noob.sdr.IqFormatException
 import io.github.mikeileech.sdr4noob.sdr.IqName
 import io.github.mikeileech.sdr4noob.sdr.LinearResampler
+import io.github.mikeileech.sdr4noob.sdr.SdrException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -82,5 +84,21 @@ class IqFileTest {
         try { IqFileReader({ f.inputStream() }, "x.mp3", f.length()); throw AssertionError() } catch (_: IqFormatException) {}
         try { IqFileReader({ f.inputStream() }, "x.wav", f.length()); throw AssertionError() } catch (_: IqFormatException) {}
         f.delete()
+    }
+
+    /** Файл короче заявленного размера: ошибка, а не вечный цикл в потоке радио. */
+    @Test(timeout = 5000) fun truncatedFileFailsInsteadOfHanging() {
+        val f = File.createTempFile("rec_1024k_100MHz", ".cu8")
+        f.writeBytes(byteArrayOf(0, 1, 2, 3))
+        val r = IqFileReader({ f.inputStream() }, f.name, 4000)       // «размер» больше настоящего
+        try { r.read(FloatArray(3000), FloatArray(3000), 3000); throw AssertionError() } catch (_: SdrException) {}
+        r.close(); f.delete()
+    }
+
+    /** Ошибки открытия файла (удалён, нет доступа) — понятное SdrException при первом обращении движка. */
+    @Test fun missingFileIsSdrException() {
+        val src = IqFileSource("x.cu8") { throw java.io.FileNotFoundException("нет") }
+        try { src.fixedRate; throw AssertionError() } catch (e: SdrException) { assertTrue(e.message!!.contains("не найден")) }
+        assertEquals(false, src.retunable)
     }
 }
