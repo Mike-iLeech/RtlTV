@@ -13,6 +13,9 @@ SDR4NOOB-<версия>-setup.exe в тихом режиме в ту же пап
 
 До 3.0 программа называлась RtlTV; с 3.1 копии RtlTV.exe в архиве нет, а установщик и обновлятор удаляют
 устаревший RtlTV.exe из папки программы. Старый адрес API (repos/Mike-iLeech/RtlTV) GitHub перенаправляет.
+
+macOS: архив SDR4NOOB-<версия>-macos-<arm64|x86_64>.zip с SDR4NOOB.app; распаковка и замена пакета —
+в updater_mac.py (установщика нет, «setup» не используется).
 """
 import hashlib
 import json
@@ -51,6 +54,14 @@ def is_newer(remote, local=__version__):
     return parse_version(remote) > parse_version(local)
 
 
+def asset_suffix():
+    """Окончание имени архива сборки для этой системы."""
+    if osplat.IS_MAC:
+        from . import updater_mac
+        return updater_mac.asset_suffix()
+    return "-win64.zip"
+
+
 def frozen():
     return bool(getattr(sys, "frozen", False))
 
@@ -75,11 +86,11 @@ def check_latest(timeout=15):
     ver = ".".join(str(x) for x in parse_version(tag))
     found = {}          # "asset" — архив zip, "setup" — установщик
     sha_urls = {}
+    suffix = asset_suffix()
     for a in data.get("assets") or []:
         name = a.get("name", "")
         low = name.lower()
-        kind = "asset" if low.endswith("-win64.zip") else "setup" if low.endswith("-setup.exe") else \
-            "appimage" if low.endswith(updater_linux.asset_suffix()) else None
+        kind = "asset" if low.endswith(suffix) else "setup" if low.endswith("-setup.exe") else             "appimage" if low.endswith(updater_linux.asset_suffix()) else None
         if kind:
             digest = a.get("digest") or ""
             found[kind] = {"name": name, "url": a.get("browser_download_url"), "size": a.get("size", 0),
@@ -122,6 +133,10 @@ def update_kind(info):
     В Linux: "appimage" (заменить запущенный файл AppImage) или "manual" (пакет .deb, исходники)."""
     if osplat.IS_LINUX:
         return updater_linux.update_kind({"asset": info.get("appimage")})
+    if osplat.IS_MAC:   # пакет SDR4NOOB.app заменяется целиком — писать нужно в папку, где он лежит
+        from . import updater_mac
+        app = updater_mac.bundle_path() if frozen() else None
+        return "manual" if app and not writable(os.path.dirname(app)) else "asset"
     d = app_dir()
     if d and not writable(d):
         return "manual"
@@ -181,6 +196,14 @@ def _app():
     return settings.load("app", {})
 
 
+def last_install_failure():
+    """macOS: причина неудачи прошлого обновления (показывается один раз) или None."""
+    if not osplat.IS_MAC:
+        return None
+    from . import updater_mac
+    return updater_mac.last_install_failure(os.path.join(paths.LOCAL, "updates"))
+
+
 def check_interval():
     return _app().get("update_check", "daily")
 
@@ -220,7 +243,7 @@ def download(info, progress=None, cancel=None, kind="asset"):
     if not a or not a.get("url"):
         raise UpdateError("В релизе нет установщика SDR4NOOB-*-setup.exe." if kind == "setup" else
                           f"В релизе нет файла SDR4NOOB-*-{updater_linux.arch()}.AppImage." if kind == "appimage" else
-                          "В релизе нет архива для Windows (SDR4NOOB-*-win64.zip).")
+                          f"В релизе нет архива для этой системы (SDR4NOOB-*{asset_suffix()}).")
     if not a.get("sha256"):
         raise UpdateError("Не удалось получить контрольную сумму файла — без неё обновление не ставится. "
                           "Скачайте его вручную со страницы релиза.")
@@ -273,6 +296,12 @@ def prepare(zip_path):
     """Распаковать архив во временную папку и найти в нём папку программы (SDR4NOOB.exe или RtlTV.exe + _internal)."""
     if not zipfile.is_zipfile(zip_path):
         raise UpdateError("Скачанный файл — не архив zip.")
+    if osplat.IS_MAC:
+        from . import updater_mac
+        try:
+            return updater_mac.prepare(zip_path)
+        except updater_mac.MacUpdateError as e:
+            raise UpdateError(str(e)) from e
     dest = tempfile.mkdtemp(prefix="rtltv-update-")
     try:
         with zipfile.ZipFile(zip_path) as z:
@@ -400,6 +429,12 @@ def install_and_restart(new_dir):
     установщик ждёт её выхода до 2 минут, а если не дождётся — файлы не трогает."""
     if not frozen():
         raise UpdateError("Обновление файлов работает только в собранной версии (SDR4NOOB.exe).")
+    if osplat.IS_MAC:
+        from . import updater_mac
+        try:
+            return updater_mac.install_and_restart(new_dir, os.path.join(paths.LOCAL, "updates"))
+        except updater_mac.MacUpdateError as e:
+            raise UpdateError(str(e)) from e
     app = app_dir()
     test = os.path.join(app, ".rtltv_write_test")
     try:

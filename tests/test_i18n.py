@@ -31,7 +31,7 @@ PENDING = {
     "guide_window.py", "help_radio.py", "iqfile.py", "linux_setup.py", "lrpt.py", "mapview.py", "osplat.py", "paths.py",
     "radiotest.py", "rds.py", "rtl_stream.py", "rtlsdr.py", "satcat.py", "satpass.py",
     "satrx.py", "source.py", "spectrum_nav.py", "sstv.py", "standards.py", "update_ui.py",
-    "updater.py", "updater_linux.py", "widgets.py",
+    "updater.py", "updater_linux.py", "updater_mac.py", "widgets.py",
     "modes/adsb_window.py", "modes/aprs_window.py", "modes/dmr_scan_panel.py", "modes/radio_panels.py",
     "modes/radio_window.py", "modes/sat_gallery.py", "modes/sat_userdlg.py", "modes/sat_widgets.py",
     "modes/sat_window.py", "modes/sstv_window.py",

@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from rtltv import devices, rtlsdr, settings  # noqa: E402
 
-win_only = pytest.mark.skipif(sys.platform != "win32", reason="только Windows: SetupAPI, PE, DLL")
+win_only = pytest.mark.skipif(sys.platform != "win32", reason="имена и форматы DLL Windows (PE, hackrf.dll)")
 
 BUILTIN = rtlsdr._dll_path()
 VCVARS = r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
@@ -231,7 +231,7 @@ def test_usb_this_machine_rtl_v4_winusb():
     rtl = [d for d in found if (d["vid"], d["pid"]) == (0x0BDA, 0x2838)]
     if not rtl:
         pytest.skip("RTL-SDR 0bda:2838 к этой машине не подключён")
-    assert rtl[0]["service"].lower() == "winusb" and rtl[0]["ready"]
+    assert rtl[0]["service"].lower() in ("winusb", devices.MAC_SVC.lower()) and rtl[0]["ready"]
     assert rtl[0]["kind"] == "rtl"
 
 
@@ -309,6 +309,7 @@ def test_reject_32bit_and_foreign_dll(tmp_path):
     assert not os.path.isdir(devices.DRIVERS_DIR) or not os.listdir(devices.DRIVERS_DIR)
 
 
+@win_only
 def test_missing_backend_messages():
     for sid, name in (("hackrf:0", devices.PREFERRED_NAMES["hackrf"][0]),
                       ("airspy:0", devices.PREFERRED_NAMES["airspy"][0])):
@@ -589,6 +590,45 @@ def test_devices_dialog_offscreen(rtltcp_server, monkeypatch):
     assert combo.itemText(0) == "RTL-SDR #7 (не найден)" and combo.currentData() == "rtl:7"
     assert combo.itemData(combo.count() - 1) == "test"
     dlg.close()
+
+
+IOREG_SAMPLE = """+-o Root  <class IORegistryEntry, id 0x100000100, retain 31>
+  +-o AppleT8103USBXHCI@00000000  <class AppleT8103USBXHCI, id 0x100000331, registered, matched, active>
+    +-o RTL2838UHIDIR@00100000  <class IOUSBHostDevice, id 0x100000a21, registered, matched, active>
+    |   {
+    |     "USB Product Name" = "Blog V4"
+    |     "idProduct" = 10296
+    |     "USB Serial Number" = "00000001"
+    |     "locationID" = 1048576
+    |     "idVendor" = 3034
+    |   }
+    +-o HackRF One@00200000  <class IOUSBHostDevice, id 0x100000a22, registered, matched, active>
+    |   {
+    |     "idProduct" = 24713
+    |     "idVendor" = 7504
+    |     "locationID" = 2097152
+    |   }
+    +-o Keyboard@00300000  <class IOUSBHostDevice, id 0x100000a23, registered, matched, active>
+    |   {
+    |     "idProduct" = 1
+    |     "idVendor" = 1452
+    |   }
+"""
+
+
+def test_usb_raw_ioreg_macos(monkeypatch):
+    """macOS: перечисление USB через ioreg; RTL-SDR готов без драйвера ОС, HackRF — если есть libhackrf."""
+    raw = devices._usb_raw_ioreg(IOREG_SAMPLE)
+    assert [r[0] for r in raw] == [r"USB\VID_0BDA&PID_2838\1048576", r"USB\VID_1D50&PID_6089\2097152",
+                                   r"USB\VID_05AC&PID_0001\4"]   # без locationID — порядковый номер в выводе ioreg
+    assert raw[0][2] == devices.MAC_SVC and raw[0][3] == "Blog V4" and raw[1][3] == "HackRF One"
+    monkeypatch.setattr(devices, "find_driver", lambda kind, *a, **k: None)
+    found = {d["kind"]: d for d in devices.usb_devices(raw)}
+    assert set(found) == {"rtl", "hackrf"}          # клавиатура Apple — не SDR
+    assert found["rtl"]["ready"] and "встроенным драйвером" in found["rtl"]["hint"]
+    assert not found["hackrf"]["ready"] and "brew install hackrf" in found["hackrf"]["hint"]
+    monkeypatch.setattr(devices, "find_driver", lambda kind, *a, **k: "/opt/homebrew/lib/libhackrf.dylib")
+    assert {d["kind"]: d for d in devices.usb_devices(raw)}["hackrf"]["ready"]
 
 
 def test_hardware_scan_cached(monkeypatch):

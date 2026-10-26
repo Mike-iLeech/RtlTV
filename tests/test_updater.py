@@ -13,6 +13,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from rtltv import updater  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _windows_logic(monkeypatch):
+    """Эти тесты — про сборку Windows (zip/установщик); на macOS её логика проверяется так же (см. test_updater_mac)."""
+    monkeypatch.setattr(updater.osplat, "IS_MAC", False)
+
+
 def test_versions():
     assert updater.parse_version("v2.0.1") == (2, 0, 1)
     assert updater.parse_version("2.1") == (2, 1, 0)

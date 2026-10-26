@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SDR4NOOB — всё в одном для начинающего радиолюбителя</title>
-<meta name="description" content="SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатная программа для Windows и любого USB радиоприёмника (SDR): ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
+<meta name="description" content="SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатная программа для Windows и macOS, для любого USB радиоприёмника (SDR): ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="https://mike-ileech.github.io/SDR4NOOB/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/sdr4noob-256.png">
 <meta property="og:title" content="SDR4NOOB — всё в одном для начинающего радиолюбителя">
-<meta property="og:description" content="SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатная программа для Windows и любого USB радиоприёмника (SDR): ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
+<meta property="og:description" content="SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатная программа для Windows и macOS, для любого USB радиоприёмника (SDR): ТВ, радио, SSTV, спутники, самолёты ADS-B, APRS.">
 <meta property="og:image" content="https://mike-ileech.github.io/SDR4NOOB/assets/sdr4noob-256.png">
 <link rel="stylesheet" href="assets/style.css">
 <script src="assets/search-index.js" defer></script>
@@ -45,13 +45,13 @@
   <div>
     <h1 class="logo-title"><img src="assets/favicon.svg" alt="" width="64" height="64">SDR4NOOB</h1>
     <p class="tagline">Всё в одном для начинающего радиолюбителя</p>
-    <p class="lead">Бесплатная программа для Windows, которая превращает любой USB радиоприёмник (SDR)
+    <p class="lead">Бесплатная программа для Windows и macOS, которая превращает любой USB радиоприёмник (SDR)
     в радио с поиском станций, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов.
     Всё в одном окне, по-русски, с подробным руководством для начинающих; для RTL-SDR драйвер встроен.</p>
-    <p class="cta"><a class="btn big" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать для Windows</a>
+    <p class="cta"><a class="btn big" href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">Скачать для Windows и macOS</a>
     <a class="btn ghost big" href="install.html">Как установить</a>
     <a class="btn ghost big" href="guide/quickstart.html">Быстрый старт</a></p>
-    <p class="dim">Windows 10/11 x64 · USB радиоприёмник (SDR), например RTL-SDR Blog V3/V4 (встроенный драйвер), HackRF, Airspy · без антенны есть
+    <p class="dim">Windows 10/11 x64 · macOS 14+ (Apple Silicon, Intel) · USB радиоприёмник (SDR), например RTL-SDR Blog V3/V4 (встроенный драйвер), HackRF, Airspy · без антенны есть
     тестовый эфир для знакомства</p>
   </div>
   <figure class="shot"><a href="img/screens/launcher.webp"><img src="img/screens/launcher.webp" alt="Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов." width="996" height="560" loading="lazy"></a><figcaption>Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов.</figcaption></figure>
@@ -148,10 +148,10 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="requirements">Системные требования<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>Windows 10 или 11, 64 бит.</b> Python ставить не нужно — всё внутри архива.</li>
+<li><b>Windows 10 или 11, 64 бит</b> или <b>macOS 14 и новее</b> (Apple Silicon или Intel, <a href="install.html#macos">как установить</a>). Python ставить не нужно — всё внутри сборки.</li>
 <li><b>Приёмник:</b> USB радиоприёмник (SDR). Встроенный драйвер — для RTL-SDR Blog V4 (R828D) и V3 и других
 приёмников на RTL2832U (R820T/R820T2 и т. п.); также поддерживаются HackRF One и Airspy R2/Mini (с их DLL) и сетевой rtl_tcp.</li>
-<li><b>Драйвер WinUSB</b> на приёмнике (RTL-SDR, HackRF, Airspy) — ставится один раз программой <a href="https://zadig.akeo.ie/">Zadig</a>
+<li><b>Windows: драйвер WinUSB</b> на приёмнике (RTL-SDR, HackRF, Airspy) — ставится один раз программой <a href="https://zadig.akeo.ie/">Zadig</a>
 (<a href="install.html#zadig">как</a>). Сам librtlsdr уже встроен.</li>
 <li>Двухъядерный процессор и выше; для полосы 2,4 МГц и больше — порт USB 2.0 без перегруженных хабов.</li>
 <li>Интернет нужен только для карт, орбит (TLE), справочника бортов и проверки обновлений.</li>

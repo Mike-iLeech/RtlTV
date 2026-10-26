@@ -42,6 +42,11 @@ def _check_async(cb):
 
 def maybe_check_on_start(parent):
     """При запуске: если пора по расписанию — тихо проверить; показать окно только при новой версии."""
+    fail = updater.last_install_failure()
+    if fail:
+        QTimer.singleShot(1000, lambda: QMessageBox.warning(
+            parent, "Обновление", f"Прошлое обновление не установилось: {fail}.\n\n"
+            "Скачайте новую версию со страницы релиза и установите её вручную."))
     if not updater.due():
         return
 
@@ -88,10 +93,11 @@ class UpdateDialog(QDialog):
         notes.setMarkdown(info.get("notes") or "Описание изменений не указано.")
         v.addWidget(notes, 1)
         manual = (updater_linux.manual_hint(info) if osplat.IS_LINUX else
+                  "Нет прав на запись в папку с SDR4NOOB.app — скачайте образ .dmg со страницы релиза и перетащите "
+                  "SDR4NOOB в «Программы»." if osplat.IS_MAC else
                   "Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "
                   "вручную (может понадобиться запуск от имени администратора).")
-        hint = QLabel(manual if self.kind == "manual" and (updater.frozen() or osplat.IS_LINUX) else "Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "
-                      "вручную (может понадобиться запуск от имени администратора)." if self.kind == "manual" else
+        hint = QLabel(manual if self.kind == "manual" else
                       "Будут заменены только файлы программы. Настройки, записи, снимки и журналы останутся на месте."
                       if updater.frozen() else
                       "Программа запущена из исходников — обновите их (git pull) или скачайте сборку со страницы релиза.")

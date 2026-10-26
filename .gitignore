@@ -9,6 +9,11 @@ prof.out
 *.wav
 .pytest_cache/
 release/
+# библиотеки Linux собираются tools/build_linux_libs.sh, в репозиторий не кладутся
 rtltv/driver/*.so
 rtltv/driver/*.so.*
 *.AppImage
+# библиотеки macOS собираются tools/build_macos_libs.sh, в репозиторий не кладутся
+rtltv/driver/*.dylib
+rtltv/driver/librtlsdr-LICENSE.txt
+rtltv/driver/libusb-LICENSE.txt
