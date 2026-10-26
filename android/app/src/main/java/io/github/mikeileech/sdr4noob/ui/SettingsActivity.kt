@@ -46,9 +46,13 @@ class SettingsActivity : Activity() {
             15f, Ui.ACCENT), Ui.lp(top = Ui.dp(this, 6)))
         val b = Ui.hbox(this)
         b.addView(Ui.button(this, tr("Выбрать папку…")) {
-            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION), REQ_TREE)
+            try {
+                startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION), REQ_TREE)
+            } catch (e: android.content.ActivityNotFoundException) {
+                toast(tr("На этом устройстве нет выбора папки Android — остаются стандартные папки"))
+            }
         }, Ui.lp(0, weight = 1f))
         b.addView(Ui.button(this, tr("По умолчанию")) {
             Storage.tree(this)?.let { t -> runCatching { contentResolver.releasePersistableUriPermission(t,
@@ -129,6 +133,10 @@ class SettingsActivity : Activity() {
         val uri = data?.data ?: return
         try {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            // прежнюю папку отпустить: разрешения копятся, у Android на них предел
+            Storage.tree(this)?.takeIf { it != uri }?.let { old ->
+                runCatching { contentResolver.releasePersistableUriPermission(old, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+            }
             Storage.setTree(this, uri)
             toast(tr("Папка данных: {name}", "name" to Storage.treeName(uri)))
         } catch (e: SecurityException) {

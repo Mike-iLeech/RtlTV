@@ -63,12 +63,15 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
 
     /** Отдать снимок пролёта (если кадры были), закрыть приёмник и начать новый. */
     private fun endPass(rx: AutoLrptReceiver, fs: Int, next: Boolean = true): AutoLrptReceiver? {
-        runCatching { rx.finish() }                                   // последние кадры из буферов
-        if (runCatching { rx.stats().framesOk }.getOrDefault(0) > 0) {
-            val p = runCatching { full(rx) }.getOrNull()
-            if (p != null) onPassEnd(p) else onError(tr("LRPT: снимок пролёта не сохранён — не хватило памяти"))
+        try {
+            runCatching { rx.finish() }                               // последние кадры из буферов
+            if (runCatching { rx.stats().framesOk }.getOrDefault(0) > 0) {
+                val p = runCatching { full(rx) }.getOrNull()
+                if (p != null) runCatching { onPassEnd(p) } else onError(tr("LRPT: снимок пролёта не сохранён — не хватило памяти"))
+            }
+        } finally {
+            rx.rxs.forEach { runCatching { it.close() } }           // нативные демодуляторы — сразу и всегда, не в finalize
         }
-        rx.rxs.forEach { runCatching { it.close() } }               // нативные демодуляторы — сразу, не в finalize
         preview = null
         return if (next) AutoLrptReceiver(fs.toDouble()) else null
     }

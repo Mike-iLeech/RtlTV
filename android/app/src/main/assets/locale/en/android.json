@@ -984,5 +984,8 @@
  "Сейчас: стандартные папки телефона": "Now: the phone's standard folders",
  "{n} ГБ": "{n} GB",
  "{n} МБ": "{n} MB",
- "{n} КБ": "{n} KB"
+ "{n} КБ": "{n} KB",
+ "{path} (своя папка недоступна — сохранено в стандартную)": "{path} (your own folder is unavailable — saved to the standard one)",
+ "корень памяти телефона": "phone storage root",
+ "На этом устройстве нет выбора папки Android — остаются стандартные папки": "This device has no Android folder picker — the standard folders stay in use"
 }

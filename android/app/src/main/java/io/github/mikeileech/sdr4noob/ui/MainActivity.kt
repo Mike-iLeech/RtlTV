@@ -139,7 +139,6 @@ class MainActivity : Activity() {
         more.addView(Ui.button(this, tr("Об Android-версии")) {
             startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE, "android/index.html"))
         }, Ui.lp(0, weight = 1f))
-        // настройки — отдельным рядом: три кнопки в ряд на узком экране переносят подписи по слогам
         root.addView(more, Ui.lp(top = Ui.dp(this, 12)))
         // настройки — отдельным рядом: три кнопки в ряд на узком экране переносят подписи по слогам
         root.addView(Ui.button(this, tr("Настройки: папка данных, место приёмника, обновления")) {

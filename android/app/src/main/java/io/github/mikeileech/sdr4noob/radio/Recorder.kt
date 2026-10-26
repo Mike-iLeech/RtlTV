@@ -149,9 +149,12 @@ object Storage {
 
     /** Как папку показывать человеку: последняя часть пути дерева (например «primary:Radio» → «Radio»). */
     fun treeName(uri: Uri): String =
-        android.provider.DocumentsContract.getTreeDocumentId(uri).substringAfter(':').ifEmpty { tr("корень карты памяти") }
+        android.provider.DocumentsContract.getTreeDocumentId(uri).let { id ->
+            id.substringAfter(':').ifEmpty { if (id.startsWith("primary")) tr("корень памяти телефона") else tr("корень карты памяти") }
+        }
 
     /** Найти или создать вложенную папку [path] ("SDR4NOOB/Звук/IQ") в дереве; документ папки. */
+    @Synchronized       // два одновременных сохранения не должны создать «SDR4NOOB (1)»
     private fun safDir(context: Context, tree: Uri, path: String): Uri {
         val cr = context.contentResolver
         var doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
@@ -176,16 +179,35 @@ object Storage {
         val dir = safDir(context, tree, "$ROOT/$sub")
         val uri = android.provider.DocumentsContract.createDocument(context.contentResolver, dir, mime, name)
             ?: throw IllegalStateException(tr("не удалось создать файл в {folder}", "folder" to treeName(tree)))
-        return uri to "${treeName(tree)}/$ROOT/$sub/$name"
+        // провайдер мог переименовать при совпадении имени («name (1).png») — показать настоящее имя
+        val real = runCatching {
+            context.contentResolver.query(uri, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)
+                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }.getOrNull() ?: name
+        return uri to "${treeName(tree)}/$ROOT/$sub/$real"
     }
 
+    /** Своя папка недоступна (карту вынули, папку удалили): файл всё равно сохраняется — в стандартную. */
+    private fun fallbackNote(shown: String) = tr("{path} (своя папка недоступна — сохранено в стандартную)", "path" to shown)
+
     fun open(context: Context, sub: String, name: String, mime: String = "audio/x-wav"): Out {
+        var safFailed = false
         tree(context)?.let { t ->
-            val (uri, shown) = safCreate(context, t, sub, name, mime)
-            val pfd: ParcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "rw")
-                ?: throw IllegalStateException(tr("не удалось открыть файл в {folder}", "folder" to treeName(t)))
-            return Out(FileOutputStream(pfd.fileDescriptor).channel, shown) { runCatching { pfd.close() } }
+            try {
+                val (uri, shown) = safCreate(context, t, sub, name, mime)
+                val pfd: ParcelFileDescriptor? = try { context.contentResolver.openFileDescriptor(uri, "rw") } catch (e: Exception) { null }
+                if (pfd == null) {
+                    runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }   // пустой файл не оставлять
+                    throw IllegalStateException(tr("не удалось открыть файл в {folder}", "folder" to treeName(t)))
+                }
+                return Out(FileOutputStream(pfd.fileDescriptor).channel, shown) { runCatching { pfd.close() } }
+            } catch (e: Exception) { safFailed = true }
         }
+        val out = openStandard(context, sub, name, mime)
+        return if (safFailed) Out(out.channel, fallbackNote(out.shownPath), out.finish) else out
+    }
+
+    private fun openStandard(context: Context, sub: String, name: String, mime: String): Out {
         if (Build.VERSION.SDK_INT >= 29) {
             val cr = context.contentResolver
             val v = ContentValues().apply {
@@ -239,18 +261,26 @@ object Storage {
 
     /** Сохранить PNG в «Изображения/SDR4NOOB/[sub]»; возвращает путь для показа. */
     fun savePng(context: Context, sub: String, name: String, bmp: android.graphics.Bitmap): String {
+        var safFailed = false
         tree(context)?.let { t ->
-            val (uri, shown) = safCreate(context, t, sub, name, "image/png")
             try {
-                (context.contentResolver.openOutputStream(uri) ?: throw IllegalStateException(tr("файл не открылся"))).use {
-                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException(tr("PNG не записан"))
+                val (uri, shown) = safCreate(context, t, sub, name, "image/png")
+                try {
+                    (context.contentResolver.openOutputStream(uri) ?: throw IllegalStateException(tr("файл не открылся"))).use {
+                        if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException(tr("PNG не записан"))
+                    }
+                } catch (e: Exception) {
+                    runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
+                    throw e
                 }
-            } catch (e: Exception) {
-                runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
-                throw e
-            }
-            return shown
+                return shown
+            } catch (e: Exception) { safFailed = true }      // снимок пролёта не повторить — сохранить в стандартную
         }
+        val p = savePngStandard(context, sub, name, bmp)
+        return if (safFailed) fallbackNote(p) else p
+    }
+
+    private fun savePngStandard(context: Context, sub: String, name: String, bmp: android.graphics.Bitmap): String {
         if (Build.VERSION.SDK_INT >= 29) {
             val cr = context.contentResolver
             val v = ContentValues().apply {
@@ -283,7 +313,12 @@ object Storage {
 
     /** Последние (до 60) картинки этой программы в «Изображения/SDR4NOOB/[sub]»: (имя, адрес), новые первыми. */
     fun listPictures(context: Context, sub: String): List<Pair<String, Uri>> {
-        tree(context)?.let { t ->
+        tree(context)?.let { t -> runCatching { listSaf(context, t, sub) }.getOrNull()?.let { return it } }
+        return listStandard(context, sub)
+    }
+
+    private fun listSaf(context: Context, t: Uri, sub: String): List<Pair<String, Uri>> {
+        run {
             val dir = safDir(context, t, "$ROOT/$sub")
             val id = android.provider.DocumentsContract.getDocumentId(dir)
             val out = ArrayList<Triple<String, Uri, Long>>()
@@ -297,6 +332,9 @@ object Storage {
             }
             return out.sortedByDescending { it.third }.take(60).map { it.first to it.second }
         }
+    }
+
+    private fun listStandard(context: Context, sub: String): List<Pair<String, Uri>> {
         if (Build.VERSION.SDK_INT >= 29) {
             val out = ArrayList<Pair<String, Uri>>()
             val col = MediaStore.Images.Media.EXTERNAL_CONTENT_URI

@@ -200,7 +200,7 @@ class SstvPanel(private val act: Activity, private val prefs: android.content.Sh
             ui.post {
                 if (act.isDestroyed) return@post
                 if (items.isEmpty()) { toast(tr("Принятых картинок пока нет")); return@post }
-                AlertDialog.Builder(act).setTitle(tr("Картинки SSTV ({path})", "path" to Storage.picturesPath(Storage.SSTV)))
+                AlertDialog.Builder(act).setTitle(tr("Картинки SSTV ({path})", "path" to Storage.whereLabel(act, Storage.SSTV, true)))
                     .setItems(items.map { it.first }.toTypedArray()) { _, i -> open(items[i].second) }
                     .setNegativeButton(tr("Закрыть"), null).show()
             }
