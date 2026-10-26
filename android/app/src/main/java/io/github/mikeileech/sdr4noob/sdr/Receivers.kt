@@ -7,6 +7,7 @@ import android.hardware.usb.UsbManager
  * Выбор приёмника строкой (как source_id в rtltv/devices.py):
  *   "usb:/dev/bus/usb/001/002" — USB-приёмник по имени устройства Android;
  *   "tcp:192.168.1.10:1234"    — сетевой rtl_tcp;
+ *   "file:content://…"         — воспроизведение записи IQ;
  *   "demo"                     — тестовый сигнал.
  */
 object Receivers {
@@ -14,10 +15,12 @@ object Receivers {
 
     fun usb(deviceName: String) = "usb:$deviceName"
     fun tcp(hostPort: String) = "tcp:$hostPort"
+    fun file(uri: String) = "file:$uri"
 
     fun describe(context: Context, id: String): String = when {
         id == DEMO -> "Тестовый сигнал (без приёмника)"
         id.startsWith("tcp:") -> "Сетевой rtl_tcp ${id.removePrefix("tcp:")}"
+        id.startsWith("file:") -> "Файл IQ: " + (android.net.Uri.parse(id.removePrefix("file:")).lastPathSegment?.substringAfterLast('/') ?: "запись")
         id.startsWith("usb:") -> {
             val d = usbDevice(context, id)
             d?.let { UsbReceivers.model(it.vendorId, it.productId)?.name } ?: "USB-приёмник (не подключён)"
@@ -32,6 +35,9 @@ object Receivers {
     fun sourceFor(context: Context, id: String): SdrSource = when {
         id == DEMO -> DemoSource()
         id.startsWith("tcp:") -> RtlTcpSource.parse(id.removePrefix("tcp:")).let { (h, p) -> RtlTcpSource(h, p) }
+        id.startsWith("file:") -> try {
+            IqFileSource.open(context, android.net.Uri.parse(id.removePrefix("file:")))
+        } catch (e: SecurityException) { throw SdrException("Нет доступа к файлу — выберите его заново", e) }
         id.startsWith("usb:") -> {
             val d = usbDevice(context, id) ?: throw SdrException("Приёмник отключён от USB")
             val m = UsbReceivers.model(d.vendorId, d.productId)

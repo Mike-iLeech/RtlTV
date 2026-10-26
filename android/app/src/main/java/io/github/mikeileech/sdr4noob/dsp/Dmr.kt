@@ -30,7 +30,7 @@ data class DmrSlotStatus(val active: Boolean, val src: Int, val dst: Int, val gr
                          val cc: Int?, val last: String)
 
 data class DmrStatus(val locked: Boolean, val mode: String, val sync: Int, val audioSlot: Int?, val mbelib: Boolean,
-                     val slots: Map<Int, DmrSlotStatus>)
+                     val slots: Map<Int, DmrSlotStatus>, val offsetHz: Double = 0.0, val deviationHz: Double = 0.0)
 
 /**
  * Декодер DMR (ETSI TS 102 361, Tier I/II) — перенос DmrDecoder из rtltv/dmr.py. Вход — мгновенная частота
@@ -176,7 +176,8 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
 
     fun status(): DmrStatus = DmrStatus(confirmed, if (confirmed) FAM_NAMES[fam] ?: "" else "",
         if (confirmed) (100 * syncLevel).roundToInt() else 0, audioSlot, slots[1]!!.voice.ok,
-        slots.mapValues { (_, s) -> DmrSlotStatus(s.active, s.src, s.dst, s.group, s.encrypted, s.cc, s.last) })
+        slots.mapValues { (_, s) -> DmrSlotStatus(s.active, s.src, s.dst, s.group, s.encrypted, s.cc, s.last) },
+        if (confirmed) dc else 0.0, if (confirmed) scale else 0.0)
 
     private fun unlock() {
         locked = false; confirmed = false; next = 0.0; spb = SPB.toDouble(); dc = 0.0; scale = DEV3; fam = FAM_BS

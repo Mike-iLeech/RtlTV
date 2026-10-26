@@ -8,6 +8,7 @@ Android-версия SDR4NOOB для **любого USB радиоприёмни
 Что есть сейчас: выбор приёмника с запросом разрешения USB, спектр и водопад, радио WFM (стерео, RDS) /
 NFM / AM / USB / LSB / CW с АРУ и шумодавом, полоса канала, усиление, bias-T, ppm, полоса обзора 0,96–2,88 МГц,
 менеджер частот (CSV/XML SDR#, как на ПК), запись звука и IQ в WAV, приём в фоне (сервис переднего плана),
+DMR (журнал вызовов, голос через mbelib) и поиск DMR, воспроизведение записей IQ,
 руководство для начинающих (то же, что в Windows-версии, вместе с интерактивной схемой), проверка обновлений.
 
 ## Архитектура и почему она такая
@@ -39,10 +40,13 @@ android/app/src/main/
   cpp/                      нативная часть (CMake)
     usb_fd_shim.[ch]        открытие любого драйвера на libusb по файловому дескриптору
     sdr4noob_jni.c          JNI к librtlsdr: поток rtlsdr_read_async → кольцевой буфер → Kotlin
+    mbe_jni.c               JNI к mbelib (вокодер AMBE+2 для голоса DMR)
   java/io/github/mikeileech/sdr4noob/
-    sdr/                    приёмники: SdrSource, RtlUsbSource, RtlTcpSource, DemoSource, UsbReceivers, Receivers
+    sdr/                    приёмники: SdrSource, RtlUsbSource, RtlTcpSource, DemoSource, IqFile (записи IQ),
+                            UsbReceivers, Receivers
     dsp/                    Filters (КИХ-дециматоры, биквады, деэмфазис, смеситель), Spectrum (БПФ), RadioDemod,
-                            Rds (декодер и кодер RDS), Agc (АРУ как в SDR#, комплексный КИХ)
+                            Rds (декодер и кодер RDS), Agc (АРУ как в SDR#, комплексный КИХ),
+                            DmrCodes/Dmr (декодер и генератор DMR), DmrScan (поиск DMR), Ambe (mbelib)
     radio/                  RadioEngine (поток чтения → спектр → демодулятор → звук), AudioOut (AudioTrack),
                             RadioService (приём в фоне), FreqMan (менеджер частот), Recorder (WAV, «Загрузки»)
     ui/                     MainActivity (лаунчер), RadioActivity, SpectrumView, GuideActivity (WebView)
@@ -81,7 +85,7 @@ android/app/src/main/
 |---|---|---|---|
 | 1 | RDS, SSB/CW, АРУ, менеджер частот, запись IQ/звука | `rds.py`, `radio.py`, `freqman.py`, `iqfile.py` | готово (3.6.0) |
 | 1 | Приём в фоне при выключенном экране (foreground-сервис mediaPlayback) | — | готово (3.6.0) |
-| 1б | Поиск DMR и голос DMR (mbelib через NDK), воспроизведение IQ-файлов | `dmr.py`, `dmrscan.py`, `iqfile.py` | в работе |
+| 1б | Поиск DMR и голос DMR (mbelib через NDK), воспроизведение IQ-файлов | `dmr.py`, `dmrscan.py`, `iqfile.py` | готово (3.7.0) |
 | 2 | Драйверы HackRF (libhackrf через fd-прослойку) и Airspy (`airspy_open_fd`) | `devices.py` | в планах |
 | 2 | APRS (AFSK 1200, карта OSM) | `aprs.py`, `mapview.py` | в планах |
 | 3 | ADS-B на карте (нужна полоса 2 MS/s и демодулятор PPM) | `adsb.py`, `aircraft_info.py` | в планах |
@@ -99,7 +103,8 @@ cd android
 ./gradlew testDebugUnitTest assembleDebug     # APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Исходники libusb 1.0.30 и rtl-sdr-blog 1.4.0 сборка скачивает сама в `android/deps` и сверяет SHA-256.
+Исходники libusb 1.0.30, rtl-sdr-blog 1.4.0 и mbelib (коммит 9a04ed5) сборка скачивает сама в `android/deps`
+и сверяет SHA-256.
 
 **Релиз.** Тег `vX.Y.Z` запускает `.github/workflows/android.yml`: тесты, сборка, подпись ключом из секретов
 репозитория `ANDROID_KEYSTORE_B64` / `ANDROID_KEYSTORE_PASS` (алиас `sdr4noob`) и публикация

@@ -18,6 +18,9 @@ interface SdrSource {
     val sampleRates: IntArray get() = io.github.mikeileech.sdr4noob.dsp.RadioDemod.RADIO_RATES
     /** Есть ли питание антенны bias-T. */
     val hasBiasTee: Boolean get() = false
+    /** Запись (файл IQ): частоту дискретизации и центр задаёт источник, перестраивать их нельзя. */
+    val fixedRate: Int? get() = null
+    val fixedCenter: Long? get() = null
 
     fun open(sampleRate: Int, frequencyHz: Long)
     fun start()

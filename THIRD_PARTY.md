@@ -59,6 +59,7 @@ macOS из исходников в CI скриптом `tools/build_macos_libs.s
 | Компонент | Лицензия | Исходники | Примечание |
 |---|---|---|---|
 | **librtlsdr**, сборка rtl-sdr-blog 1.4.0 | GPL-2.0-or-later | https://github.com/rtlsdrblog/rtl-sdr-blog/archive/refs/tags/V1.4.0.tar.gz | Исходники не изменены; открытие по файловому дескриптору Android — прослойкой `android/app/src/main/cpp/usb_fd_shim.[ch]` (часть SDR4NOOB, GPL-3.0-or-later). |
+| **mbelib** (коммит 9a04ed5) | ISC | https://github.com/szechyjs/mbelib/archive/9a04ed5c78176a9965f3d43f7aa1b1f5330e771f.tar.gz | Вокодер AMBE+2 для голоса DMR, без изменений. См. оговорку о патентах AMBE выше — она относится и к Android-версии. |
 | **libusb** 1.0.30 | LGPL-2.1-or-later | https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2 | Без изменений. Вся программа открыта (GPL-3.0), поэтому требование LGPL о возможности пересборки с другой libusb выполняется: замените архив в `fetchNativeDeps` и соберите APK. |
 
 Остальное в APK — код SDR4NOOB (Kotlin, GPL-3.0-or-later) и руководство из `rtltv/guide`. Сторонних

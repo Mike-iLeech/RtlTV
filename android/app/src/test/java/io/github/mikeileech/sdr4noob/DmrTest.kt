@@ -107,6 +107,41 @@ class DmrTest {
         assertEquals(2, ev.count { it.type == "call_start" })
     }
 
+    /** Поиск DMR (перенос dmrscan.py): в окне тестового эфира у 446 МГц находится DMR на 446,1 МГц, CC 1. */
+    @Test fun scannerFindsDmr() {
+        val fs = 960_000
+        val sc = io.github.mikeileech.sdr4noob.dsp.DmrScanner(fs, 446.0e6, 446.2e6)
+        assertEquals(1, sc.centers.size)
+        val center = sc.centers[0]
+        val src = DemoSource()
+        src.open(fs, center)
+        src.start()
+        val t0 = DemoSource::class.java.getDeclaredField("t0").apply { isAccessible = true }
+        val re = FloatArray(sc.nsamp); val im = FloatArray(sc.nsamp)
+        val block = fs / 20
+        val br = FloatArray(block); val bi = FloatArray(block)
+        var fill = 0
+        t0.setLong(src, t0.getLong(src) - 600_000_000L)      // начать с 0,6 с сигнала — там уже идёт вызов
+        while (fill < sc.nsamp) {
+            t0.setLong(src, t0.getLong(src) - 50_000_000L)
+            val k = src.read(br, bi, block)
+            val c = minOf(k, sc.nsamp - fill)
+            System.arraycopy(br, 0, re, fill, c); System.arraycopy(bi, 0, im, fill, c)
+            fill += c
+        }
+        val found = sc.process(center, re, im, fill, 0)
+        val dmr = sc.snapshot().filter { it.kind == "dmr" }
+        assertEquals(found.joinToString(), 1, dmr.size)
+        assertEquals(446.1e6, dmr[0].freq, 1.0)
+        assertEquals(listOf(1), dmr[0].cc)
+    }
+
+    @Test fun scanPlanLikeDesktop() {
+        // эталон: rtltv.dmrscan.plan_windows(430e6, 440e6, 2_400_000)
+        assertEquals(listOf(430834375L, 432503125L, 434171875L, 435834375L, 437503125L, 439171875L),
+            io.github.mikeileech.sdr4noob.dsp.DmrScanner.planWindows(430e6, 440e6, 2_400_000))
+    }
+
     /** Полная цепочка: тестовый эфир 446,1 МГц → RadioDemod (DMR) → события. */
     @Test fun demoStationThroughRadioChain() {
         val fs = 960_000

@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.radio
 
+import io.github.mikeileech.sdr4noob.dsp.DmrScanner
 import io.github.mikeileech.sdr4noob.dsp.Modulation
 import io.github.mikeileech.sdr4noob.dsp.RadioDemod
 import io.github.mikeileech.sdr4noob.dsp.SpectrumAnalyzer
@@ -10,6 +11,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * Движок радиорежима: один поток читает приёмник, считает спектр (для водопада) и демодулирует
@@ -108,6 +110,7 @@ class RadioEngine(
 
     /** Сдвинуть центр приёмника (перетаскивание спектра), VFO остаётся на станции, если она в полосе. */
     fun setCenter(hz: Long) = post {
+        if (source.fixedCenter != null) return@post
         if (hz != centerHz) stopIqOnRetune()
         centerHz = hz
         source.setFrequency(hz)
@@ -139,6 +142,54 @@ class RadioEngine(
 
     /** RDS текущей станции (поля читаются из потока интерфейса — только для показа). */
     val rds get() = demod.rds
+    // ---------- поиск DMR: приёмник обходит окна плана, звук молчит ----------
+    @Volatile var scanner: DmrScanner? = null; private set
+    /** Что найдено в последних окнах (для строки состояния). */
+    val scanLog = ConcurrentLinkedQueue<String>()
+    @Volatile var scanWindow = 0; private set
+    private var scanBufRe = FloatArray(0); private var scanBufIm = FloatArray(0)
+    private var scanFill = 0
+    private var scanSkip = 0
+    private var lastScanLine = ""
+
+    /** Начать поиск: частота дискретизации сканера должна совпадать с текущей. */
+    fun startScan(s: DmrScanner) {
+        if (source.fixedCenter != null) return          // в записи искать нечего: центр не перестраивается
+        scanner = s
+        post {
+            scanWindow = 0; scanFill = 0
+            scanBufRe = FloatArray(s.nsamp); scanBufIm = FloatArray(s.nsamp)
+            scanTune(s)
+        }
+    }
+
+    fun stopScan() {
+        scanner = null
+        post { stopIqOnRetune(); centerHz = vfoHz + offsetFor(sampleRate); source.setFrequency(centerHz); demod.offsetHz = (vfoHz - centerHz).toDouble() }
+    }
+
+    private fun scanTune(s: DmrScanner) {
+        stopIqOnRetune()
+        centerHz = s.centers[scanWindow]
+        source.setFrequency(centerHz)
+        scanSkip = 2            // первые блоки после перестройки — переходный процесс тюнера
+    }
+
+    /** Поток приёма: накопить окно и отдать сканеру; затем следующее окно плана. */
+    private fun scanStep(s: DmrScanner, re: FloatArray, im: FloatArray, n: Int) {
+        if (scanSkip > 0) { scanSkip--; return }
+        val k = min(n, s.nsamp - scanFill)
+        System.arraycopy(re, 0, scanBufRe, scanFill, k); System.arraycopy(im, 0, scanBufIm, scanFill, k)
+        scanFill += k
+        if (scanFill < s.nsamp) return
+        val found = s.process(centerHz, scanBufRe, scanBufIm, scanFill, scanWindow)
+        for (f in found) if (f != lastScanLine) { scanLog.add(f); lastScanLine = f }   // без повторов подряд
+        while (scanLog.size > 50) scanLog.poll()
+        scanFill = 0
+        scanWindow = (scanWindow + 1) % s.centers.size
+        scanTune(s)
+    }
+
     /** Декодер DMR (в режиме DMR) и очередь его событий для журнала. */
     val dmr get() = demod.dmr
     val dmrEvents get() = demod.dmrEvents
@@ -167,6 +218,13 @@ class RadioEngine(
     }
 
     private fun tuneNow(hz: Long) {
+        if (source.fixedCenter != null) {
+            // запись: центр не двигается, VFO — только внутри записанной полосы
+            val half = sampleRate / 2 - mode.defaultBw / 2
+            vfoHz = hz.coerceIn(centerHz - half, centerHz + half)
+            demod.offsetHz = (vfoHz - centerHz).toDouble()
+            return
+        }
         val off = hz - centerHz
         if (abs(off) > sampleRate / 2 - mode.defaultBw / 2 - 20_000 || abs(off) < 15_000) {
             stopIqOnRetune()
@@ -177,6 +235,7 @@ class RadioEngine(
     }
 
     fun setSampleRate(rate: Int) = post {
+        if (source.fixedRate != null) return@post
         sampleRate = rate
         source.setSampleRate(rate)
         demod = RadioDemod(rate, mode).also {
@@ -210,6 +269,14 @@ class RadioEngine(
         val analyzer = SpectrumAnalyzer(spectrumSize, 4)
         val spec = FloatArray(spectrumSize)
         try {
+            source.fixedRate?.let { r ->
+                if (r != sampleRate) { sampleRate = r; demod = RadioDemod(r, mode).also { it.stereo = stereoWanted; it.squelchDb = squelch; it.setBandwidth(bandwidth); it.agc.on = agcOn } }
+            }
+            source.fixedCenter?.let { c ->
+                centerHz = c
+                val half = sampleRate / 2 - mode.defaultBw / 2
+                if (abs(vfoHz - c) > half) vfoHz = c - offsetFor(sampleRate)
+            }
             source.open(sampleRate, centerHz)
             if (!running) return   // закрыли, пока открывался приёмник: finally закроет его
             demod.offsetHz = (vfoHz - centerHz).toDouble()
@@ -246,6 +313,8 @@ class RadioEngine(
                     }
                     listener?.onSpectrum()
                 }
+                val sc = scanner
+                if (sc != null && sc.fs == sampleRate) { scanStep(sc, re, im, n); dropped = source.droppedSamples; continue }
                 iqRec.get()?.writeIq(re, im, n)      // до демодулятора: он переносит частоту на месте
                 val frames = demod.process(re, im, n, aud)
                 audio.write(aud, frames)
