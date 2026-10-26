@@ -112,14 +112,9 @@ class DemoSource : SdrSource {
 
     private fun render(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int) {
         val t = produced.toDouble() / fs
-<<<<<<< HEAD
         // станции без нот (телеграф, DMR) — до выбора ноты: у них пустой список
         if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         if (st.kind == 'D') { renderDmr(k, st, off, re, im, n, t); return }
-=======
-        // станции без нот (телеграф) — до выбора ноты: у них пустой список
-        if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
->>>>>>> feat/android-q1
         val step = (t / 0.4).toInt()
         val fl = st.notesL[step % st.notesL.size].toDouble()
         val fr = if (st.notesR.isEmpty()) fl else st.notesR[step % st.notesR.size].toDouble()
