@@ -53,6 +53,7 @@ class RadioActivity : Activity() {
         const val APP_APRS = "aprs"
         const val APP_ADSB = "adsb"
         const val APP_TV = "tv"
+        const val APP_SAT = "sat"
         /** Режимы, где приёмник ведёт декодер на сыром IQ: звука и ручной настройки нет. */
         private val IQ_APPS = setOf(APP_ADSB, APP_TV)
         private const val REQ_SSTV_WAV = 14
@@ -99,6 +100,8 @@ class RadioActivity : Activity() {
     private var aprs: AprsPanel? = null
     private var adsb: AdsbPanel? = null
     private var tvPanel: TvPanel? = null
+    private var satPanel: SatPanel? = null
+    private var satTick = 0
     private var adsbTick = 0
 
     private val ticker = object : Runnable {
@@ -111,16 +114,16 @@ class RadioActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        app = intent.getStringExtra(EXTRA_APP)?.takeIf { it in listOf(APP_SSTV, APP_APRS, APP_ADSB, APP_TV) }
+        app = intent.getStringExtra(EXTRA_APP)?.takeIf { it in listOf(APP_SSTV, APP_APRS, APP_ADSB, APP_TV, APP_SAT) }
         prefs = getSharedPreferences(if (app == null) "sdr4noob" else "sdr4noob_$app", MODE_PRIVATE)
         sourceId = intent.getStringExtra(EXTRA_SOURCE) ?: Receivers.DEMO
-        val defMode = when (app) { APP_SSTV -> "USB"; APP_APRS, APP_ADSB -> "NFM"; else -> "WFM" }
+        val defMode = when (app) { APP_SSTV -> "USB"; APP_APRS, APP_ADSB, APP_SAT -> "NFM"; else -> "WFM" }
         mode = runCatching { Modulation.valueOf(prefs.getString("mode", defMode)!!) }.getOrDefault(Modulation.WFM)
         if (app == APP_ADSB || app == APP_APRS || app == APP_TV) mode = Modulation.NFM
         // SSTV в тестовом эфире передаётся на 145,800 МГц ЧМ (как МКС): сразу туда, пока пользователь не выбрал сам
         if (app == APP_SSTV && sourceId == Receivers.DEMO && !prefs.contains("mode")) mode = Modulation.NFM
         title = when (app) {
-            APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> "Самолёты ADS-B · "; APP_TV -> "Телевидение · "; else -> ""
+            APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> "Самолёты ADS-B · "; APP_TV -> "Телевидение · "; APP_SAT -> "Спутники · "; else -> ""
         } + Receivers.describe(this, sourceId)
         freqFile = File(filesDir, "freqman.json")
         freqs = FreqMan.load(freqFile)
@@ -154,7 +157,7 @@ class RadioActivity : Activity() {
     override fun onDestroy() {
         val e = engine
         val owner = e != null && !e.preempted
-        sstv?.stop(); aprs?.stop(); adsb?.stop(); tvPanel?.stop()
+        sstv?.stop(); aprs?.stop(); adsb?.stop(); tvPanel?.stop(); satPanel?.stop()
         e?.let { it.stopAudioRec(); it.stopIqRec(); it.stop() }   // stop снимает listener
         engine = null
         // сервис общий: вытесненное окно не трогает его — им пользуется новое окно радио
@@ -223,6 +226,9 @@ class RadioActivity : Activity() {
             APP_APRS -> AprsPanel(this, common, ::toast).also { aprs = it }.view
             APP_ADSB -> AdsbPanel(this, common, ::toast).also { adsb = it }.view
             APP_TV -> TvPanel(this, prefs, ::toast).also { tvPanel = it }.view
+            APP_SAT -> SatPanel(this, prefs, common, ::toast) { f, m, bw -> setMode(m, f, bw) }.also {
+                satPanel = it
+            }.view
             else -> null
         }
         panel?.let { root.addView(it, Ui.lp(h = 0, weight = if (app in IQ_APPS) 3f else 2f, top = Ui.dp(this, 4))) }
@@ -299,7 +305,8 @@ class RadioActivity : Activity() {
         // ТВ: обход мультиплекса кусками ±1 МГц — полоса не уже 2 МГц (Tv.RATES)
         val rate = if (app == APP_ADSB || app == APP_TV) 2_400_000
             else prefs.getInt("rate", 1_200_000).takeIf { it in RadioDemod.RADIO_RATES } ?: 1_200_000
-        val freq = if (app == APP_ADSB) 1_090_000_000L else if (app == APP_TV) tvPanel!!.startFreq() else prefs.getLong("freq_${mode.name}", defaultFreq(mode))
+        val freq = if (app == APP_ADSB) 1_090_000_000L else if (app == APP_TV) tvPanel!!.startFreq()
+            else if (app == APP_SAT && !prefs.contains("freq_${mode.name}")) satPanel!!.startFreq() else prefs.getLong("freq_${mode.name}", defaultFreq(mode))
         val e = RadioEngine(src, rate, freq, mode)
         e.setBandwidth(prefs.getInt("bw_${mode.name}", mode.defaultBw))
         e.setAgc(prefs.getBoolean("agc", true))
@@ -321,7 +328,7 @@ class RadioActivity : Activity() {
         applyModeUi()
         spectrum.onTuned = { f -> saveFreq(f); updateFreq() }
         updateFreq()
-        sstv?.start(e); aprs?.start(e); adsb?.start(e); tvPanel?.start(e)
+        sstv?.start(e); aprs?.start(e); adsb?.start(e); tvPanel?.start(e); satPanel?.start(e)
         e.start()
         if (app == APP_ADSB) e.setCenter(1_090_000_000L)     // кадры Mode S — в центре полосы, без смещения VFO
     }
@@ -472,6 +479,7 @@ class RadioActivity : Activity() {
         val e = engine ?: return
         if (!e.running) return
         if (adsb != null && ++adsbTick % 3 == 0) adsb?.refresh()
+        if (satPanel != null && ++satTick % 5 == 0) satPanel?.refresh()          // раз в секунду: положения и доплер
         val st = when {
             mode != Modulation.WFM -> ""
             e.stereoLock -> " · СТЕРЕО"
@@ -751,7 +759,7 @@ class RadioActivity : Activity() {
                     }.setNegativeButton("Отмена", null).show()
             }
             3 -> startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE,
-                when (app) { APP_SSTV -> "guide/mode-sstv.html"; APP_APRS -> "guide/mode-aprs.html"; APP_ADSB -> "guide/mode-adsb.html"; APP_TV -> "guide/mode-tv.html"; else -> "guide/mode-radio.html" }))
+                when (app) { APP_SSTV -> "guide/mode-sstv.html"; APP_APRS -> "guide/mode-aprs.html"; APP_ADSB -> "guide/mode-adsb.html"; APP_TV -> "guide/mode-tv.html"; APP_SAT -> "guide/mode-sat.html"; else -> "guide/mode-radio.html" }))
             4 -> {
                 val e = engine ?: return true
                 val steps = listOf(0.25, 0.5, 0.75, 1.0, 1.5, 2.0).map { (mode.defaultBw * it).toInt() }

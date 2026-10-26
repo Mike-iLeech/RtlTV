@@ -126,13 +126,7 @@ class MainActivity : Activity() {
         modes.addView(Ui.button(this, "✈  Самолёты ADS-B на карте (1090 МГц)") { openRadio(RadioActivity.APP_ADSB) })
         modes.addView(Ui.button(this, "📍  APRS — метки любителей на карте (144,800 МГц)") { openRadio(RadioActivity.APP_APRS) })
         modes.addView(Ui.button(this, "📺  Телевидение: измеритель DVB-T/T2, аналоговая картинка, поиск каналов") { openRadio(RadioActivity.APP_TV) })
-        for ((name, plan) in listOf(
-            "🛰  Спутники: пролёты, «Метеор» LRPT" to "в планах",
-        )) {
-            val b = Ui.button(this, "$name — $plan") {}
-            b.isEnabled = false
-            modes.addView(b)
-        }
+        modes.addView(Ui.button(this, "🛰  Спутники: пролёты, приём с доплером, «Метеор» LRPT") { openRadio(RadioActivity.APP_SAT) })
         modes.addView(Ui.text(this, "Остальные режимы есть в версии для Windows и переносятся на Android по очереди.",
             12f, Ui.DIM), Ui.lp(top = Ui.dp(this, 4)))
         root.addView(modes, Ui.lp(top = Ui.dp(this, 12)))
