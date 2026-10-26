@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.0</small></a>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.1</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -49,9 +49,9 @@
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Что</th><th>Требование</th></tr>
 <tr><td>Система</td><td>Windows 10 или 11, 64 бит.</td></tr>
-<tr><td>Приёмник</td><td>RTL-SDR Blog V4 или V3, другие донглы на RTL2832U. Дополнительно: HackRF One, Airspy R2/Mini
-(с их DLL), любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
-<tr><td>Драйвер</td><td>WinUSB на интерфейсе донгла (Zadig, один раз).</td></tr>
+<tr><td>Приёмник</td><td>USB радиоприёмник (SDR): RTL-SDR Blog V4 или V3 и другие на RTL2832U (встроенный драйвер), HackRF One, Airspy R2/Mini
+(с их DLL); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
+<tr><td>Драйвер</td><td>WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
 <tr><td>Антенна</td><td>Комплектный диполь для начала; для спутников и самолётов — см.
 <a href="guide/antennas.html">«Антенны и кабели»</a>.</td></tr>
 <tr><td>Интернет</td><td>Не обязателен. Нужен для подложки карт, орбит (TLE), справочника бортов и обновлений.</td></tr>
@@ -80,8 +80,8 @@ SmartScreen может показать «Система Windows защитил�
 случае». Скачивайте SDR4NOOB только со страницы выпусков на GitHub.</div>
 
 <h2 id="zadig">2. Драйвер WinUSB (Zadig)<a class="anchor" href="#zadig" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Windows считает донгл ТВ-тюнером и ставит драйвер Realtek для DVB-T, с которым SDR-программы не работают.
-Один раз замените его на WinUSB. Если донгл уже работал в SDR#, SDR++ или SatDump — этот шаг не нужен.</p>
+<p>Windows считает RTL-SDR ТВ-тюнером и ставит драйвер Realtek для DVB-T, с которым SDR-программы не работают.
+Один раз замените его на WinUSB. Если приёмник уже работал в SDR#, SDR++ или SatDump — этот шаг не нужен.</p>
 <ol>
 <li>Скачайте Zadig с официального сайта <a href="https://zadig.akeo.ie/">zadig.akeo.ie</a> и запустите.</li>
 <li><b>Options → List All Devices.</b> Выберите «Bulk-In, Interface (Interface 0)» или «RTL2838UHIDIR».
@@ -89,7 +89,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 <li>Справа выберите <b>WinUSB</b> и нажмите <b>Replace Driver</b> (или Install Driver).</li>
 </ol>
 <div class="callout warn">Не выбирайте в Zadig другие устройства — клавиатура, мышь или звуковая карта перестанут
-работать. В другом USB-порту Windows может считать донгл новым устройством — тогда замену нужно повторить.</div>
+работать. В другом USB-порту Windows может считать приёмник новым устройством — тогда замену нужно повторить.</div>
 <p>Проверить результат можно в SDR4NOOB: кнопка <b>«Устройства…»</b> на экране выбора режима показывает найденные
 приёмники, их VID:PID и драйвер Windows («Готово: работает со встроенным драйвером SDR4NOOB»).
 Подробнее — <a href="guide/sdr.html#driver">«Драйверы: WinUSB и Zadig»</a>.</p>
@@ -98,7 +98,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 <ul>
 <li>Появится экран выбора режима: ТВ, Радио, SSTV, Спутники, Самолёты (ADS-B), APRS. Вернуться к нему —
 меню «Режим → Выбрать другой режим…» (Ctrl+M).</li>
-<li>Галочка <b>«Без антенны: тестовый эфир вместо донгла»</b> включает синтетические сигналы для всех режимов.</li>
+<li>Галочка <b>«Без антенны: тестовый эфир вместо приёмника»</b> включает синтетические сигналы для всех режимов.</li>
 <li>Кнопка <b>«Руководство»</b> открывает встроенную справку (то же, что на этом сайте), <b>F1</b> в окне режима —
 страницу этого режима.</li>
 <li>Дальше — <a href="guide/quickstart.html">«Быстрый старт»</a>.</li>
@@ -141,7 +141,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 </ul>
 
 <h2 id="linux">Linux<a class="anchor" href="#linux" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Для Linux есть готовые сборки: <b>x86_64</b> (Ubuntu 22.04 и новее, Debian 12+, Fedora 36+ — нужна glibc 2.34+)
+<p>Для Linux есть готовые сборки: <b>x86_64</b> (Ubuntu 22.04 и новее, Debian 12+, Fedora 36+ — нужна glibc 2.35+)
 и <b>aarch64</b> (Raspberry Pi 5 и другие; glibc 2.39+: Ubuntu 24.04+, Debian 13+). Скачайте со
 <a href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">страницы последнего выпуска</a> один из вариантов:</p>
 <ul>
@@ -187,7 +187,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.3.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.3.1 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>

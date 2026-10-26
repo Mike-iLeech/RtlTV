@@ -9,12 +9,14 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
 
 from . import devices, osplat
 
-INTRO_WIN = ("Встроенный драйвер SDR4NOOB работает с RTL-SDR. Для других приёмников загрузите DLL их драйвера "
-         "(HackRF: hackrf.dll; Airspy R2/Mini: airspy.dll; обоим нужны libusb-1.0.dll и pthreadVC2.dll) — "
-         "файлы копируются в папку драйверов SDR4NOOB. Приёмник на другом компьютере подключается как "
-         "сетевой rtl_tcp. Драйвер Windows (WinUSB) ставится программой Zadig: "
-         f'<a href="{devices.ZADIG_URL}">{devices.ZADIG_URL}</a> — SDR4NOOB его не меняет.')
-INTRO_UNIX = ("Встроенный драйвер SDR4NOOB работает с приёмниками на RTL2832U (RTL-SDR и совместимые). "
+INTRO_WIN = ("SDR4NOOB работает с USB радиоприёмниками (SDR). Для RTL-SDR драйвер встроен; для других приёмников "
+             "загрузите DLL их драйвера "
+             "(HackRF: hackrf.dll; Airspy R2/Mini: airspy.dll; обоим нужны libusb-1.0.dll и pthreadVC2.dll) — "
+             "файлы копируются в папку драйверов SDR4NOOB. Приёмник на другом компьютере подключается как "
+             "сетевой rtl_tcp. Драйвер Windows (WinUSB) ставится программой Zadig: "
+             f'<a href="{devices.ZADIG_URL}">{devices.ZADIG_URL}</a> — SDR4NOOB его не меняет.')
+INTRO_UNIX = ("SDR4NOOB работает с USB радиоприёмниками (SDR). Для приёмников на RTL2832U (RTL-SDR и совместимые) "
+              "драйвер встроен. "
               "Для HackRF и Airspy R2/Mini SDR4NOOB берёт системную библиотеку "
               + ("(brew install hackrf airspy)" if osplat.IS_MAC else "(пакеты libhackrf0, libairspy0)")
               + f" или файл {osplat.LIB_EXT}, загруженный сюда. Приёмник на другом компьютере подключается "

@@ -33,9 +33,10 @@ DEFAULTS = {
     "volume": 70, "source": "rtl:0", "field_swap": False, "autostart": True,
 }
 
-DIGITAL_NOTE = ("Картинку DVB-T2 донгл не покажет: мультиплекс занимает 7,8 МГц, а RTL-SDR "
-                "отдаёт не больше ~3 МГц полосы. Поэтому здесь работает измеритель: канал собирается из "
-                "нескольких перестроек, считаются уровень и C/N, по циклическому префиксу определяются "
+DIGITAL_NOTE = ("Картинку DVB-T2 режим ТВ не показывает: декодера DVB-T2 в программе нет, а полоса режима — "
+                "до 3,2 МГц (это максимум RTL-SDR) при ширине мультиплекса 7,8 МГц. "
+                "Поэтому здесь работает измеритель: канал "
+                "собирается из нескольких перестроек, считаются уровень и C/N, по циклическому префиксу определяются "
                 "режим FFT и защитный интервал. Удобно наводить антенну: C/N выше 15–18 dB хватит телевизору.")
 
 
@@ -206,8 +207,9 @@ class MainWindow(ModeWindow):
         lay.addWidget(self.rb_analog)
         lay.addWidget(self.rb_digital)
         self.cb_sound = QCheckBox("Звук вместо картинки")
-        self.cb_sound.setToolTip("Несущая звука отстоит на 6,5 МГц от изображения — в полосу RTL-SDR "
-                                 "(до 3,2 МГц) одновременно они не помещаются, поэтому либо картинка, либо звук.")
+        self.cb_sound.setToolTip("Несущая звука отстоит на 6,5 МГц от изображения — в полосу режима ТВ "
+                                 "(до 3,2 МГц, как у RTL-SDR) одновременно они не помещаются, "
+                                 "поэтому либо картинка, либо звук.")
         self.cb_sound.setChecked(self.s["sound"])
         self.cb_sound.toggled.connect(lambda _on: self._mode_changed(False))
         lay.addWidget(self.cb_sound)
@@ -424,7 +426,7 @@ class MainWindow(ModeWindow):
     def start(self):
         src = self.src_combo.currentData()
         if src == "none":
-            self._on_error("Нет устройства. Выберите тестовый генератор или подключите донгл.")
+            self._on_error("Нет устройства. Выберите тестовый генератор или подключите приёмник.")
             self.btn_start.setChecked(False)
             return
         e = self.engine
@@ -550,7 +552,7 @@ class MainWindow(ModeWindow):
                                 else "Несущая изображения"))
         self.btn_scan.setText("Искать цифровые" if digital else "Искать аналоговые")
         if not digital and self.cb_sound.isChecked():
-            self.video.clear("Режим звука\n\nКартинка и звук не помещаются\nв полосу RTL-SDR одновременно")
+            self.video.clear("Режим звука\n\nКартинка и звук не помещаются\nв полосу режима ТВ одновременно")
 
     def _mode_changed(self, switched):
         mode = self._mode()
