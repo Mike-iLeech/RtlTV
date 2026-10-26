@@ -74,8 +74,8 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
     val centers = planWindows(this.lo, this.hi, fs)
     /** Длина окна: степень двойки около dwellSec (для БПФ мощности). */
     val nsamp: Int = Integer.highestOneBit((dwellSec * fs).toInt().coerceAtLeast(8192))
-    val entries = LinkedHashMap<Long, Entry>()
-    var passes = 0; private set
+    private val entries = LinkedHashMap<Long, Entry>()
+    @Volatile var passes = 0; private set
     var windowsDone = 0; private set
 
     private fun entry(f: Double): Entry {
@@ -84,7 +84,11 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
     }
 
     /** Одно окно плана (центр [freq], [n] отсчётов IQ). Возвращает описания найденного в этом окне. */
-    fun process(freq: Long, re: FloatArray, im: FloatArray, n: Int, index: Int): List<String> {
+    fun process(freq: Long, re: FloatArray, im: FloatArray, n: Int, index: Int): List<String> = synchronized(this) {
+        processLocked(freq, re, im, n, index)
+    }
+
+    private fun processLocked(freq: Long, re: FloatArray, im: FloatArray, n: Int, index: Int): List<String> {
         if (index == 0) passes++
         windowsDone++
         if (n < 4096) return emptyList()
@@ -239,8 +243,17 @@ class DmrScanner(val fs: Int, lo0: Double, hi0: Double, dwellSec: Double = 0.35,
         while (e.ids.size > 5) e.ids.removeAt(e.ids.size - 1)
     }
 
-    /** Найденное (с хотя бы одним попаданием), по частоте. */
-    fun snapshot(): List<Entry> = entries.values.filter { it.hits > 0 }.sortedBy { it.freq }
+    /** Готовая строка найденного — копия для интерфейса (сканер меняет свои записи в потоке приёма). */
+    class Found(val freq: Double, val kind: String, val text: String, val ids: List<String>, val cc: List<Int>, val dmrHits: Int)
+
+    /** Найденное (с хотя бы одним попаданием), по частоте; безопасно вызывать из любого потока. */
+    fun snapshot(): List<Found> = synchronized(this) {
+        entries.values.filter { it.hits > 0 }.sortedBy { it.freq }
+            .map { Found(it.freq, it.kind, it.describe(), it.ids.toList(), it.cc.toList(), it.dmrHits) }
+    }
+
+    /** Сколько найдено каналов DMR (для строки состояния). */
+    fun dmrFound(): Int = synchronized(this) { entries.values.count { it.kind == "dmr" && it.dmrHits > 0 } }
 
     private fun fmtMhz(f: Double) = String.format(java.util.Locale.ROOT, "%.5f МГц", f / 1e6).replace('.', ',')
 }

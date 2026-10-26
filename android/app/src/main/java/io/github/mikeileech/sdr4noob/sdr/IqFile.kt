@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import io.github.mikeileech.sdr4noob.dsp.RadioDemod
+import io.github.mikeileech.sdr4noob.dsp.StreamResampler
 import java.io.DataInputStream
 import java.io.EOFException
 import java.io.InputStream
@@ -75,7 +76,7 @@ class LinearResampler(private val step: Double) {
 }
 
 /** Чтение файла IQ блоками по кругу. [open] открывает поток с начала файла. */
-class IqFileReader(private val open: () -> InputStream, name: String, private val sizeBytes: Long) {
+class IqFileReader(private val open: () -> InputStream, val name: String, private val sizeBytes: Long) {
     val kind: String
     val fs: Int
     val center: Double?
@@ -158,10 +159,20 @@ class IqFileReader(private val open: () -> InputStream, name: String, private va
         input?.close()
         val s = DataInputStream(open().buffered(1 shl 16))
         var skip = offset
-        while (skip > 0) { val k = s.skip(skip); if (k <= 0) break; skip -= k }
+        // skip() у потоков ContentResolver может вернуть 0 — тогда дочитываем по байту, иначе данные сдвинутся
+        while (skip > 0) {
+            val k = s.skip(skip)
+            if (k > 0) skip -= k
+            else if (s.read() < 0) throw SdrException("Файл IQ обрывается в заголовке")
+            else skip--
+        }
         input = s
         pos = 0
+        fresh = true
     }
+
+    /** Поток только что открыт заново и из него ещё ничего не прочитано (EOF сразу — файл короче заявленного). */
+    private var fresh = false
 
     private var raw = ByteArray(0)
 
@@ -173,7 +184,11 @@ class IqFileReader(private val open: () -> InputStream, name: String, private va
             val take = minOf((n - got).toLong(), total - pos).toInt()
             val bytes = take * width
             if (raw.size < bytes) raw = ByteArray(bytes)
-            try { input!!.readFully(raw, 0, bytes) } catch (_: EOFException) { pos = total; continue }
+            try { input!!.readFully(raw, 0, bytes) } catch (_: EOFException) {
+                if (fresh) throw SdrException("Файл IQ короче, чем указано в его заголовке: воспроизводить нечего")
+                pos = total; continue
+            }
+            fresh = false
             val b = ByteBuffer.wrap(raw, 0, bytes).order(ByteOrder.LITTLE_ENDIAN)
             for (i in 0 until take) {
                 val j = got + i
@@ -195,51 +210,88 @@ class IqFileReader(private val open: () -> InputStream, name: String, private va
 /**
  * Источник «файл IQ»: блоки в реальном темпе по кругу. Частоту и полосу задаёт файл (перестройка центра
  * невозможна — VFO ходит только внутри записанной полосы). Если частота дискретизации не подходит радиорежиму,
- * поток пересчитывается линейной интерполяцией вверх до ближайшей подходящей (как target_rate на ПК).
+ * поток пересчитывается в ближайшую подходящую (target_rate) тем же фильтром StreamResampler, что на ПК.
+ * Файл открывается и разбирается в потоке радио (при первом обращении движка), а не в потоке интерфейса:
+ * у облачных хранилищ открытие может означать скачивание.
  */
-class IqFileSource(private val reader: IqFileReader, private val name: String) : SdrSource {
+class IqFileSource(shownName: String, private val makeReader: () -> IqFileReader) : SdrSource {
     companion object {
-        fun open(context: Context, uri: Uri): IqFileSource {
-            val cr = context.contentResolver
-            var name = uri.lastPathSegment ?: "file"
-            var size = -1L
-            cr.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
-                if (c.moveToFirst()) {
-                    c.getString(0)?.let { name = it }
-                    if (!c.isNull(1)) size = c.getLong(1)
+        fun forUri(context: Context, uri: Uri): IqFileSource {
+            val cr = context.applicationContext.contentResolver
+            val shown = uri.lastPathSegment?.substringAfterLast('/') ?: "file"
+            return IqFileSource(shown) {
+                var name = shown
+                var size = -1L
+                cr.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) {
+                        c.getString(0)?.let { name = it }
+                        if (!c.isNull(1)) size = c.getLong(1)
+                    }
                 }
+                if (size <= 0) size = cr.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1
+                if (size <= 0) throw SdrException("Не удалось узнать размер файла")
+                IqFileReader({ cr.openInputStream(uri) ?: throw SdrException("Файл не открывается") }, name, size)
             }
-            if (size <= 0) size = cr.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1
-            if (size <= 0) throw SdrException("Не удалось узнать размер файла")
-            return try {
-                IqFileSource(IqFileReader({ cr.openInputStream(uri) ?: throw SdrException("Файл не открывается") }, name, size), name)
-            } catch (e: IqFormatException) { throw SdrException(e.message ?: "Неверный файл IQ", e) }
+        }
+    }
+
+    @Volatile private var name = shownName
+    private val reader: IqFileReader by lazy {
+        try {
+            makeReader().also { name = it.name }
+        } catch (e: SdrException) { throw e
+        } catch (e: IqFormatException) { throw SdrException(e.message ?: "Неверный файл IQ", e)
+        } catch (e: SecurityException) { throw SdrException("Нет доступа к файлу — выберите его заново", e)
+        } catch (e: java.io.FileNotFoundException) { throw SdrException("Файл IQ не найден (удалён или перемещён?) — выберите его заново", e)
+        } catch (e: java.io.IOException) { throw SdrException("Файл IQ не читается: ${e.message}", e)
+        } catch (e: IllegalArgumentException) { throw SdrException("Файл IQ не открывается: ${e.message}", e)
         }
     }
 
     override val label get() = "Файл IQ: $name"
     override val gains = IntArray(0)
-    val fileRate = reader.fs
-    override val fixedRate: Int = IqName.targetRate(fileRate)
-    override val fixedCenter: Long = (reader.center ?: 100e6).toLong()
+    override val retunable get() = false
+    val fileRate get() = reader.fs
+    override val fixedRate: Int get() = IqName.targetRate(reader.fs)
+    override val fixedCenter: Long get() = (reader.center ?: 100e6).toLong()
     override val sampleRates get() = intArrayOf(fixedRate)
 
     private var t0 = 0L
     private var produced = 0L
-    private val resampler = if (fixedRate == fileRate) null else LinearResampler(fileRate.toDouble() / fixedRate)
+    private var stream: StreamResampler? = null
+    private var linear: LinearResampler? = null
+    private var br = FloatArray(0); private var bi = FloatArray(0)
 
-    override fun open(sampleRate: Int, frequencyHz: Long) {}
+    override fun open(sampleRate: Int, frequencyHz: Long) {
+        val from = reader.fs; val to = fixedRate
+        if (from != to) {
+            // как на ПК — фильтр против наложения; линейная интерполяция — только при «неудобном» отношении частот
+            stream = try { StreamResampler(from, to) } catch (_: IllegalArgumentException) { null }
+            if (stream == null) linear = LinearResampler(from.toDouble() / to)
+        }
+    }
+
     override fun start() { t0 = System.nanoTime(); produced = 0 }
 
     override fun read(re: FloatArray, im: FloatArray, maxSamples: Int): Int {
-        val due = (System.nanoTime() - t0) / 1000 * fixedRate / 1_000_000L
-        if (due - produced > fixedRate) produced = due - maxSamples
+        val rate = fixedRate
+        val due = (System.nanoTime() - t0) / 1000 * rate / 1_000_000L
+        if (due - produced > rate) produced = due - maxSamples
         val lag = due - produced
-        if (lag < maxSamples) { Thread.sleep(maxOf(1L, (maxSamples - lag) * 1000L / fixedRate)); return 0 }
-        val rs = resampler
-        if (rs == null) reader.read(re, im, maxSamples) else rs.process(maxSamples, re, im) { r, i, n -> reader.read(r, i, n) }
-        produced += maxSamples
-        return maxSamples
+        if (lag < maxSamples) { Thread.sleep(maxOf(1L, (maxSamples - lag) * 1000L / rate)); return 0 }
+        val sr = stream; val lr = linear
+        val n = when {
+            sr != null -> {
+                val want = ((maxSamples - 2).toLong() * sr.down / sr.up).toInt().coerceAtLeast(1)
+                if (br.size < want) { br = FloatArray(want); bi = FloatArray(want) }
+                reader.read(br, bi, want)
+                sr.process(br, bi, want, re, im)
+            }
+            lr != null -> { lr.process(maxSamples, re, im) { r, i, k -> reader.read(r, i, k) }; maxSamples }
+            else -> { reader.read(re, im, maxSamples); maxSamples }
+        }
+        produced += n
+        return n
     }
 
     override fun setFrequency(hz: Long) {}

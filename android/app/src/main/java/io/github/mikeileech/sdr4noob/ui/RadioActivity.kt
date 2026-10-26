@@ -263,6 +263,7 @@ class RadioActivity : Activity() {
             override fun onRecordStopped(message: String) = runOnUiThread {
                 if (alive) { toast(message); recButton.text = if (engine?.audioRecording != null) "■ Стоп записи" else "● Звук в WAV" }
             }
+            override fun onScanStopped(message: String) = runOnUiThread { if (alive) toast(message) }
         }
         engine = e
         spectrum.engine = e
@@ -409,7 +410,7 @@ class RadioActivity : Activity() {
             " · полоса " + Ui.mhz(e.sampleRate.toLong()).replace(" МГц", " МГц обзора")
         e.scanner?.let { s ->
             infoText.text = "Поиск DMR: проход ${s.passes}, окно ${e.scanWindow + 1} из ${s.centers.size}, " +
-                "найдено DMR: ${s.entries.values.count { it.kind == "dmr" && it.dmrHits > 0 }}"
+                "найдено DMR: ${s.dmrFound()}"
             e.scanLog.peek()?.let { rdsText.text = e.scanLog.toList().takeLast(5).joinToString("\n"); rdsText.visibility = View.VISIBLE }
             return
         }
@@ -470,7 +471,7 @@ class RadioActivity : Activity() {
         val e = engine ?: return
         val s = e.scanner ?: return
         val rows = s.snapshot()
-        val items = rows.map { "${Ui.mhz(it.freq.toLong())} — ${it.describe()}" +
+        val items = rows.map { "${Ui.mhz(it.freq.toLong())} — ${it.text}" +
             (if (it.ids.isNotEmpty()) "\n   " + it.ids.joinToString(", ") else "") }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("Найдено (проход ${s.passes}, окон ${s.centers.size}); нажмите — слушать")

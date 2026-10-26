@@ -31,6 +31,8 @@ class RadioEngine(
         fun onError(message: String) {}
         /** Запись остановилась сама (нет места, предел 4 ГБ, перестройка центра для IQ). */
         fun onRecordStopped(message: String) {}
+        /** Поиск DMR остановился сам (сменили полосу обзора). */
+        fun onScanStopped(message: String) {}
     }
 
     @Volatile var listener: Listener? = null
@@ -143,7 +145,9 @@ class RadioEngine(
     /** RDS текущей станции (поля читаются из потока интерфейса — только для показа). */
     val rds get() = demod.rds
     // ---------- поиск DMR: приёмник обходит окна плана, звук молчит ----------
+    /** Идёт поиск (для интерфейса). Поток приёма работает со своим [scan]: его ставит команда после подготовки буферов. */
     @Volatile var scanner: DmrScanner? = null; private set
+    private var scan: DmrScanner? = null
     /** Что найдено в последних окнах (для строки состояния). */
     val scanLog = ConcurrentLinkedQueue<String>()
     @Volatile var scanWindow = 0; private set
@@ -154,18 +158,28 @@ class RadioEngine(
 
     /** Начать поиск: частота дискретизации сканера должна совпадать с текущей. */
     fun startScan(s: DmrScanner) {
-        if (source.fixedCenter != null) return          // в записи искать нечего: центр не перестраивается
+        if (!source.retunable) return                   // в записи искать нечего: центр не перестраивается
         scanner = s
         post {
-            scanWindow = 0; scanFill = 0
+            if (scanner !== s) return@post               // успели остановить или запустить другой
+            if (s.fs != sampleRate) { scanner = null; listener?.onScanStopped("Поиск DMR не начат: сменилась полоса обзора"); return@post }
+            scanWindow = 0; scanFill = 0; scanSkip = 0; lastScanLine = ""
             scanBufRe = FloatArray(s.nsamp); scanBufIm = FloatArray(s.nsamp)
+            scan = s
             scanTune(s)
         }
     }
 
     fun stopScan() {
         scanner = null
-        post { stopIqOnRetune(); centerHz = vfoHz + offsetFor(sampleRate); source.setFrequency(centerHz); demod.offsetHz = (vfoHz - centerHz).toDouble() }
+        post { endScan() }
+    }
+
+    /** Поток приёма: вернуть центр к станции после поиска. */
+    private fun endScan() {
+        if (scan == null) return
+        scan = null
+        stopIqOnRetune(); centerHz = vfoHz + offsetFor(sampleRate); source.setFrequency(centerHz); demod.offsetHz = (vfoHz - centerHz).toDouble()
     }
 
     private fun scanTune(s: DmrScanner) {
@@ -236,6 +250,11 @@ class RadioEngine(
 
     fun setSampleRate(rate: Int) = post {
         if (source.fixedRate != null) return@post
+        // окна плана поиска рассчитаны на прежнюю полосу: поиск останавливается
+        if (scan != null || scanner != null) {
+            scan = null; scanner = null
+            listener?.onScanStopped("Поиск DMR остановлен: сменена полоса обзора")
+        }
         sampleRate = rate
         source.setSampleRate(rate)
         demod = RadioDemod(rate, mode).also {
@@ -313,8 +332,8 @@ class RadioEngine(
                     }
                     listener?.onSpectrum()
                 }
-                val sc = scanner
-                if (sc != null && sc.fs == sampleRate) { scanStep(sc, re, im, n); dropped = source.droppedSamples; continue }
+                val sc = scan
+                if (sc != null) { scanStep(sc, re, im, n); dropped = source.droppedSamples; continue }
                 iqRec.get()?.writeIq(re, im, n)      // до демодулятора: он переносит частоту на месте
                 val frames = demod.process(re, im, n, aud)
                 audio.write(aud, frames)

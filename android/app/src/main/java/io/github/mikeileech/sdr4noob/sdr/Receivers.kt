@@ -35,9 +35,7 @@ object Receivers {
     fun sourceFor(context: Context, id: String): SdrSource = when {
         id == DEMO -> DemoSource()
         id.startsWith("tcp:") -> RtlTcpSource.parse(id.removePrefix("tcp:")).let { (h, p) -> RtlTcpSource(h, p) }
-        id.startsWith("file:") -> try {
-            IqFileSource.open(context, android.net.Uri.parse(id.removePrefix("file:")))
-        } catch (e: SecurityException) { throw SdrException("Нет доступа к файлу — выберите его заново", e) }
+        id.startsWith("file:") -> IqFileSource.forUri(context, android.net.Uri.parse(id.removePrefix("file:")))
         id.startsWith("usb:") -> {
             val d = usbDevice(context, id) ?: throw SdrException("Приёмник отключён от USB")
             val m = UsbReceivers.model(d.vendorId, d.productId)

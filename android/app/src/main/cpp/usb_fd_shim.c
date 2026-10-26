@@ -71,6 +71,22 @@ int sdr4n_open(libusb_device *dev, libusb_device_handle **handle)
 	return LIBUSB_ERROR_NOT_FOUND;
 }
 
+libusb_device_handle *sdr4n_open_device_with_vid_pid(libusb_context *ctx, uint16_t vid, uint16_t pid)
+{
+	libusb_device **list = NULL;
+	libusb_device_handle *h = NULL;
+	ssize_t n = sdr4n_get_device_list(ctx, &list);
+	for (ssize_t i = 0; i < n; i++) {
+		struct libusb_device_descriptor d;
+		if (libusb_get_device_descriptor(list[i], &d) == 0 && d.idVendor == vid && d.idProduct == pid &&
+		    sdr4n_open(list[i], &h) == 0)
+			break;
+		h = NULL;
+	}
+	sdr4n_free_device_list(list, 1);
+	return h;
+}
+
 void sdr4n_exit(libusb_context *ctx)
 {
 	/* драйвер не взял обёрнутое устройство (например, неизвестный VID/PID) — закрыть до libusb_exit */
