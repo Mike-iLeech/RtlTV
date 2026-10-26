@@ -44,6 +44,8 @@ class RadioEngine(
     val label get() = source.label
     val gains get() = source.gains
     val hasBiasTee get() = source.hasBiasTee
+    /** Можно ли перестраивать (у записи IQ центр и полоса заданы файлом). */
+    val retunable get() = source.retunable
 
     private val commands = ConcurrentLinkedQueue<() -> Unit>()
     private var thread: Thread? = null

@@ -107,8 +107,9 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
     private var chans: List<TvChannel> = emptyList()
     private var worker: TvWorker? = null
     private var engine: RadioEngine? = null
-    private var mode: String = prefs.getString("tv_job", "measure")!!
+    private var mode: String = prefs.getString("tv_job", "measure")!!.takeIf { it != "scan" } ?: "measure"
     @Volatile private var alive = false
+    private val posted = java.util.concurrent.atomic.AtomicBoolean(false)
     private var scanStarted = false
 
     init {
@@ -137,7 +138,7 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
                 val ch = chans.getOrNull(pos) ?: return
                 if (ch.name != prefs.getString("tv_channel", null)) {
                     prefs.edit().putString("tv_channel", ch.name).apply()
-                    if (mode != "scan") run(mode)
+                    run(if (mode == "scan") "measure" else mode)      // после поиска — измерить выбранный канал
                 }
             }
             override fun onNothingSelected(p: AdapterView<*>?) {}
@@ -165,7 +166,9 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
     fun start(e: RadioEngine) {
         stop()
         alive = true
-        val w = TvWorker(e, { ui.post { if (alive) refresh() } }, { msg -> ui.post { if (alive) toast(msg) } })
+        // обновления из потока измерителя (на каждый кадр аналога) прореживаются: одно в очереди интерфейса
+        val w = TvWorker(e, { if (posted.compareAndSet(false, true)) ui.postDelayed({ posted.set(false); if (alive) refresh() }, 100) },
+            { msg -> ui.post { if (alive) toast(msg) } })
         worker = w; engine = e
         e.iqTap = w::feed
     }
@@ -183,7 +186,7 @@ class TvPanel(private val act: Activity, private val prefs: SharedPreferences, p
         val w = worker ?: return
         val ch = channel ?: return
         mode = m
-        prefs.edit().putString("tv_job", m).apply()
+        if (m != "scan") prefs.edit().putString("tv_job", m).apply()      // поиск при следующем открытии не повторять
         tv.mux = null
         when (m) {
             "analog" -> { tv.hint = "Аналоговое ТВ: ожидание кадра на ${ch.name}…"; w.analog(ch, std) }

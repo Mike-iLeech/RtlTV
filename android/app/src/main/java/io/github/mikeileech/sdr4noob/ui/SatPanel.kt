@@ -108,7 +108,7 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
         e.setSampleRate(fs)
         lrptCenter = x.center - RxPlan.IF_OFFSET
         e.setCenter(lrptCenter.roundToLong())
-        val w = LrptWorker(fs) { msg -> ui.post { if (alive) toast(msg) } }
+        val w = LrptWorker(fs, { p -> savePicture(p, auto = true) }, { msg -> ui.post { if (alive) toast(msg) } })
         w.offsetHz = x.center - lrptCenter
         lrpt = w
         e.iqTap = w::feed
@@ -132,12 +132,20 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
         if (showPic) refresh()
     }
 
+    /** Полный снимок строится в потоке декодера (картинку меняет только он), сохраняется — в фоне. */
     private fun savePic() {
-        val p = lrpt?.picture ?: run { toast("Снимка пока нет: кадры ещё не приняты"); return }
-        val b = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
+        val w = lrpt ?: return
+        w.requestFull { p -> if (p == null) ui.post { if (alive) toast("Снимка пока нет: кадры ещё не приняты") } else savePicture(p, auto = false) }
+    }
+
+    /** Сохранить снимок в «Изображения/SDR4NOOB/Метеор» (вызывается из потока декодера — сохраняет в фоне). */
+    private fun savePicture(p: io.github.mikeileech.sdr4noob.radio.LrptPicture, auto: Boolean) {
         val name = "meteor_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(Date()) + "_${p.key}.png"
         thread(name = "lrpt-save") {
-            val msg = try { "Снимок сохранён: " + Storage.savePng(act, Storage.METEOR, name, b) } catch (e: Exception) { "Снимок не сохранён: ${e.message}" }
+            val msg = try {
+                val b = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
+                (if (auto) "Пролёт закончился, снимок сохранён: " else "Снимок сохранён: ") + Storage.savePng(act, Storage.METEOR, name, b)
+            } catch (e: Throwable) { "Снимок не сохранён: ${e.message ?: e.javaClass.simpleName}" }
             ui.post { if (alive) toast(msg) }
         }
     }
@@ -207,8 +215,12 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
                     val d = o.doppler(t, x.center, la, lo)
                     append(String.format(Locale.ROOT, " · доплер %+.1f кГц", d / 1e3).replace('.', ','))
                     val w = lrpt
-                    if (w != null) w.offsetHz = x.center - lrptCenter + (if (l.el > -2) d else 0.0)
-                    else if (l.el > -2) retune(x, d)
+                    val e = engine
+                    if (w != null && e != null) {
+                        // центр и полосу берём у движка: их могли сменить (меню, касание спектра, запись IQ со своими)
+                        w.rate = e.sampleRate
+                        w.offsetHz = x.center - e.centerHz + (if (l.el > -2 && e.retunable) d else 0.0)   // у записи доплер — свой
+                    } else if (l.el > -2) retune(x, d)
                 }
                 if (l.el < 0) append(" · за горизонтом")
             }
@@ -221,9 +233,11 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
                     if (s.channels.isNotEmpty()) append(" · каналы " + s.channels.joinToString(",") { (it - 63).toString() })
                     append(String.format(Locale.ROOT, " · С/Ш %.1f dB", s.snrDb).replace('.', ','))
                     if (s.mode.isNotEmpty()) append(" · ${s.mode}")
+                    if (w.dropped > 0) append(" · пропущено блоков ${w.dropped}: телефон не успевает")
                 }
-                // растр — только для нового снимка и когда его видно (снимок пролёта — десятки МБ)
-                w.picture?.takeIf { it !== shownPic && showPic }?.let { p ->
+                w.wantPreview = showPic
+                // растр — только для нового снимка и когда его видно (уменьшенная копия, не больше 1200 строк)
+                w.preview?.takeIf { it !== shownPic && showPic }?.let { p ->
                     shownPic = p
                     picView.bitmap = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
                 }

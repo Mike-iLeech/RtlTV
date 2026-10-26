@@ -49,7 +49,7 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
     fun scan(kind: TvMode, chans: List<TvChannel>, std: TvStandard) = set(Job.Scan(kind, chans, std))
     fun stopJob() = set(null)
 
-    private fun set(j: Job?) { job = j; jobSerial++; queue.clear() }
+    @Synchronized private fun set(j: Job?) { job = j; jobSerial++; queue.clear() }
 
     fun stop() { running = false; thread.interrupt() }
 
@@ -71,7 +71,7 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
             } catch (_: Changed) {
             } catch (e: Exception) {
                 if (!reported) { reported = true; onError("ТВ: сбой измерителя (${e.javaClass.simpleName}), измерение начато заново") }
-                Thread.sleep(200)
+                try { Thread.sleep(200) } catch (_: InterruptedException) { break }
             }
         }
     }
@@ -111,7 +111,15 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
         return re to im
     }
 
+    /** Полоса уже 2 МГц (запись IQ со своей частотой) — измерять нечем: сказать один раз и ждать другой задачи. */
+    private fun rateOk(serial: Int): Boolean {
+        if (engine.sampleRate >= Tv.RATES.min()) return true
+        onError("Полоса ${engine.sampleRate / 1e6} МГц мала для ТВ: нужна не уже 2,4 МГц (у записи IQ полоса своя)")
+        while (true) next(serial)
+    }
+
     private fun runMeasure(j: Job.Measure, serial: Int) {
+        rateOk(serial)
         val fs = engine.sampleRate.toDouble()
         val an = MuxAnalyzer(fs, j.ch.center, j.ch.bandwidth)
         mux = null; hops = 0
@@ -126,6 +134,7 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
     }
 
     private fun runAnalog(j: Job.Analog, serial: Int) {
+        rateOk(serial)
         val fs = engine.sampleRate.toDouble()
         retune(Tv.receiverCenter(TvMode.ANALOG, false, j.std, j.ch.video, j.ch.center), serial)
         val dec = AnalogVideoDecoder(fs, j.std)
@@ -138,19 +147,24 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
     }
 
     private fun runScan(j: Job.Scan, serial: Int) {
+        rateOk(serial)
         val fs = engine.sampleRate.toDouble()
         val items = TvScan.items(j.kind, j.chans, j.std)
         val res = ArrayList<TvScanResult>()
         scan = emptyList()
-        for ((i, h) in items.withIndex()) {
-            scanProgress = i to items.size; onUpdate()
-            retune(h.freq, serial)
-            val (re, im) = capture(h.samples, serial)
-            TvScan.step(res, j.kind, j.chans[i], i, items.size, re, im, fs, j.std)
-            scan = res.toList()
+        try {
+            for ((i, h) in items.withIndex()) {
+                scanProgress = i to items.size; onUpdate()
+                retune(h.freq, serial)
+                val (re, im) = capture(h.samples, serial)
+                TvScan.step(res, j.kind, j.chans[i], i, items.size, re, im, fs, j.std)
+                // копии: finishDigital на последнем шаге меняет значения, а интерфейс читает список
+                scan = res.map { TvScanResult(it.ch, it.kind, it.value, it.found) }
+            }
+        } finally {
+            scanProgress = null
         }
-        scanProgress = null
         onUpdate()
-        if (serial == jobSerial) job = null
+        synchronized(this) { if (serial == jobSerial) job = null }     // новая задача, поставленная только что, не теряется
     }
 }
