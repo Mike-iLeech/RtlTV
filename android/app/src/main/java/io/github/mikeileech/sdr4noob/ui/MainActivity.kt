@@ -27,11 +27,13 @@ import io.github.mikeileech.sdr4noob.update.UpdateCheck
 
 /**
  * Экран выбора приёмника и режима — как лаунчер настольной версии (rtltv/launcher.py).
- * Подходит любой USB радиоприёмник (SDR) через OTG-переходник; для RTL-SDR (RTL2832U) драйвер встроен.
+ * Подходит любой USB радиоприёмник (SDR) через OTG-переходник; для RTL2832U (например, RTL-SDR), HackRF и
+ * Airspy драйверы встроены.
  */
 class MainActivity : Activity() {
     companion object {
         const val ACTION_USB_PERMISSION = "io.github.mikeileech.sdr4noob.USB_PERMISSION"
+        private const val REQ_IQ_FILE = 21
     }
 
     private lateinit var prefs: android.content.SharedPreferences
@@ -96,7 +98,7 @@ class MainActivity : Activity() {
         root.addView(Ui.text(this, "SDR4NOOB", 28f, Ui.ACCENT, bold = true))
         root.addView(Ui.text(this, "Всё в одном для начинающего радиолюбителя · версия ${BuildConfig.VERSION_NAME}", 13f, Ui.DIM))
         root.addView(Ui.text(this, "Подключите любой USB радиоприёмник (SDR) через OTG-переходник. " +
-            "Для приёмников на RTL2832U (например, RTL-SDR Blog V4) драйвер встроен — ничего ставить не нужно. " +
+            "Для приёмников на RTL2832U (например, RTL-SDR Blog V4), HackRF и Airspy драйверы встроены — ничего ставить не нужно. " +
             "Без приёмника можно попробовать тестовый сигнал.", 14f), Ui.lp(top = Ui.dp(this, 10)))
 
         updateBox = Ui.vbox(this, 0)
@@ -112,11 +114,14 @@ class MainActivity : Activity() {
         row.addView(Ui.button(this, "Сетевой rtl_tcp…") { askTcp() }, Ui.lp(0, weight = 1f))
         row.addView(Ui.button(this, "Тестовый сигнал") { select(Receivers.DEMO) }, Ui.lp(0, weight = 1f))
         dev.addView(row)
+        dev.addView(Ui.button(this, "Файл IQ… (запись с ПК или телефона)") {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), REQ_IQ_FILE)
+        })
         root.addView(dev, Ui.lp(top = Ui.dp(this, 12)))
 
         val modes = Ui.card(this)
         modes.addView(Ui.text(this, "Режимы", 17f, bold = true))
-        modes.addView(Ui.button(this, "📻  Радио и спектр: FM с RDS, NFM, AM, SSB, CW, водопад") { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
+        modes.addView(Ui.button(this, "📻  Радио и спектр: FM с RDS, NFM, AM, SSB, CW, DMR, водопад") { openRadio() }, Ui.lp(top = Ui.dp(this, 6)))
         for ((name, plan) in listOf(
             "📺  Телевидение (измеритель DVB-T2, аналог)" to "в планах",
             "🖼  SSTV — картинки с МКС и любителей" to "в планах",
@@ -166,8 +171,8 @@ class MainActivity : Activity() {
     private fun chooseUsb(d: UsbDevice) {
         val m = UsbReceivers.model(d.vendorId, d.productId)
         if (m != null && !m.kind.builtIn) {
-            toastDialog("${m.name}: ${m.kind.title}.\n\nВ Android-версии пока работают приёмники на RTL2832U " +
-                "и сетевой rtl_tcp. Остальные USB радиоприёмники (SDR) поддерживаются в версии для Windows.")
+            toastDialog("${m.name}: ${m.kind.title}.\n\nВ Android-версии пока работают приёмники на RTL2832U, HackRF, " +
+                "Airspy R2/Mini и сетевой rtl_tcp. Остальные USB радиоприёмники (SDR) поддерживаются в версии для Windows.")
             return
         }
         val um = getSystemService(USB_SERVICE) as UsbManager
@@ -207,6 +212,17 @@ class MainActivity : Activity() {
 
     private fun openRadio() {
         startActivity(Intent(this, RadioActivity::class.java).putExtra(RadioActivity.EXTRA_SOURCE, selected))
+    }
+
+    @Deprecated("Activity.onActivityResult")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val uri = data?.data ?: return
+        if (requestCode != REQ_IQ_FILE || resultCode != RESULT_OK) return
+        // доступ к файлу и после перезапуска программы (последний выбранный источник запоминается)
+        runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        select(Receivers.file(uri.toString()))
+        openRadio()
     }
 
     private fun toastDialog(msg: String) {

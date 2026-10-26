@@ -57,6 +57,7 @@ class RadioActivity : Activity() {
             "Любители 20 м (USB)" to (14_230_000L to Modulation.USB),
             "Любители 40 м (LSB)" to (7_100_000L to Modulation.LSB),
             "Телеграф 40 м (CW)" to (7_030_000L to Modulation.CW),
+            "DMR, рации PMR (446,1 МГц)" to (446_100_000L to Modulation.DMR),
         )
     }
 
@@ -262,6 +263,7 @@ class RadioActivity : Activity() {
             override fun onRecordStopped(message: String) = runOnUiThread {
                 if (alive) { toast(message); recButton.text = if (engine?.audioRecording != null) "■ Стоп записи" else "● Звук в WAV" }
             }
+            override fun onScanStopped(message: String) = runOnUiThread { if (alive) toast(message) }
         }
         engine = e
         spectrum.engine = e
@@ -320,6 +322,7 @@ class RadioActivity : Activity() {
         Modulation.USB -> 14_230_000L
         Modulation.LSB -> 7_100_000L
         Modulation.CW -> 7_030_000L
+        Modulation.DMR -> 446_100_000L
     }
 
     private fun setMode(m: Modulation, freq: Long? = null, bw: Int? = null) {
@@ -338,7 +341,7 @@ class RadioActivity : Activity() {
     private fun applyModeUi() {
         spectrum.snapHz = when (mode) {
             Modulation.WFM -> 100_000L; Modulation.NFM -> 6_250L; Modulation.AM -> 1_000L
-            Modulation.USB, Modulation.LSB -> 100L; Modulation.CW -> 10L
+            Modulation.USB, Modulation.LSB -> 100L; Modulation.CW -> 10L; Modulation.DMR -> 6_250L
         }
         val bw = engine?.bandwidth ?: mode.defaultBw
         spectrum.channelBw = bw
@@ -405,11 +408,18 @@ class RadioActivity : Activity() {
         val sq = if (!e.squelchOpen) " · шумодав закрыт" else ""
         infoText.text = String.format(Locale.ROOT, "Уровень %.0f dBFS", e.levelDb) + st + sq +
             " · полоса " + Ui.mhz(e.sampleRate.toLong()).replace(" МГц", " МГц обзора")
+        e.scanner?.let { s ->
+            infoText.text = "Поиск DMR: проход ${s.passes}, окно ${e.scanWindow + 1} из ${s.centers.size}, " +
+                "найдено DMR: ${s.dmrFound()}"
+            e.scanLog.peek()?.let { rdsText.text = e.scanLog.toList().takeLast(5).joinToString("\n"); rdsText.visibility = View.VISIBLE }
+            return
+        }
         val rec = listOfNotNull(e.audioRecording?.let { w ->
                 "звук ${w.seconds.toInt()} с" + (w.dropped.get().takeIf { it > 0 }?.let { " (потеряно при записи: ${"%.1f".format(it / 2.0 / RadioDemod.AUDIO_RATE)} с)" } ?: "") },
             e.iqRecording?.let { "IQ ${it.seconds.toInt()} с" }).joinToString(", ")
         statusText.text = e.label + (if (e.dropped > 0) " · потеряно отсчётов: ${e.dropped}" else "") +
             (if (rec.isNotEmpty()) " · ● запись: $rec" else "")
+        if (mode == Modulation.DMR) { showDmr(e); return }
         // RDS (только ЧМ-вещание)
         if (mode == Modulation.WFM && e.rds.synced || mode == Modulation.WFM && e.rds.ps.isNotEmpty()) {
             val r = e.rds.state()
@@ -417,6 +427,64 @@ class RadioActivity : Activity() {
                 .filterNotNull().filter { it.isNotEmpty() }.joinToString(" · ").let { "RDS: $it" }
             rdsText.visibility = View.VISIBLE
         } else rdsText.visibility = View.GONE
+    }
+
+    /** DMR: синхронизация, кто говорит в слотах, последние события журнала (как панель DMR на ПК). */
+    private val dmrLog = ArrayDeque<String>()
+    private fun showDmr(e: RadioEngine) {
+        val d = e.dmr
+        if (d == null) { rdsText.visibility = View.GONE; return }
+        while (true) {
+            val ev = e.dmrEvents.poll() ?: break
+            dmrLog.addFirst("${java.text.SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(java.util.Date())} " +
+                (if (ev.slot > 0) "слот ${ev.slot}: " else "") + ev.text)
+            while (dmrLog.size > 5) dmrLog.removeLast()
+        }
+        val st = d.status()
+        val head = if (!st.locked) "DMR: нет синхронизации" else {
+            val sl = st.slots.entries.joinToString(" · ") { (n, s) ->
+                "слот $n: " + if (s.active) "${if (s.src != 0) s.src else "?"} → ${if (s.group) "TG " else ""}${if (s.dst != 0) s.dst else "?"}" +
+                    (if (s.encrypted) " (шифр.)" else "") else s.last.ifEmpty { "—" }
+            }
+            "DMR ${st.mode}, синхро ${st.sync} %, CC ${st.slots.values.firstNotNullOfOrNull { it.cc } ?: "?"} · $sl" +
+                (if (!st.mbelib) " · голос: нет mbelib" else "")
+        }
+        rdsText.maxLines = 7
+        rdsText.text = (listOf(head) + dmrLog).joinToString("\n")
+        rdsText.visibility = View.VISIBLE
+    }
+
+    // ---------------- поиск DMR ----------------
+    private fun startScan() {
+        val e = engine ?: return
+        if (!e.running) { toast("Приёмник не работает"); return }
+        val bands = io.github.mikeileech.sdr4noob.dsp.DmrScanner.BANDS
+        AlertDialog.Builder(this).setTitle("Поиск DMR — где искать")
+            .setItems(bands.map { it.first }.toTypedArray()) { _, i ->
+                val (_, lo, hi) = bands[i]
+                if (!e.startScan(io.github.mikeileech.sdr4noob.dsp.DmrScanner(e.sampleRate, lo, hi))) {
+                    toast("В записи IQ поиск невозможен: центр частоты задаёт файл"); return@setItems
+                }
+                toast("Поиск идёт по кругу, звук на это время выключен. Результаты — меню ⋮ → «Поиск DMR: результаты…»")
+            }.show()
+    }
+
+    private fun showScanResults() {
+        val e = engine ?: return
+        val s = e.scanner ?: return
+        val rows = s.snapshot()
+        val items = rows.map { "${Ui.mhz(it.freq.toLong())} — ${it.text}" +
+            (if (it.ids.isNotEmpty()) "\n   " + it.ids.joinToString(", ") else "") }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Найдено (проход ${s.passes}, окон ${s.centers.size}); нажмите — слушать")
+            .setItems(items) { _, i ->
+                val r = rows[i]
+                e.stopScan()
+                setMode(if (r.kind == "dmr") Modulation.DMR else Modulation.NFM, r.freq.toLong())
+            }
+            .setPositiveButton("Остановить поиск") { _, _ -> e.stopScan() }
+            .setNegativeButton("Искать дальше", null)
+            .show()
     }
 
     // ---------------- запись ----------------
@@ -569,6 +637,7 @@ class RadioActivity : Activity() {
         menu.add(0, 4, 0, "Полоса канала…")
         menu.add(0, 5, 0, "АРУ звука (AM, SSB, CW)").setCheckable(true).isChecked = prefs.getBoolean("agc", true)
         menu.add(0, 6, 0, "Запись IQ (базовая полоса)")
+        menu.add(0, 7, 0, "Поиск DMR…")
         menu.add(0, 2, 0, "Поправка частоты (ppm)…")
         menu.add(0, 3, 0, "Справка")
         return true
@@ -576,6 +645,7 @@ class RadioActivity : Activity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(6)?.title = if (engine?.iqRecording != null) "Остановить запись IQ" else "Запись IQ (базовая полоса)"
+        menu.findItem(7)?.title = if (engine?.scanner != null) "Поиск DMR: результаты…" else "Поиск DMR…"
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -618,6 +688,7 @@ class RadioActivity : Activity() {
                 prefs.edit().putBoolean("agc", on).apply(); engine?.setAgc(on)
             }
             6 -> toggleIqRec()
+            7 -> if (engine?.scanner != null) showScanResults() else startScan()
             else -> return super.onOptionsItemSelected(item)
         }
         return true

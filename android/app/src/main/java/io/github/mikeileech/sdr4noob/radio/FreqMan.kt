@@ -29,18 +29,12 @@ object FreqMan {
     )
     private val SDRSHARP_MODES = mapOf("WFM" to "WFM", "NFM" to "NFM", "AM" to "AM", "DSB" to "AM", "USB" to "USB",
         "LSB" to "LSB", "CW" to "CW", "RAW" to "NFM")
-    /** Режимы настольной версии, которых на Android пока нет, — ближайший доступный. */
-    private val ANDROID_MODE = mapOf("DMR" to "NFM")
+    fun modulation(e: FreqEntry): Modulation = runCatching { Modulation.valueOf(e.mode) }.getOrDefault(Modulation.NFM)
 
-    fun modulation(e: FreqEntry): Modulation =
-        runCatching { Modulation.valueOf(ANDROID_MODE[e.mode] ?: e.mode) }.getOrDefault(Modulation.NFM)
+    private fun modeRange(mode: String): Triple<Int, Int, Int> =
+        Modulation.valueOf(mode).let { Triple(it.defaultBw, it.minBw, it.maxBw) }
 
-    private fun modeRange(mode: String): Triple<Int, Int, Int> = when (mode) {
-        "DMR" -> Triple(12_500, 12_500, 12_500)
-        else -> Modulation.valueOf(mode).let { Triple(it.defaultBw, it.minBw, it.maxBw) }
-    }
-
-    private val ALL_MODES = Modulation.values().map { it.name } + "DMR"
+    private val ALL_MODES = Modulation.values().map { it.name }
 
     /** Запись с проверенными полями (частота — Гц, режим из списка, полоса в пределах режима). */
     fun normalize(name: String?, freq: Double?, mode: String?, bw: Double?, group: String?): FreqEntry {

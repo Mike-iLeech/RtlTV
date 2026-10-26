@@ -13,6 +13,7 @@
 #ifndef SDR4N_USB_FD_SHIM_H
 #define SDR4N_USB_FD_SHIM_H
 
+#include <stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <libusb.h>
@@ -30,6 +31,7 @@ int sdr4n_libusb_init(libusb_context **ctx);
 ssize_t sdr4n_get_device_list(libusb_context *ctx, libusb_device ***list);
 void sdr4n_free_device_list(libusb_device **list, int unref_devices);
 int sdr4n_open(libusb_device *dev, libusb_device_handle **handle);
+libusb_device_handle *sdr4n_open_device_with_vid_pid(libusb_context *ctx, uint16_t vid, uint16_t pid);
 void sdr4n_exit(libusb_context *ctx);
 void sdr4n_log(const char *fmt, ...);
 
@@ -42,6 +44,8 @@ void sdr4n_log(const char *fmt, ...);
 #define libusb_get_device_list(ctx, list) sdr4n_get_device_list(ctx, list)
 #define libusb_free_device_list(list, unref) sdr4n_free_device_list(list, unref)
 #define libusb_open(dev, handle) sdr4n_open(dev, handle)
+/* libhackrf ищет устройство так (hackrf_open) — внутри libusb подмена выше не действует */
+#define libusb_open_device_with_vid_pid(ctx, vid, pid) sdr4n_open_device_with_vid_pid(ctx, vid, pid)
 #define libusb_exit(ctx) sdr4n_exit(ctx)
 /* диагностика драйвера (fprintf(stderr, …)) — в logcat */
 #define fprintf(stream, ...) sdr4n_log(__VA_ARGS__)

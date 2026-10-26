@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- USB радиоприёмники (SDR), при подключении которых Android предлагает открыть SDR4NOOB:
-     только те, для которых в Android-версии есть драйвер (RTL2832U — таблица librtlsdr, как в
-     sdr/UsbReceivers.kt). Остальные известные приёмники программа узнаёт в списке, но не перехватывает. -->
+     только те, для которых в Android-версии есть драйвер (RTL2832U — таблица librtlsdr, HackRF, Airspy,
+     как в sdr/UsbReceivers.kt). Остальные известные приёмники программа узнаёт в списке, но не перехватывает. -->
 <resources>
     <usb-device vendor-id="3034" product-id="10290" />
     <usb-device vendor-id="3034" product-id="10296" />
@@ -45,4 +45,10 @@
     <usb-device vendor-id="8013" product-id="51203" />
     <usb-device vendor-id="8013" product-id="53894" />
     <usb-device vendor-id="8013" product-id="55299" />
+    <!-- HackRF (libhackrf) -->
+    <usb-device vendor-id="7504" product-id="24713" />
+    <usb-device vendor-id="7504" product-id="24651" />
+    <usb-device vendor-id="7504" product-id="52245" />
+    <!-- Airspy R2 / Mini (libairspy) -->
+    <usb-device vendor-id="7504" product-id="24737" />
 </resources>
