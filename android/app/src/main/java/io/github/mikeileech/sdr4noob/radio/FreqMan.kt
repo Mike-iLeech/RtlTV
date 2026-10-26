@@ -132,9 +132,11 @@ object FreqMan {
 
     // ---------------- XML SDR# ----------------
     fun importSdrSharpXml(bytes: ByteArray): List<FreqEntry> {
-        // без DTD и внешних сущностей: чужой файл не раздует память и не прочитает лишнего
+        // без DTD: у файлов SDR# его нет, а чужой файл с DTD мог бы раздуть память («billion laughs»).
+        // Парсер Android не поддерживает запрет DOCTYPE через setFeature — проверяем сами.
+        if (String(bytes, Charsets.UTF_8).contains("<!DOCTYPE", ignoreCase = true))
+            throw IllegalArgumentException("файл с DOCTYPE — это не список частот SDR#")
         val f = DocumentBuilderFactory.newInstance()
-        runCatching { f.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
         f.isExpandEntityReferences = false
         val doc = f.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
         val list = doc.getElementsByTagName("MemoryEntry")

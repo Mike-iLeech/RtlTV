@@ -406,7 +406,7 @@ class RadioActivity : Activity() {
         infoText.text = String.format(Locale.ROOT, "Уровень %.0f dBFS", e.levelDb) + st + sq +
             " · полоса " + Ui.mhz(e.sampleRate.toLong()).replace(" МГц", " МГц обзора")
         val rec = listOfNotNull(e.audioRecording?.let { w ->
-                "звук ${w.seconds.toInt()} с" + (w.dropped.get().takeIf { it > 0 }?.let { " (потеряно при записи: $it)" } ?: "") },
+                "звук ${w.seconds.toInt()} с" + (w.dropped.get().takeIf { it > 0 }?.let { " (потеряно при записи: ${"%.1f".format(it / 2.0 / RadioDemod.AUDIO_RATE)} с)" } ?: "") },
             e.iqRecording?.let { "IQ ${it.seconds.toInt()} с" }).joinToString(", ")
         statusText.text = e.label + (if (e.dropped > 0) " · потеряно отсчётов: ${e.dropped}" else "") +
             (if (rec.isNotEmpty()) " · ● запись: $rec" else "")

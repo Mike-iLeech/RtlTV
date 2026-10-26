@@ -68,6 +68,9 @@ class FreqManTest {
         // бесконечные и отрицательные частоты отбрасываются
         assertEquals(1, FreqMan.importCsv("a;1e400\nb;-5\nc;101.2\n").size)
         assertEquals(0, FreqMan.importSdrSharpXml("<a><MemoryEntry><Frequency>Infinity</Frequency></MemoryEntry></a>".toByteArray()).size)
+        // XML с DOCTYPE (возможный «billion laughs») не разбирается — у файлов SDR# его нет
+        val dtd = "<?xml version=\"1.0\"?><!DOCTYPE a [<!ENTITY x \"y\">]><a><MemoryEntry><Frequency>1</Frequency></MemoryEntry></a>"
+        try { FreqMan.importSdrSharpXml(dtd.toByteArray()); throw AssertionError("DOCTYPE принят") } catch (_: IllegalArgumentException) {}
         // в XML кавычки не экранируются (как ElementTree)
         assertTrue(FreqMan.exportSdrSharpXml(listOf(FreqMan.normalize("\"А\"", 1e8, "WFM", null, null))).contains("<Name>\"А\"</Name>"))
     }
