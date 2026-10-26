@@ -165,7 +165,7 @@ class Launcher(QWidget):
             self.lang.currentIndexChanged.connect(self._lang_changed)
             top.addWidget(self.lang, 0, Qt.AlignTop)
         v.addLayout(top)
-        sub = QLabel(tr("Приёмник на RTL-SDR: ТВ, радио, цифровая связь, SSTV, спутники, самолёты, APRS. "
+        sub = QLabel(tr("Любой USB радиоприёмник (SDR): ТВ, радио, цифровая связь, SSTV, спутники, самолёты, APRS. "
                         "Выберите режим — вернуться сюда можно из меню «Режим» (Ctrl+M)."))
         sub.setObjectName("dim")
         v.addWidget(sub)
@@ -178,7 +178,7 @@ class Launcher(QWidget):
             grid.addWidget(t, i // 3, i % 3)
             self.tiles.append(t)
         v.addLayout(grid, 1)
-        self.cb_test = QCheckBox(tr("Без антенны: тестовый эфир вместо донгла"))
+        self.cb_test = QCheckBox(tr("Без антенны: тестовый эфир вместо приёмника"))
         self.cb_test.setChecked(self.opts.get("source") == "test")
         bottom = QHBoxLayout()
         bottom.addWidget(self.cb_test, 1)
@@ -186,7 +186,7 @@ class Launcher(QWidget):
                                      toolTip=tr("Руководство для начинающего радиолюбителя (F1 в окне режима)"),
                                      clicked=lambda: importlib.import_module("rtltv.guide_window").show_guide("index", self)))
         self.btn_devices = QPushButton(tr("Устройства…"))
-        self.btn_devices.setToolTip(tr("Другие приёмники: HackRF, Airspy, сетевой rtl_tcp, свой драйвер RTL-SDR"))
+        self.btn_devices.setToolTip(tr("Приёмники SDR: RTL-SDR (встроенный драйвер или свой), HackRF, Airspy, сетевой rtl_tcp"))
         self.btn_devices.clicked.connect(self.show_devices)
         bottom.addWidget(self.btn_devices)
         b_set = QPushButton(tr("⚙ Настройки"))

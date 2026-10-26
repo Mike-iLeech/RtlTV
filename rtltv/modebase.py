@@ -30,7 +30,7 @@ class ModeWindow(QMainWindow):
         act.triggered.connect(self.request_switch)
         m.addAction(act)
         act_dev = QAction(tr("Устройства…"), self)
-        act_dev.setToolTip(tr("Другие приёмники: HackRF, Airspy, сетевой rtl_tcp, свой драйвер RTL-SDR"))
+        act_dev.setToolTip(tr("Приёмники SDR: RTL-SDR (встроенный драйвер или свой), HackRF, Airspy, сетевой rtl_tcp"))
         act_dev.triggered.connect(self.show_devices)
         m.addAction(act_dev)
         act_set = QAction(tr("Настройки…"), self)
@@ -85,7 +85,7 @@ class ModeWindow(QMainWindow):
         box.setTextFormat(Qt.RichText)
         site = site_url()
         box.setText(tr("<h3>SDR4NOOB {version}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
-                       "Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p>"
+                       "Любой USB радиоприёмник (SDR): ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p>"
                        "<p>Руководство для начинающих — меню «Справка → Руководство» (F1).</p>"
                        "<p>Сайт и вики: <a href='{site}'>{site_name}</a><br>Исходники и релизы: "
                        "<a href='https://github.com/Mike-iLeech/SDR4NOOB'>github.com/Mike-iLeech/SDR4NOOB</a><br>"

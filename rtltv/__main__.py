@@ -37,9 +37,9 @@ def main():
     from .i18n import tr
     from .launcher import MODES, Launcher
     ap = argparse.ArgumentParser(prog="SDR4NOOB", description=tr(
-        "SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на RTL-SDR"))
+        "SDR4NOOB — всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на любом USB радиоприёмнике (SDR)"))
     ap.add_argument("--mode", choices=[m[0] for m in MODES], help=tr("сразу открыть режим, минуя выбор"))
-    ap.add_argument("--test", action="store_true", help=tr("тестовый эфир вместо донгла"))
+    ap.add_argument("--test", action="store_true", help=tr("тестовый эфир вместо приёмника"))
     ap.add_argument("--digital", action="store_true", help=tr("ТВ: запуск в цифровом режиме"))
     ap.add_argument("--shot", help=tr("сохранить снимок окна через --shot-delay секунд и выйти"))
     ap.add_argument("--shot-delay", type=float, default=8.0)
