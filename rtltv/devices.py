@@ -73,7 +73,9 @@ DEP_NAMES = ("libusb", "pthread", "libwinpthread", "libgcc", "libstdc++", "msvcp
 if osplat.IS_WIN:
     PREFERRED_NAMES = {"hackrf": ("hackrf.dll", "libhackrf.dll"), "airspy": ("airspy.dll", "libairspy.dll")}
 else:
-    PREFERRED_NAMES = {k: ("lib" + k + osplat.LIB_EXT, "lib" + k + osplat.LIB_EXT + ".0") for k in ("hackrf", "airspy")}
+    PREFERRED_NAMES = {k: ("lib" + k + osplat.LIB_EXT,
+                           "lib" + k + (".0" + osplat.LIB_EXT if osplat.IS_MAC else osplat.LIB_EXT + ".0"))
+                       for k in ("hackrf", "airspy")}
 SYSTEM_LIB_NAMES = {"hackrf": ("hackrf",), "airspy": ("airspy",)}   # ctypes.util.find_library (macOS, Linux)
 
 UNSUPPORTED_HINT = {
@@ -943,11 +945,10 @@ class HackRfSource(_CallbackSource):
         try:
             if self.index >= count:
                 raise DeviceError(f"Не удалось открыть HackRF #{self.index}: подключено устройств — {count}. "
-                                  "Проверьте кабель и драйвер WinUSB («Режим → Устройства…»).")
+                                  "Проверьте кабель и " + ("драйвер WinUSB" if osplat.IS_WIN else "доступ к USB") + " («Режим → Устройства…»).")
             r = L.hackrf_device_list_open(lst, self.index, C.byref(self.dev))
             if r != 0:
-                raise DeviceError(f"Не удалось открыть HackRF #{self.index} (код {r}): устройство занято "
-                                  "другой программой или не привязан WinUSB.")
+                raise DeviceError(f"Не удалось открыть HackRF #{self.index} (код {r}): " + osplat.usb_busy_hint())
         finally:
             if lst:
                 L.hackrf_device_list_free(lst)
@@ -1038,8 +1039,7 @@ class AirspySource(_CallbackSource):
         L.airspy_list_devices(arr, n)
         r = L.airspy_open_sn(C.byref(self.dev), arr[self.index])
         if r != 0:
-            raise DeviceError(f"Не удалось открыть Airspy #{self.index} (код {r}): устройство занято "
-                              "другой программой или не привязан WinUSB.")
+            raise DeviceError(f"Не удалось открыть Airspy #{self.index} (код {r}): " + osplat.usb_busy_hint())
         self._err(L.airspy_set_sample_type(self.dev, AIRSPY_SAMPLE_FLOAT32_IQ), "формат отсчётов")
         cnt = C.c_uint32(0)
         L.airspy_get_samplerates(self.dev, C.byref(cnt), 0)

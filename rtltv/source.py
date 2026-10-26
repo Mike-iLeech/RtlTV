@@ -8,7 +8,7 @@ import queue
 import threading
 import time
 
-from . import rtlsdr
+from . import osplat, rtlsdr
 from .testsignal import TestSignal
 
 BLOCK_BYTES = 262144  # 131072 отсчёта ≈ 51 мс при 2,56 МГц
@@ -118,7 +118,7 @@ class RtlSource(SourceBase):
         self.dev.set_gain(self.gain)
         self.dev.reset_buffer()
         dll = os.path.abspath(self.lib_path or rtlsdr.active_dll_path())
-        drv = ("встроенный librtlsdr (rtl-sdr-blog), WinUSB" if dll == os.path.abspath(rtlsdr._dll_path())
+        drv = (osplat.builtin_driver_label() if dll == os.path.abspath(rtlsdr._dll_path())
                else "librtlsdr пользователя: " + os.path.basename(dll))
         self.sink("opened", {"label": self.dev.label, "tuner": self.dev.tuner, "gains": self.gains,
                              "driver": drv})

@@ -706,7 +706,7 @@ class SatWindow(ModeWindow):
         self.l_tle.setToolTip(
             "TLE — наборы элементов орбит NORAD, публикует CelesTrak (обновляет несколько раз в сутки).\n"
             "SDR4NOOB скачивает их не чаще раза в сутки или по кнопке «Обновить TLE»; без сети — кэш\n"
-            "%LOCALAPPDATA%\\SDR4NOOB\\tle. Положение считается моделью SGP4: при TLE возрастом 1–3 суток\n"
+            f"{paths.service('tle')}. Положение считается моделью SGP4: при TLE возрастом 1–3 суток\n"
             "ошибка ~1 км, время пролёта — секунды.\n\n" + msg)
         self.map_note = (f"Орбиты: TLE CelesTrak, обновлено {time.strftime('%d.%m %H:%M', time.localtime(upd))}"
                          if upd else "Орбиты: TLE CelesTrak") + (f", возраст {ages[len(ages) // 2]:.0f} ч" if ages else "") \

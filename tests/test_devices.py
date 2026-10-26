@@ -229,7 +229,7 @@ def test_usb_this_machine_rtl_v4_winusb():
     rtl = [d for d in found if (d["vid"], d["pid"]) == (0x0BDA, 0x2838)]
     if not rtl:
         pytest.skip("RTL-SDR 0bda:2838 к этой машине не подключён")
-    assert rtl[0]["service"].lower() == "winusb" and rtl[0]["ready"]
+    assert rtl[0]["service"].lower() in ("winusb", devices.MAC_SVC.lower()) and rtl[0]["ready"]
     assert rtl[0]["kind"] == "rtl"
 
 
