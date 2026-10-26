@@ -1,6 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
 import io.github.mikeileech.sdr4noob.dsp.AdsbDemo
+import io.github.mikeileech.sdr4noob.i18n.tr
 
 /**
  * Тестовый эфир ADS-B без приёмника (как демо в окне «Самолёты» на ПК): борта вокруг Москвы на 1090 МГц,
@@ -9,7 +10,7 @@ import io.github.mikeileech.sdr4noob.dsp.AdsbDemo
 class AdsbDemoSource : SdrSource {
     companion object { const val FS = 2_400_000 }
 
-    override val label = "Тестовый сигнал ADS-B (без приёмника)"
+    override val label get() = tr("Тестовый сигнал ADS-B (без приёмника)")
     override val gains = IntArray(0)
     override val fixedRate: Int get() = FS
     override val fixedCenter: Long get() = 1_090_000_000L

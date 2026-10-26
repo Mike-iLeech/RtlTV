@@ -7,6 +7,7 @@ import io.github.mikeileech.sdr4noob.dsp.AdsbTracker
 import io.github.mikeileech.sdr4noob.dsp.AfskDemodulator
 import io.github.mikeileech.sdr4noob.dsp.Aprs
 import io.github.mikeileech.sdr4noob.dsp.AprsPacket
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -58,7 +59,7 @@ class AprsWorker(private val onPackets: (List<AprsRx>) -> Unit, private val onEr
                 break
             } catch (e: Exception) {
                 dem = AfskDemodulator(48_000.0)      // сбой демодулятора не роняет приложение: начать заново
-                if (!reported) { reported = true; onError("APRS: сбой декодера (${e.javaClass.simpleName}), декодер перезапущен") }
+                if (!reported) { reported = true; onError(tr("APRS: сбой декодера ({error}), декодер перезапущен", "error" to e.javaClass.simpleName)) }
             }
         }
     }
@@ -121,7 +122,7 @@ class AdsbWorker(fs: Int, home: Pair<Double, Double>, private val onError: (Stri
                 // сбой на одном блоке не роняет приложение; таблица бортов сохраняется. Сбои подряд — состояние
                 // демодулятора испорчено: пересоздать его
                 if (++fails >= 5) { fails = 0; runCatching { proc.setRate(fs) } }
-                if (!reported) { reported = true; onError("ADS-B: сбой декодера (${e.javaClass.simpleName}), блок пропущен") }
+                if (!reported) { reported = true; onError(tr("ADS-B: сбой декодера ({error}), блок пропущен", "error" to e.javaClass.simpleName)) }
             }
         }
     }

@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
@@ -62,7 +63,7 @@ class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int,
         if (!alive) return
         if (!queue.offer(b)) {
             dropped.addAndGet(n.toLong())
-            if (strict && failed == null) { failed = "память телефона не успевает за потоком IQ — уменьшите полосу обзора"; close() }
+            if (strict && failed == null) { failed = tr("память телефона не успевает за потоком IQ — уменьшите полосу обзора"); close() }
         }
     }
 
@@ -96,12 +97,12 @@ class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int,
             while (true) {
                 val b = queue.take()
                 if (b === stopMark) break
-                if (bytes + b.remaining() > LIMIT) { failed = "файл дорос до предела WAV (4 ГБ)"; break }
+                if (bytes + b.remaining() > LIMIT) { failed = tr("файл дорос до предела WAV (4 ГБ)"); break }
                 while (b.hasRemaining()) bytes += ch.write(b)
             }
         } catch (e: Throwable) {
             failed = if (failed != null) failed else if (e.message?.contains("ENOSPC") == true || e.message?.contains("space", true) == true)
-                "нет места на телефоне" else "ошибка записи: ${e.message ?: e.javaClass.simpleName}"
+                tr("нет места на телефоне") else tr("ошибка записи: {error}", "error" to (e.message ?: e.javaClass.simpleName))
         } finally {
             queue.clear()
             runCatching { ch.write(header(bytes), 0) }
@@ -129,8 +130,8 @@ class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int,
  */
 object Storage {
     const val ROOT = "SDR4NOOB"
-    const val AUDIO = "Звук"          // как paths.AUDIO в настольной версии
-    const val IQ = "Звук/IQ"
+    const val AUDIO = "Звук"          // как paths.AUDIO в настольной версии  // noqa: i18n
+    const val IQ = "Звук/IQ"  // noqa: i18n
 
     class Out(val channel: FileChannel, val shownPath: String, val finish: () -> Unit)
 
@@ -148,7 +149,7 @@ object Storage {
 
     /** Как папку показывать человеку: последняя часть пути дерева (например «primary:Radio» → «Radio»). */
     fun treeName(uri: Uri): String =
-        android.provider.DocumentsContract.getTreeDocumentId(uri).substringAfter(':').ifEmpty { "корень карты памяти" }
+        android.provider.DocumentsContract.getTreeDocumentId(uri).substringAfter(':').ifEmpty { tr("корень карты памяти") }
 
     /** Найти или создать вложенную папку [path] ("SDR4NOOB/Звук/IQ") в дереве; документ папки. */
     private fun safDir(context: Context, tree: Uri, path: String): Uri {
@@ -166,7 +167,7 @@ object Storage {
                 }
             }
             doc = found ?: android.provider.DocumentsContract.createDocument(cr, doc, android.provider.DocumentsContract.Document.MIME_TYPE_DIR, seg)
-                ?: throw IllegalStateException("не удалось создать папку $seg в ${treeName(tree)}")
+                ?: throw IllegalStateException(tr("не удалось создать папку {name} в {folder}", "name" to seg, "folder" to treeName(tree)))
         }
         return doc
     }
@@ -174,7 +175,7 @@ object Storage {
     private fun safCreate(context: Context, tree: Uri, sub: String, name: String, mime: String): Pair<Uri, String> {
         val dir = safDir(context, tree, "$ROOT/$sub")
         val uri = android.provider.DocumentsContract.createDocument(context.contentResolver, dir, mime, name)
-            ?: throw IllegalStateException("не удалось создать файл в ${treeName(tree)}")
+            ?: throw IllegalStateException(tr("не удалось создать файл в {folder}", "folder" to treeName(tree)))
         return uri to "${treeName(tree)}/$ROOT/$sub/$name"
     }
 
@@ -182,7 +183,7 @@ object Storage {
         tree(context)?.let { t ->
             val (uri, shown) = safCreate(context, t, sub, name, mime)
             val pfd: ParcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "rw")
-                ?: throw IllegalStateException("не удалось открыть файл в ${treeName(t)}")
+                ?: throw IllegalStateException(tr("не удалось открыть файл в {folder}", "folder" to treeName(t)))
             return Out(FileOutputStream(pfd.fileDescriptor).channel, shown) { runCatching { pfd.close() } }
         }
         if (Build.VERSION.SDK_INT >= 29) {
@@ -194,9 +195,9 @@ object Storage {
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val uri: Uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v)
-                ?: throw IllegalStateException("MediaStore не создал файл")
+                ?: throw IllegalStateException(tr("MediaStore не создал файл"))
             val pfd: ParcelFileDescriptor = cr.openFileDescriptor(uri, "rw")
-                ?: throw IllegalStateException("MediaStore не открыл файл")
+                ?: throw IllegalStateException(tr("MediaStore не открыл файл"))
             val chan = FileOutputStream(pfd.fileDescriptor).channel
             return Out(chan, "${Environment.DIRECTORY_DOWNLOADS}/$ROOT/$sub/$name") {
                 runCatching { pfd.close() }
@@ -221,7 +222,7 @@ object Storage {
 
     // ---------------- картинки (SSTV, позже — спутники) ----------------
     const val SSTV = "SSTV"           // как paths.PICS_SSTV в настольной версии
-    const val METEOR = "Метеор"       // как paths.PICS_METEOR
+    const val METEOR = "Метеор"       // как paths.PICS_METEOR  // noqa: i18n
 
     /** Где лежат картинки — для подсказок: Pictures/SDR4NOOB/SSTV (или своя папка данных). */
     fun picturesPath(sub: String) = "${Environment.DIRECTORY_PICTURES}/$ROOT/$sub"
@@ -241,8 +242,8 @@ object Storage {
         tree(context)?.let { t ->
             val (uri, shown) = safCreate(context, t, sub, name, "image/png")
             try {
-                (context.contentResolver.openOutputStream(uri) ?: throw IllegalStateException("файл не открылся")).use {
-                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("PNG не записан")
+                (context.contentResolver.openOutputStream(uri) ?: throw IllegalStateException(tr("файл не открылся"))).use {
+                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException(tr("PNG не записан"))
                 }
             } catch (e: Exception) {
                 runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
@@ -259,10 +260,10 @@ object Storage {
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val uri = cr.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v)
-                ?: throw IllegalStateException("MediaStore не создал файл")
+                ?: throw IllegalStateException(tr("MediaStore не создал файл"))
             try {
-                (cr.openOutputStream(uri) ?: throw IllegalStateException("MediaStore не открыл файл")).use {
-                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("PNG не записан")
+                (cr.openOutputStream(uri) ?: throw IllegalStateException(tr("MediaStore не открыл файл"))).use {
+                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException(tr("PNG не записан"))
                 }
             } catch (e: Exception) {
                 runCatching { cr.delete(uri, null, null) }
@@ -273,7 +274,7 @@ object Storage {
         }
         val dir = picturesDir(context, sub).apply { mkdirs() }
         val f = File(dir, name)
-        FileOutputStream(f).use { if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("PNG не записан") }
+        FileOutputStream(f).use { if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException(tr("PNG не записан")) }
         return f.path
     }
 

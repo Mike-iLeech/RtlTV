@@ -24,6 +24,9 @@ import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
 import io.github.mikeileech.sdr4noob.dsp.Modulation
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.dsp.RadioDemod
 import io.github.mikeileech.sdr4noob.radio.FreqEntry
 import io.github.mikeileech.sdr4noob.radio.FreqMan
@@ -61,16 +64,16 @@ class RadioActivity : Activity() {
         private const val REQ_EXPORT = 12
         private const val REQ_NOTIFY = 13
         private val PRESETS = listOf(
-            "FM вещание" to (101_000_000L to Modulation.WFM),
-            "Любители 2 м" to (145_500_000L to Modulation.NFM),
+            N_("FM вещание") to (101_000_000L to Modulation.WFM),
+            N_("Любители 2 м") to (145_500_000L to Modulation.NFM),
             "PMR446" to (446_006_250L to Modulation.NFM),
             "LPD 433" to (433_075_000L to Modulation.NFM),
-            "Авиа (АМ)" to (127_000_000L to Modulation.AM),
-            "СВ радио (АМ)" to (999_000L to Modulation.AM),
-            "Любители 20 м (USB)" to (14_230_000L to Modulation.USB),
-            "Любители 40 м (LSB)" to (7_100_000L to Modulation.LSB),
-            "Телеграф 40 м (CW)" to (7_030_000L to Modulation.CW),
-            "DMR, рации PMR (446,1 МГц)" to (446_100_000L to Modulation.DMR),
+            N_("Авиа (АМ)") to (127_000_000L to Modulation.AM),
+            N_("СВ радио (АМ)") to (999_000L to Modulation.AM),
+            N_("Любители 20 м (USB)") to (14_230_000L to Modulation.USB),
+            N_("Любители 40 м (LSB)") to (7_100_000L to Modulation.LSB),
+            N_("Телеграф 40 м (CW)") to (7_030_000L to Modulation.CW),
+            N_("DMR, рации PMR (446,1 МГц)") to (446_100_000L to Modulation.DMR),
         )
     }
 
@@ -123,7 +126,7 @@ class RadioActivity : Activity() {
         // SSTV в тестовом эфире передаётся на 145,800 МГц ЧМ (как МКС): сразу туда, пока пользователь не выбрал сам
         if (app == APP_SSTV && sourceId == Receivers.DEMO && !prefs.contains("mode")) mode = Modulation.NFM
         title = when (app) {
-            APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> "Самолёты ADS-B · "; APP_TV -> "Телевидение · "; APP_SAT -> "Спутники · "; else -> ""
+            APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> tr("Самолёты ADS-B") + " · "; APP_TV -> tr("Телевидение") + " · "; APP_SAT -> tr("Спутники") + " · "; else -> ""
         } + Receivers.describe(this, sourceId)
         freqFile = File(filesDir, "freqman.json")
         freqs = FreqMan.load(freqFile)
@@ -186,7 +189,7 @@ class RadioActivity : Activity() {
         val row = Ui.hbox(this)
         modeSpin = Spinner(this).apply {
             adapter = ArrayAdapter(this@RadioActivity, android.R.layout.simple_spinner_dropdown_item,
-                Modulation.values().map { it.title })
+                Modulation.values().map { tr(it.title) })
             setSelection(mode.ordinal)
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
@@ -198,7 +201,7 @@ class RadioActivity : Activity() {
         }
         row.addView(modeSpin, Ui.lp(0, weight = 1f))
         stereoBox = CheckBox(this).apply {
-            text = "Стерео"; setTextColor(0xFFFFFFFF.toInt())
+            text = tr("Стерео"); setTextColor(0xFFFFFFFF.toInt())
             isChecked = prefs.getBoolean("stereo", true)
             setOnCheckedChangeListener { _, on -> engine?.setStereo(on); prefs.edit().putBoolean("stereo", on).apply() }
         }
@@ -235,17 +238,17 @@ class RadioActivity : Activity() {
 
         // усиление
         val g = Ui.hbox(this)
-        gainText = Ui.text(this, "Усиление", 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) }
+        gainText = Ui.text(this, tr("Усиление"), 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) }
         g.addView(gainText)
         gainBar = SeekBar(this).apply { max = 1 }
         g.addView(gainBar, Ui.lp(0, weight = 1f))
-        gainAuto = CheckBox(this).apply { text = "Авто"; setTextColor(0xFFFFFFFF.toInt()) }
+        gainAuto = CheckBox(this).apply { text = tr("Авто"); setTextColor(0xFFFFFFFF.toInt()) }
         g.addView(gainAuto)
         root.addView(g)
 
         // громкость и шумодав
         val v = Ui.hbox(this)
-        v.addView(Ui.text(this, "Громкость", 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) })
+        v.addView(Ui.text(this, tr("Громкость"), 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) })
         val vol = SeekBar(this).apply {
             max = 100; progress = prefs.getInt("volume", 80)
             setOnSeekBarChangeListener(seek { p -> engine?.volume = p / 100f; prefs.edit().putInt("volume", p).apply() })
@@ -254,7 +257,7 @@ class RadioActivity : Activity() {
         root.addView(v)
         if (app in IQ_APPS) v.visibility = View.GONE        // ADS-B и ТВ-измеритель без звука
         val s = Ui.hbox(this)
-        s.addView(Ui.text(this, "Шумодав", 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) })
+        s.addView(Ui.text(this, tr("Шумодав"), 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) })
         squelchBar = SeekBar(this).apply {
             max = 100; progress = prefs.getInt("squelch", 0)
             setOnSeekBarChangeListener(seek { p -> engine?.setSquelch(squelchDb(p)); prefs.edit().putInt("squelch", p).apply() })
@@ -265,20 +268,20 @@ class RadioActivity : Activity() {
 
         val b = Ui.hbox(this)
         biasBox = CheckBox(this).apply {
-            text = "Питание антенны (bias-T)"; setTextColor(0xFFFFFFFF.toInt()); visibility = View.GONE
+            text = tr("Питание антенны (bias-T)"); setTextColor(0xFFFFFFFF.toInt()); visibility = View.GONE
             setOnCheckedChangeListener { _, on -> engine?.setBiasTee(on) }
         }
         b.addView(biasBox, Ui.lp(0, weight = 1f))
         root.addView(b)
         val btns = Ui.hbox(this)
-        btns.addView(Ui.button(this, "Станции…") { choosePreset() }, Ui.lp(0, weight = 1f))
-        btns.addView(Ui.button(this, "Мои частоты…") { showFreqMan() }, Ui.lp(0, weight = 1f))
-        recButton = Ui.button(this, "● Звук в WAV") { toggleAudioRec() }
+        btns.addView(Ui.button(this, tr("Станции…")) { choosePreset() }, Ui.lp(0, weight = 1f))
+        btns.addView(Ui.button(this, tr("Мои частоты…")) { showFreqMan() }, Ui.lp(0, weight = 1f))
+        recButton = Ui.button(this, tr("● Звук в WAV")) { toggleAudioRec() }
         btns.addView(recButton, Ui.lp(0, weight = 1f))
         root.addView(btns)
         if (app in IQ_APPS) { btns.visibility = View.GONE; top.visibility = View.GONE }
 
-        statusText = Ui.text(this, "Подключение…", 12f, Ui.DIM)
+        statusText = Ui.text(this, tr("Подключение…"), 12f, Ui.DIM)
         root.addView(statusText)
         setContentView(root)
     }
@@ -298,7 +301,7 @@ class RadioActivity : Activity() {
             else if (app == APP_TV && sourceId == Receivers.DEMO) TvDemoSource()
             else Receivers.sourceFor(this, sourceId)
         } catch (e: SdrException) {
-            fail(e.message ?: "Ошибка приёмника"); return
+            fail(e.message ?: tr("Ошибка приёмника")); return
         }
         // по умолчанию 1,2 МГц обзора: вдвое меньше нагрузка и расход батареи; до 2,88 МГц — в меню
         // ADS-B: импульсы 0,5 мкс — нужна полоса от 2 МГц (2,4 МГц — ближайшая частота радиорежима), 1090 МГц
@@ -319,7 +322,7 @@ class RadioActivity : Activity() {
             override fun onSpectrum() = spectrum.postInvalidate()
             override fun onError(message: String) = runOnUiThread { fail(message) }
             override fun onRecordStopped(message: String) = runOnUiThread {
-                if (alive) { toast(message); recButton.text = if (engine?.audioRecording != null) "■ Стоп записи" else "● Звук в WAV" }
+                if (alive) { toast(message); recButton.text = if (engine?.audioRecording != null) tr("■ Стоп записи") else tr("● Звук в WAV") }
             }
             override fun onScanStopped(message: String) = runOnUiThread { if (alive) toast(message) }
         }
@@ -338,7 +341,7 @@ class RadioActivity : Activity() {
         val gains = e.gains
         val savedGain = prefs.getInt("gain", -1)
         if (gains.isEmpty()) {
-            gainBar.isEnabled = false; gainAuto.isEnabled = false; gainText.text = "Усиление —"
+            gainBar.isEnabled = false; gainAuto.isEnabled = false; gainText.text = tr("Усиление —")
         } else {
             gainBar.max = gains.size - 1
             val idx = if (savedGain < 0) gains.size * 2 / 3 else gains.indexOfFirst { it >= savedGain }.coerceAtLeast(0)
@@ -361,7 +364,7 @@ class RadioActivity : Activity() {
         gainBar.isEnabled = !auto
         val t = gains[gainBar.progress.coerceIn(0, gains.size - 1)]
         e.setGain(if (auto) -1 else t)
-        gainText.text = if (auto) "Усиление: авто" else String.format(Locale.ROOT, "Усиление %.1f dB", t / 10.0).replace('.', ',')
+        gainText.text = if (auto) tr("Усиление: авто") else tr("Усиление {g} dB", "g" to num(t / 10.0, 1))
         prefs.edit().putInt("gain", t).putBoolean("gain_auto", auto).apply()
     }
 
@@ -369,10 +372,10 @@ class RadioActivity : Activity() {
         if (!alive || engine?.preempted == true) return
         statusText.text = message
         AlertDialog.Builder(this)
-            .setTitle("Приёмник")
+            .setTitle(tr("Приёмник"))
             .setMessage(message)
-            .setPositiveButton("К выбору приёмника") { _, _ -> finish() }
-            .setNegativeButton("Остаться", null)
+            .setPositiveButton(tr("К выбору приёмника")) { _, _ -> finish() }
+            .setNegativeButton(tr("Остаться"), null)
             .show()
     }
 
@@ -435,23 +438,23 @@ class RadioActivity : Activity() {
             selectAll()
         }
         AlertDialog.Builder(this)
-            .setTitle("Частота, МГц")
+            .setTitle(tr("Частота, МГц"))
             .setView(edit)
-            .setPositiveButton("Настроить") { _, _ ->
+            .setPositiveButton(tr("Настроить")) { _, _ ->
                 val mhz = edit.text.toString().replace(',', '.').toDoubleOrNull()
                 if (mhz != null && mhz in 0.5..1766.0) {
                     val f = (mhz * 1e6).roundToLong()
                     e.tune(f); saveFreq(f); updateFreq()
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(tr("Отмена"), null)
             .show()
     }
 
     private fun choosePreset() {
         if (app == APP_SSTV) {
             val pr = SstvPanel.PRESETS
-            AlertDialog.Builder(this).setTitle("Частоты SSTV").setItems(pr.map { it.first }.toTypedArray()) { _, i ->
+            AlertDialog.Builder(this).setTitle(tr("Частоты SSTV")).setItems(pr.map { tr(it.first) }.toTypedArray()) { _, i ->
                 val (_, f, m) = pr[i]
                 val mm = Modulation.valueOf(m)
                 if (mm != mode) setMode(mm, f) else { engine?.tune(f); saveFreq(f); updateFreq() }
@@ -460,15 +463,15 @@ class RadioActivity : Activity() {
         }
         if (app == APP_APRS) {
             val pr = AprsPanel.PRESETS
-            AlertDialog.Builder(this).setTitle("Частоты APRS").setItems(pr.map { it.first }.toTypedArray()) { _, i ->
+            AlertDialog.Builder(this).setTitle(tr("Частоты APRS")).setItems(pr.map { tr(it.first) }.toTypedArray()) { _, i ->
                 val f = pr[i].second
                 engine?.tune(f); saveFreq(f); updateFreq()
             }.show()
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Куда настроиться")
-            .setItems(PRESETS.map { "${it.first} — ${Ui.mhz(it.second.first)}" }.toTypedArray()) { _, i ->
+            .setTitle(tr("Куда настроиться"))
+            .setItems(PRESETS.map { "${tr(it.first)} — ${Ui.mhz(it.second.first)}" }.toTypedArray()) { _, i ->
                 val (f, m) = PRESETS[i].second
                 if (m != mode) setMode(m, f) else { engine?.tune(f); saveFreq(f); updateFreq() }
             }
@@ -482,23 +485,24 @@ class RadioActivity : Activity() {
         if (satPanel != null && ++satTick % 5 == 0) satPanel?.refresh()          // раз в секунду: положения и доплер
         val st = when {
             mode != Modulation.WFM -> ""
-            e.stereoLock -> " · СТЕРЕО"
-            else -> " · моно"
+            e.stereoLock -> " · " + tr("СТЕРЕО")
+            else -> " · " + tr("моно")
         }
-        val sq = if (!e.squelchOpen) " · шумодав закрыт" else ""
-        infoText.text = (if (app == APP_ADSB) "1090 МГц" else if (app == APP_TV) Ui.mhz(e.centerHz) else String.format(Locale.ROOT, "Уровень %.0f dBFS", e.levelDb)) + st + sq +
-            " · полоса " + Ui.mhz(e.sampleRate.toLong()).replace(" МГц", " МГц обзора")
+        val sq = if (!e.squelchOpen) " · " + tr("шумодав закрыт") else ""
+        infoText.text = (if (app == APP_ADSB) tr("1090 МГц") else if (app == APP_TV) Ui.mhz(e.centerHz) else tr("Уровень {l} dBFS", "l" to num(e.levelDb, 0))) + st + sq +
+            " · " + tr("полоса {f} обзора", "f" to Ui.mhz(e.sampleRate.toLong()))
         e.scanner?.let { s ->
-            infoText.text = "Поиск DMR: проход ${s.passes}, окно ${e.scanWindow + 1} из ${s.centers.size}, " +
-                "найдено DMR: ${s.dmrFound()}"
+            infoText.text = tr("Поиск DMR: проход {p}, окно {w} из {n}, найдено DMR: {f}",
+                "p" to s.passes, "w" to e.scanWindow + 1, "n" to s.centers.size, "f" to s.dmrFound())
             e.scanLog.peek()?.let { rdsText.text = e.scanLog.toList().takeLast(5).joinToString("\n"); rdsText.visibility = View.VISIBLE }
             return
         }
         val rec = listOfNotNull(e.audioRecording?.let { w ->
-                "звук ${w.seconds.toInt()} с" + (w.dropped.get().takeIf { it > 0 }?.let { " (потеряно при записи: ${"%.1f".format(it / 2.0 / RadioDemod.AUDIO_RATE)} с)" } ?: "") },
-            e.iqRecording?.let { "IQ ${it.seconds.toInt()} с" }).joinToString(", ")
-        statusText.text = e.label + (if (e.dropped > 0) " · потеряно отсчётов: ${e.dropped}" else "") +
-            (if (rec.isNotEmpty()) " · ● запись: $rec" else "")
+                tr("звук {s} с", "s" to w.seconds.toInt()) + (w.dropped.get().takeIf { it > 0 }?.let {
+                    " (" + tr("потеряно при записи: {s} с", "s" to num(it / 2.0 / RadioDemod.AUDIO_RATE, 1)) + ")" } ?: "") },
+            e.iqRecording?.let { tr("IQ {s} с", "s" to it.seconds.toInt()) }).joinToString(", ")
+        statusText.text = e.label + (if (e.dropped > 0) " · " + tr("потеряно отсчётов: {n}", "n" to e.dropped) else "") +
+            (if (rec.isNotEmpty()) " · ● " + tr("запись: {r}", "r" to rec) else "")
         if (mode == Modulation.DMR) { showDmr(e); return }
         // RDS (только ЧМ-вещание)
         if (mode == Modulation.WFM && e.rds.synced || mode == Modulation.WFM && e.rds.ps.isNotEmpty()) {
@@ -517,17 +521,18 @@ class RadioActivity : Activity() {
         while (true) {
             val ev = e.dmrEvents.poll() ?: break
             dmrLog.addFirst("${java.text.SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(java.util.Date())} " +
-                (if (ev.slot > 0) "слот ${ev.slot}: " else "") + ev.text)
+                (if (ev.slot > 0) tr("слот {n}", "n" to ev.slot) + ": " else "") + ev.text)
             while (dmrLog.size > 5) dmrLog.removeLast()
         }
         val st = d.status()
-        val head = if (!st.locked) "DMR: нет синхронизации" else {
+        val head = if (!st.locked) tr("DMR: нет синхронизации") else {
             val sl = st.slots.entries.joinToString(" · ") { (n, s) ->
-                "слот $n: " + if (s.active) "${if (s.src != 0) s.src else "?"} → ${if (s.group) "TG " else ""}${if (s.dst != 0) s.dst else "?"}" +
-                    (if (s.encrypted) " (шифр.)" else "") else s.last.ifEmpty { "—" }
+                tr("слот {n}", "n" to n) + ": " + if (s.active) "${if (s.src != 0) s.src else "?"} → ${if (s.group) "TG " else ""}${if (s.dst != 0) s.dst else "?"}" +
+                    (if (s.encrypted) " (" + tr("шифр.") + ")" else "") else tr(s.last).ifEmpty { "—" }
             }
-            "DMR ${st.mode}, синхро ${st.sync} %, CC ${st.slots.values.firstNotNullOfOrNull { it.cc } ?: "?"} · $sl" +
-                (if (!st.mbelib) " · голос: нет mbelib" else "")
+            tr("DMR {mode}, синхро {sync} %, CC {cc} · {slots}", "mode" to st.mode, "sync" to st.sync,
+                "cc" to (st.slots.values.firstNotNullOfOrNull { it.cc } ?: "?"), "slots" to sl) +
+                (if (!st.mbelib) " · " + tr("голос: нет mbelib") else "")
         }
         rdsText.maxLines = 7
         rdsText.text = (listOf(head) + dmrLog).joinToString("\n")
@@ -537,15 +542,15 @@ class RadioActivity : Activity() {
     // ---------------- поиск DMR ----------------
     private fun startScan() {
         val e = engine ?: return
-        if (!e.running) { toast("Приёмник не работает"); return }
+        if (!e.running) { toast(tr("Приёмник не работает")); return }
         val bands = io.github.mikeileech.sdr4noob.dsp.DmrScanner.BANDS
-        AlertDialog.Builder(this).setTitle("Поиск DMR — где искать")
-            .setItems(bands.map { it.first }.toTypedArray()) { _, i ->
+        AlertDialog.Builder(this).setTitle(tr("Поиск DMR — где искать"))
+            .setItems(bands.map { tr(it.first) }.toTypedArray()) { _, i ->
                 val (_, lo, hi) = bands[i]
                 if (!e.startScan(io.github.mikeileech.sdr4noob.dsp.DmrScanner(e.sampleRate, lo, hi))) {
-                    toast("В записи IQ поиск невозможен: центр частоты задаёт файл"); return@setItems
+                    toast(tr("В записи IQ поиск невозможен: центр частоты задаёт файл")); return@setItems
                 }
-                toast("Поиск идёт по кругу, звук на это время выключен. Результаты — меню ⋮ → «Поиск DMR: результаты…»")
+                toast(tr("Поиск идёт по кругу, звук на это время выключен. Результаты — меню ⋮ → «Поиск DMR: результаты…»"))
             }.show()
     }
 
@@ -556,14 +561,14 @@ class RadioActivity : Activity() {
         val items = rows.map { "${Ui.mhz(it.freq.toLong())} — ${it.text}" +
             (if (it.ids.isNotEmpty()) "\n   " + it.ids.joinToString(", ") else "") }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Найдено (проход ${s.passes}, окон ${s.centers.size}); нажмите — слушать")
+            .setTitle(tr("Найдено (проход {p}, окон {w}); нажмите — слушать", "p" to s.passes, "w" to s.centers.size))
             .setItems(items) { _, i ->
                 val r = rows[i]
                 e.stopScan()
                 setMode(if (r.kind == "dmr") Modulation.DMR else Modulation.NFM, r.freq.toLong())
             }
-            .setPositiveButton("Остановить поиск") { _, _ -> e.stopScan() }
-            .setNegativeButton("Искать дальше", null)
+            .setPositiveButton(tr("Остановить поиск")) { _, _ -> e.stopScan() }
+            .setNegativeButton(tr("Искать дальше"), null)
             .show()
     }
 
@@ -571,34 +576,34 @@ class RadioActivity : Activity() {
     private fun toggleAudioRec() {
         val e = engine ?: return
         if (e.audioRecording != null) {
-            e.stopAudioRec(); recButton.text = "● Звук в WAV"; return
+            e.stopAudioRec(); recButton.text = tr("● Звук в WAV"); return
         }
-        if (!e.running) { toast("Приёмник не работает — записывать нечего"); return }
+        if (!e.running) { toast(tr("Приёмник не работает — записывать нечего")); return }
         var out: Storage.Out? = null
         try {
             out = Storage.open(this, Storage.AUDIO, Storage.audioName(e.vfoHz))
             e.startAudioRec(WavWriter(out.channel, RadioDemod.AUDIO_RATE, 2, onClose = out.finish))
-            recButton.text = "■ Стоп записи"
-            toast("Запись звука: ${out.shownPath}")
+            recButton.text = tr("■ Стоп записи")
+            toast(tr("Запись звука: {path}", "path" to out.shownPath))
         } catch (ex: Exception) {
             out?.let { o -> runCatching { o.channel.close() }; runCatching { o.finish() } }
-            toast("Не удалось начать запись: ${ex.message}")
+            toast(tr("Не удалось начать запись: {error}", "error" to ex.message))
         }
     }
 
     private fun toggleIqRec() {
         val e = engine ?: return
         if (e.iqRecording != null) { e.stopIqRec(); return }
-        if (!e.running) { toast("Приёмник не работает — записывать нечего"); return }
+        if (!e.running) { toast(tr("Приёмник не работает — записывать нечего")); return }
         var out: Storage.Out? = null
         try {
             out = Storage.open(this, Storage.IQ, Storage.iqName(e.centerHz, e.sampleRate))
             e.startIqRec(WavWriter(out.channel, e.sampleRate, 2, strict = true, onClose = out.finish))
             val mbMin = e.sampleRate * 4L * 60 / 1_000_000
-            toast("Запись IQ (≈$mbMin МБ в минуту; перестройка центра её остановит): ${out.shownPath}")
+            toast(tr("Запись IQ (≈{mb} МБ в минуту; перестройка центра её остановит): {path}", "mb" to mbMin, "path" to out.shownPath))
         } catch (ex: Exception) {
             out?.let { o -> runCatching { o.channel.close() }; runCatching { o.finish() } }
-            toast("Не удалось начать запись IQ: ${ex.message}")
+            toast(tr("Не удалось начать запись IQ: {error}", "error" to ex.message))
         }
     }
 
@@ -608,20 +613,20 @@ class RadioActivity : Activity() {
     private fun showFreqMan() {
         val e = engine
         val sorted = freqs.sortedWith(compareBy({ it.group }, { it.freq }))
-        val items = sorted.map { "${it.group} · ${it.name} — ${Ui.mhz(it.freq.toLong())} ${it.mode}" }.toTypedArray()
+        val items = sorted.map { "${tr(it.group)} · ${it.name} — ${Ui.mhz(it.freq.toLong())} ${it.mode}" }.toTypedArray()
         val d = AlertDialog.Builder(this)
-            .setTitle(if (sorted.isEmpty()) "Мои частоты — пока пусто" else "Мои частоты (долгое нажатие — удалить)")
+            .setTitle(if (sorted.isEmpty()) tr("Мои частоты — пока пусто") else tr("Мои частоты (долгое нажатие — удалить)"))
             .setItems(items) { _, i -> tuneTo(sorted[i]) }
-            .setPositiveButton("Добавить текущую") { _, _ -> if (e != null) addCurrent(e) }
-            .setNeutralButton("Импорт/экспорт…") { _, _ -> importExport() }
-            .setNegativeButton("Закрыть", null)
+            .setPositiveButton(tr("Добавить текущую")) { _, _ -> if (e != null) addCurrent(e) }
+            .setNeutralButton(tr("Импорт/экспорт…")) { _, _ -> importExport() }
+            .setNegativeButton(tr("Закрыть"), null)
             .create()
         d.setOnShowListener {
             d.listView?.setOnItemLongClickListener { _, _, i, _ ->
                 val it = sorted[i]
-                AlertDialog.Builder(this).setMessage("Удалить «${it.name}»?")
-                    .setPositiveButton("Удалить") { _, _ -> freqs.remove(it); saveFreqs(); d.dismiss() }
-                    .setNegativeButton("Отмена", null).show()
+                AlertDialog.Builder(this).setMessage(tr("Удалить «{name}»?", "name" to it.name))
+                    .setPositiveButton(tr("Удалить")) { _, _ -> freqs.remove(it); saveFreqs(); d.dismiss() }
+                    .setNegativeButton(tr("Отмена"), null).show()
                 true
             }
         }
@@ -629,7 +634,7 @@ class RadioActivity : Activity() {
     }
 
     private fun saveFreqs() {
-        try { FreqMan.save(freqFile, freqs) } catch (ex: Exception) { toast("Не удалось сохранить список: ${ex.message}") }
+        try { FreqMan.save(freqFile, freqs) } catch (ex: Exception) { toast(tr("Не удалось сохранить список: {error}", "error" to ex.message)) }
     }
 
     private fun tuneTo(f: FreqEntry) {
@@ -645,20 +650,21 @@ class RadioActivity : Activity() {
             setText(e.rds.ps.trim().ifEmpty { Ui.mhz(e.vfoHz) })
             selectAll()
         }
-        val group = EditText(this).apply { hint = "Группа (например, FM или Рации)"; setText(FreqMan.DEFAULT_GROUP) }
+        val group = EditText(this).apply { hint = tr("Группа (например, FM или Рации)"); setText(tr(FreqMan.DEFAULT_GROUP)) }
         val box = Ui.vbox(this, 16).apply { addView(name); addView(group) }
-        AlertDialog.Builder(this).setTitle("Сохранить частоту").setView(box)
-            .setPositiveButton("Сохранить") { _, _ ->
+        AlertDialog.Builder(this).setTitle(tr("Сохранить частоту")).setView(box)
+            .setPositiveButton(tr("Сохранить")) { _, _ ->
                 freqs.add(FreqMan.normalize(name.text.toString(), e.vfoHz.toDouble(), mode.name, e.bandwidth.toDouble(),
-                    group.text.toString()))
+                    // группа по умолчанию хранится по-русски (как на ПК), какой бы язык ни был
+                    group.text.toString().let { if (it == tr(FreqMan.DEFAULT_GROUP)) FreqMan.DEFAULT_GROUP else it }))
                 saveFreqs()
-            }.setNegativeButton("Отмена", null).show()
+            }.setNegativeButton(tr("Отмена"), null).show()
     }
 
     private fun importExport() {
-        AlertDialog.Builder(this).setTitle("Мои частоты")
-            .setItems(arrayOf("Импорт из CSV или XML SDR# (добавит без повторов)", "Экспорт в CSV (Excel, SDR4NOOB на ПК)",
-                "Экспорт в XML SDR#")) { _, i ->
+        AlertDialog.Builder(this).setTitle(tr("Мои частоты"))
+            .setItems(arrayOf(tr("Импорт из CSV или XML SDR# (добавит без повторов)"), tr("Экспорт в CSV (Excel, SDR4NOOB на ПК)"),
+                tr("Экспорт в XML SDR#"))) { _, i ->
                 when (i) {
                     0 -> startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                         .setType("*/*"), REQ_IMPORT)
@@ -667,7 +673,7 @@ class RadioActivity : Activity() {
                         prefs.edit().putBoolean("export_xml", xml).apply()
                         startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                             .setType(if (xml) "text/xml" else "text/csv")
-                            .putExtra(Intent.EXTRA_TITLE, if (xml) "Frequencies.xml" else "SDR4NOOB-частоты.csv"), REQ_EXPORT)
+                            .putExtra(Intent.EXTRA_TITLE, if (xml) "Frequencies.xml" else "SDR4NOOB-частоты.csv"), REQ_EXPORT)   // noqa: i18n
                     }
                 }
             }.show()
@@ -691,13 +697,13 @@ class RadioActivity : Activity() {
                             val k = s.read(chunk)
                             if (k < 0) break
                             buf.write(chunk, 0, k)
-                            if (buf.size() > limit) throw IllegalArgumentException("файл больше 5 МБ — это не список частот")
+                            if (buf.size() > limit) throw IllegalArgumentException(tr("файл больше 5 МБ — это не список частот"))
                         }
                         buf.toByteArray()
                     }
                     val n = FreqMan.merge(freqs, FreqMan.importAny(bytes))
                     saveFreqs()
-                    toast("Добавлено записей: $n")
+                    toast(tr("Добавлено записей: {n}", "n" to n))
                 }
                 REQ_EXPORT -> {
                     val xml = prefs.getBoolean("export_xml", false)
@@ -705,44 +711,44 @@ class RadioActivity : Activity() {
                         if (xml) os.write(FreqMan.exportSdrSharpXml(freqs).toByteArray())
                         else os.write(("\uFEFF" + FreqMan.exportCsv(freqs)).toByteArray())
                     }
-                    toast("Сохранено записей: ${freqs.size}")
+                    toast(tr("Сохранено записей: {n}", "n" to freqs.size))
                 }
             }
         } catch (ex: Throwable) {
-            toast("Не получилось: ${ex.message}")
+            toast(tr("Не получилось: {error}", "error" to ex.message))
         }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         if (app in IQ_APPS) {
-            menu.add(0, 2, 0, "Поправка частоты (ppm)…")
-            menu.add(0, 3, 0, "Справка")
+            menu.add(0, 2, 0, tr("Поправка частоты (ppm)…"))
+            menu.add(0, 3, 0, tr("Справка"))
             return true
         }
-        menu.add(0, 1, 0, "Полоса обзора…")
-        menu.add(0, 4, 0, "Полоса канала…")
-        menu.add(0, 5, 0, "АРУ звука (AM, SSB, CW)").setCheckable(true).isChecked = prefs.getBoolean("agc", true)
-        menu.add(0, 6, 0, "Запись IQ (базовая полоса)")
-        if (app == null) menu.add(0, 7, 0, "Поиск DMR…")
-        menu.add(0, 2, 0, "Поправка частоты (ppm)…")
-        menu.add(0, 3, 0, "Справка")
+        menu.add(0, 1, 0, tr("Полоса обзора…"))
+        menu.add(0, 4, 0, tr("Полоса канала…"))
+        menu.add(0, 5, 0, tr("АРУ звука (AM, SSB, CW)")).setCheckable(true).isChecked = prefs.getBoolean("agc", true)
+        menu.add(0, 6, 0, tr("Запись IQ (базовая полоса)"))
+        if (app == null) menu.add(0, 7, 0, tr("Поиск DMR…"))
+        menu.add(0, 2, 0, tr("Поправка частоты (ppm)…"))
+        menu.add(0, 3, 0, tr("Справка"))
         return true
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menu.findItem(6)?.title = if (engine?.iqRecording != null) "Остановить запись IQ" else "Запись IQ (базовая полоса)"
-        menu.findItem(7)?.title = if (engine?.scanner != null) "Поиск DMR: результаты…" else "Поиск DMR…"
+        menu.findItem(6)?.title = if (engine?.iqRecording != null) tr("Остановить запись IQ") else tr("Запись IQ (базовая полоса)")
+        menu.findItem(7)?.title = if (engine?.scanner != null) tr("Поиск DMR: результаты…") else tr("Поиск DMR…")
         return super.onPrepareOptionsMenu(menu)
     }
 
-    private fun fmtBw(hz: Int) = if (hz >= 10_000) "${hz / 1000} кГц" else String.format(Locale.ROOT, "%.1f кГц", hz / 1000.0).replace('.', ',')
+    private fun fmtBw(hz: Int) = tr("{v} кГц", "v" to if (hz >= 10_000) (hz / 1000).toString() else num(hz / 1000.0, 1))
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             1 -> {
                 val rates = RadioDemod.RADIO_RATES
-                AlertDialog.Builder(this).setTitle("Полоса обзора (частота дискретизации)")
-                    .setItems(rates.map { String.format(Locale.ROOT, "%.2f МГц", it / 1e6).replace('.', ',') }.toTypedArray()) { _, i ->
+                AlertDialog.Builder(this).setTitle(tr("Полоса обзора (частота дискретизации)"))
+                    .setItems(rates.map { tr("{v} МГц", "v" to num(it / 1e6, 2)) }.toTypedArray()) { _, i ->
                         prefs.edit().putInt("rate", rates[i]).apply()
                         engine?.setSampleRate(rates[i])
                     }.show()
@@ -752,11 +758,11 @@ class RadioActivity : Activity() {
                     inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
                     setText(prefs.getInt("ppm", 0).toString())
                 }
-                AlertDialog.Builder(this).setTitle("Поправка кварца, ppm").setView(edit)
+                AlertDialog.Builder(this).setTitle(tr("Поправка кварца, ppm")).setView(edit)
                     .setPositiveButton("OK") { _, _ ->
                         val p = edit.text.toString().toIntOrNull() ?: 0
                         prefs.edit().putInt("ppm", p).apply(); engine?.setPpm(p)
-                    }.setNegativeButton("Отмена", null).show()
+                    }.setNegativeButton(tr("Отмена"), null).show()
             }
             3 -> startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE,
                 when (app) { APP_SSTV -> "guide/mode-sstv.html"; APP_APRS -> "guide/mode-aprs.html"; APP_ADSB -> "guide/mode-adsb.html"; APP_TV -> "guide/mode-tv.html"; APP_SAT -> "guide/mode-sat.html"; else -> "guide/mode-radio.html" }))
@@ -764,7 +770,7 @@ class RadioActivity : Activity() {
                 val e = engine ?: return true
                 val steps = listOf(0.25, 0.5, 0.75, 1.0, 1.5, 2.0).map { (mode.defaultBw * it).toInt() }
                     .filter { it in mode.minBw..mode.maxBw }.plus(listOf(mode.minBw, mode.maxBw)).distinct().sorted()
-                AlertDialog.Builder(this).setTitle("Полоса канала (сейчас ${fmtBw(e.bandwidth)})")
+                AlertDialog.Builder(this).setTitle(tr("Полоса канала (сейчас {bw})", "bw" to fmtBw(e.bandwidth)))
                     .setItems(steps.map { fmtBw(it) }.toTypedArray()) { _, i ->
                         e.setBandwidth(steps[i]); prefs.edit().putInt("bw_${mode.name}", steps[i]).apply(); applyModeUi()
                     }.show()

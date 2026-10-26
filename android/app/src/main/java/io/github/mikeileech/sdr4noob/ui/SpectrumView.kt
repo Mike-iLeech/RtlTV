@@ -11,6 +11,8 @@ import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.radio.RadioEngine
 import kotlin.math.abs
 import kotlin.math.max
@@ -100,7 +102,7 @@ class SpectrumView @JvmOverloads constructor(context: Context, attrs: AttributeS
             }
         }
         if (rate == 0) {
-            canvas.drawText("Ожидание сигнала…", 16 * density, 24 * density, textPaint)
+            canvas.drawText(tr("Ожидание сигнала…"), 16 * density, 24 * density, textPaint)
             return
         }
         // сетка частот
@@ -189,7 +191,7 @@ class SpectrumView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     private fun fmtMhz(f: Long): String {
         val mhz = f / 1e6
-        return if (f % 100_000 == 0L) "%.1f".format(mhz) else "%.3f".format(mhz)
+        return if (f % 100_000 == 0L) num(mhz, 1) else num(mhz, 3)
     }
 
     // ---------- касания ----------

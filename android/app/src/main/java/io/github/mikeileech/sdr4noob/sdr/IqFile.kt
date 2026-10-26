@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -98,24 +100,24 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
             width = when (kind) { "u8", "s8" -> 2; "s16" -> 4; else -> 8 }
             total = len / width
         } else {
-            kind = IqName.RAW_KINDS[ext] ?: throw IqFormatException("Неизвестный формат файла IQ: ${ext.ifEmpty { "без расширения" }}")
-            fs = nFs ?: throw IqFormatException("Не удалось определить частоту дискретизации по имени файла " +
-                "(нужно, например, …_2400000sps… или …_2.4MSPS…)")
+            kind = IqName.RAW_KINDS[ext] ?: throw IqFormatException(tr("Неизвестный формат файла IQ: {ext}", "ext" to ext.ifEmpty { tr("без расширения") }))
+            fs = nFs ?: throw IqFormatException(
+                tr("Не удалось определить частоту дискретизации по имени файла (нужно, например, …_2400000sps… или …_2.4MSPS…)"))
             offset = 0
             width = when (kind) { "u8", "s8" -> 2; "s16" -> 4; else -> 8 }
             total = sizeBytes / width
         }
-        if (fs <= 0) throw IqFormatException("Неверная частота дискретизации в заголовке файла")
-        if (total <= 0) throw IqFormatException("Файл пуст")
+        if (fs <= 0) throw IqFormatException(tr("Неверная частота дискретизации в заголовке файла"))
+        if (total <= 0) throw IqFormatException(tr("Файл пуст"))
     }
 
     private class WavInfo(val kind: String, val rate: Int, val offset: Long, val size: Long)
 
     private fun wavInfo(): WavInfo = DataInputStream(open().buffered()).use { s ->
         val hdr = ByteArray(12)
-        try { s.readFully(hdr) } catch (_: EOFException) { throw IqFormatException("Это не WAV-файл") }
+        try { s.readFully(hdr) } catch (_: EOFException) { throw IqFormatException(tr("Это не WAV-файл")) }
         val id = String(hdr, 0, 4, Charsets.US_ASCII)
-        if ((id != "RIFF" && id != "RF64") || String(hdr, 8, 4, Charsets.US_ASCII) != "WAVE") throw IqFormatException("Это не WAV-файл")
+        if ((id != "RIFF" && id != "RF64") || String(hdr, 8, 4, Charsets.US_ASCII) != "WAVE") throw IqFormatException(tr("Это не WAV-файл"))
         var off = 12L
         var fmt: IntArray? = null
         while (true) {
@@ -138,13 +140,13 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
                     if (size % 2 == 1L) { s.skipBytes(1); off++ }
                 }
                 "data" -> {
-                    val f = fmt ?: throw IqFormatException("WAV без заголовка формата")
-                    if (f[1] != 2) throw IqFormatException("В WAV ${f[1]} канал(а), а для IQ нужно 2 (I и Q)")
+                    val f = fmt ?: throw IqFormatException(tr("WAV без заголовка формата"))
+                    if (f[1] != 2) throw IqFormatException(tr("В WAV {n} канал(а), а для IQ нужно 2 (I и Q)", "n" to f[1]))
                     val kind = when {
                         f[0] == 1 && f[3] == 8 -> "u8"
                         f[0] == 1 && f[3] == 16 -> "s16"
                         f[0] == 3 && f[3] == 32 -> "f32"
-                        else -> throw IqFormatException("Формат WAV не поддерживается (код ${f[0]}, ${f[3]} бит)")
+                        else -> throw IqFormatException(tr("Формат WAV не поддерживается (код {code}, {bits} бит)", "code" to f[0], "bits" to f[3]))
                     }
                     return WavInfo(kind, f[2], off, size)
                 }
@@ -153,13 +155,13 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
                     var skip = size + (size % 2)
                     while (skip > 0) {
                         val k = s.skip(skip)
-                        if (k > 0) skip -= k else if (s.read() < 0) throw IqFormatException("В WAV нет данных") else skip--
+                        if (k > 0) skip -= k else if (s.read() < 0) throw IqFormatException(tr("В WAV нет данных")) else skip--
                     }
                     off += size + (size % 2)
                 }
             }
         }
-        throw IqFormatException("В WAV нет данных")
+        throw IqFormatException(tr("В WAV нет данных"))
     }
 
     val seconds get() = total.toDouble() / fs
@@ -168,14 +170,14 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
         input?.close(); input = null
         val s = try { DataInputStream(open().buffered(1 shl 16)) }
         catch (e: SdrException) { throw e }
-        catch (e: SecurityException) { throw SdrException("Нет доступа к файлу IQ — выберите его заново", e) }
-        catch (e: java.io.IOException) { throw SdrException("Файл IQ больше не читается (удалён или перемещён?)", e) }
+        catch (e: SecurityException) { throw SdrException(tr("Нет доступа к файлу IQ — выберите его заново"), e) }
+        catch (e: java.io.IOException) { throw SdrException(tr("Файл IQ больше не читается (удалён или перемещён?)"), e) }
         var skip = offset
         // skip() у потоков ContentResolver может вернуть 0 — тогда дочитываем по байту, иначе данные сдвинутся
         while (skip > 0) {
             val k = s.skip(skip)
             if (k > 0) skip -= k
-            else if (s.read() < 0) throw SdrException("Файл IQ обрывается в заголовке")
+            else if (s.read() < 0) throw SdrException(tr("Файл IQ обрывается в заголовке"))
             else skip--
         }
         input = s
@@ -197,9 +199,9 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
             val bytes = take * width
             if (raw.size < bytes) raw = ByteArray(bytes)
             try { input!!.readFully(raw, 0, bytes) } catch (_: EOFException) {
-                if (fresh) throw SdrException("Файл IQ короче, чем указано в его заголовке: воспроизводить нечего")
+                if (fresh) throw SdrException(tr("Файл IQ короче, чем указано в его заголовке: воспроизводить нечего"))
                 pos = total; continue
-            } catch (e: java.io.IOException) { throw SdrException("Файл IQ больше не читается: ${e.message}", e) }
+            } catch (e: java.io.IOException) { throw SdrException(tr("Файл IQ больше не читается: {err}", "err" to e.message), e) }
             fresh = false
             val b = ByteBuffer.wrap(raw, 0, bytes).order(ByteOrder.LITTLE_ENDIAN)
             for (i in 0 until take) {
@@ -241,8 +243,8 @@ class IqFileSource(shownName: String, private val makeReader: () -> IqFileReader
                     }
                 }
                 if (size <= 0) size = cr.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1
-                if (size <= 0) throw SdrException("Не удалось узнать размер файла")
-                IqFileReader({ cr.openInputStream(uri) ?: throw SdrException("Файл не открывается") }, name, size)
+                if (size <= 0) throw SdrException(tr("Не удалось узнать размер файла"))
+                IqFileReader({ cr.openInputStream(uri) ?: throw SdrException(tr("Файл не открывается")) }, name, size)
             }
         }
     }
@@ -252,17 +254,17 @@ class IqFileSource(shownName: String, private val makeReader: () -> IqFileReader
         try {
             makeReader().also { name = it.name }
         } catch (e: SdrException) { throw e
-        } catch (e: IqFormatException) { throw SdrException(e.message ?: "Неверный файл IQ", e)
-        } catch (e: SecurityException) { throw SdrException("Нет доступа к файлу — выберите его заново", e)
-        } catch (e: java.io.FileNotFoundException) { throw SdrException("Файл IQ не найден (удалён или перемещён?) — выберите его заново", e)
-        } catch (e: java.io.IOException) { throw SdrException("Файл IQ не читается: ${e.message}", e)
-        } catch (e: IllegalArgumentException) { throw SdrException("Файл IQ не открывается: ${e.message}", e)
+        } catch (e: IqFormatException) { throw SdrException(e.message ?: tr("Неверный файл IQ"), e)
+        } catch (e: SecurityException) { throw SdrException(tr("Нет доступа к файлу — выберите его заново"), e)
+        } catch (e: java.io.FileNotFoundException) { throw SdrException(tr("Файл IQ не найден (удалён или перемещён?) — выберите его заново"), e)
+        } catch (e: java.io.IOException) { throw SdrException(tr("Файл IQ не читается: {err}", "err" to e.message), e)
+        } catch (e: IllegalArgumentException) { throw SdrException(tr("Файл IQ не открывается: {err}", "err" to e.message), e)
         }
     }
 
     private val reader by readerLazy
 
-    override val label get() = "Файл IQ: $name"
+    override val label get() = tr("Файл IQ: {name}", "name" to name)
     override val gains = IntArray(0)
     override val retunable get() = false
     val fileRate get() = reader.fs

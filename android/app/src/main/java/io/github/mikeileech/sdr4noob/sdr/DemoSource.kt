@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.i18n.tr
+
 import io.github.mikeileech.sdr4noob.dsp.Afsk
 import io.github.mikeileech.sdr4noob.dsp.Aprs
 import io.github.mikeileech.sdr4noob.dsp.Ax25
@@ -45,8 +47,8 @@ class DemoSource : SdrSource {
         /** APRS: три станции у Москвы (позиция, объект, погода), затем тишина — ~12 с по кругу, 48 кГц. */
         private val APRS_AUDIO: FloatArray by lazy {
             val frames = listOf(
-                Ax25.makeFrame("RA3AAA-9", "APRS", listOf("WIDE1-1"), Aprs.encodePosition(55.7512, 37.6184, "/", ">", "Тестовый эфир SDR4NOOB")),
-                Ax25.makeFrame("UA3BBB-10", "APRS", listOf("WIDE2-1"), Aprs.encodePosition(55.8304, 37.3297, "/", "-", "дом")),
+                Ax25.makeFrame("RA3AAA-9", "APRS", listOf("WIDE1-1"), Aprs.encodePosition(55.7512, 37.6184, "/", ">", "Тестовый эфир SDR4NOOB")),  // noqa: i18n
+                Ax25.makeFrame("UA3BBB-10", "APRS", listOf("WIDE2-1"), Aprs.encodePosition(55.8304, 37.3297, "/", "-", "дом")),  // noqa: i18n
                 Ax25.makeFrame("R3CCC", "APRS", emptyList(), "!5541.20N/03745.00E_090/005g010t050r000p000P000h80b10132"),
             )
             val x = Afsk.encodePackets(frames, gap = 1.0)
@@ -71,7 +73,7 @@ class DemoSource : SdrSource {
         private val DMR_FREQ: FloatArray by lazy { DmrGen.testSignal() }
 
         /** RDS станции 101,0 МГц (PS и радиотекст — как в тестовом эфире настольной версии). */
-        val RDS = RdsEncoder(RdsEncoder.groups(0x7A01, "SDR4NOOB", "Тестовый эфир SDR4NOOB: музыка в стерео", pty = 10))
+        val RDS = RdsEncoder(RdsEncoder.groups(0x7A01, "SDR4NOOB", "Тестовый эфир SDR4NOOB: музыка в стерео", pty = 10))  // noqa: i18n
 
         // телеграф: «CQ CQ DE SDR4NOOB» азбукой Морзе, 18 слов/мин (точка 1,2/18 с)
         private val MORSE = mapOf('A' to ".-", 'B' to "-...", 'C' to "-.-.", 'D' to "-..", 'E' to ".", 'N' to "-.",
@@ -91,7 +93,7 @@ class DemoSource : SdrSource {
         private const val DOT_S = 1.2 / 18
     }
 
-    override val label = "Тестовый сигнал (без приёмника)"
+    override val label = tr("Тестовый сигнал (без приёмника)")
     override val gains = IntArray(0)
 
     private var fs = 2_400_000

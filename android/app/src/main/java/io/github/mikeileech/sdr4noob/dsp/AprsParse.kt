@@ -1,5 +1,8 @@
 package io.github.mikeileech.sdr4noob.dsp
 
+import io.github.mikeileech.sdr4noob.i18n.I18n
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -167,8 +170,8 @@ object Aprs {
         // «²» проходит isdigit(), но не int(): Python здесь падает с ValueError, у нас — «нет отметки времени»
         val day = if (z in "zZ/") PyNum.int(v.sl(0, 2)) ?: return null else 0L
         return when (z) {
-            'z', 'Z' -> "$day-е число, ${v.sl(2, 4)}:${v.sl(4, 6)} UTC"
-            '/' -> "$day-е число, ${v.sl(2, 4)}:${v.sl(4, 6)} (местное)"
+            'z', 'Z' -> tr("{day}-е число, {hh}:{mm} UTC", "day" to day, "hh" to v.sl(2, 4), "mm" to v.sl(4, 6))
+            '/' -> tr("{day}-е число, {hh}:{mm} (местное)", "day" to day, "hh" to v.sl(2, 4), "mm" to v.sl(4, 6))
             'h' -> "${v.sl(0, 2)}:${v.sl(2, 4)}:${v.sl(4, 6)} UTC"
             else -> null
         }
@@ -349,8 +352,9 @@ object Aprs {
         return null
     }
 
-    val MICE_STD = mapOf(7 to "Не на службе", 6 to "В пути", 5 to "На службе", 4 to "Возвращаюсь", 3 to "Занят",
-        2 to "Особое", 1 to "Приоритет", 0 to "ЭКСТРЕННОЕ")
+    /** стандартные сообщения Mic-E (N_ — переводятся через tr при разборе пакета) */
+    val MICE_STD = mapOf(7 to N_("Не на службе"), 6 to N_("В пути"), 5 to N_("На службе"), 4 to N_("Возвращаюсь"),
+        3 to N_("Занят"), 2 to N_("Особое"), 1 to N_("Приоритет"), 0 to N_("ЭКСТРЕННОЕ"))
     val MICE_RADIO = mapOf("_ " to "Yaesu VX-8", "_\"" to "Yaesu FTM-350", "_#" to "Yaesu VX-8G", "_\$" to "Yaesu FT1D",
         "_%" to "Yaesu FTM-400DR", "_)" to "Yaesu FTM-100D", "_(" to "Yaesu FT2D", "_0" to "Yaesu FT3D",
         "_3" to "Yaesu FT5D", "_1" to "Yaesu FTM-300D", "_4" to "Yaesu FTM-500D", "|3" to "Byonics TinyTrack3",
@@ -401,9 +405,9 @@ object Aprs {
         if (speed != 0) p.speedKmh = speed * 1.852
         val idx = bits[0] * 4 + bits[1] * 2 + bits[2]
         p.miceMsg = when {
-            custom && std -> "неизвестно"
-            custom -> "Своё сообщение ${7 - idx}"
-            else -> MICE_STD.getValue(idx)
+            custom && std -> tr("неизвестно")
+            custom -> tr("Своё сообщение {n}", "n" to 7 - idx)
+            else -> tr(MICE_STD.getValue(idx))
         }
         var rest = s.sl(9)
         var radio: String? = null
@@ -609,42 +613,43 @@ object Aprs {
 
     // ------------------------------------------------------------------ классы станций и символы
 
+    /** названия символов (N_ — переводятся в symbolName) */
     val SYM_PRIMARY = mapOf(
-        "!" to "Полиция", "#" to "Digipeater", "\$" to "Телефон", "%" to "DX-кластер", "&" to "КВ-шлюз",
-        "'" to "Малый самолёт", "(" to "Мобильный спутник", ")" to "Инвалидная коляска", "*" to "Снегоход",
-        "+" to "Красный Крест", "," to "Скауты", "-" to "Дом", "." to "Крестик", "/" to "Точка", ":" to "Пожар",
-        ";" to "Лагерь", "<" to "Мотоцикл", "=" to "Поезд", ">" to "Автомобиль", "?" to "Сервер", "@" to "Ураган",
-        "A" to "Аптечка", "B" to "BBS", "C" to "Каноэ", "E" to "Событие", "F" to "Трактор", "G" to "Квадрат",
-        "H" to "Гостиница", "I" to "TCP/IP", "K" to "Школа", "L" to "Компьютер", "M" to "MacAPRS", "N" to "Станция NTS",
-        "O" to "Аэростат", "P" to "Полиция", "R" to "Дом на колёсах", "S" to "Шаттл", "T" to "SSTV", "U" to "Автобус",
-        "V" to "ATV", "W" to "Метеослужба", "X" to "Вертолёт", "Y" to "Яхта", "Z" to "WinAPRS", "[" to "Пешеход",
-        "\\" to "Пеленг (DF)", "]" to "Почта", "^" to "Самолёт", "_" to "Метеостанция", "`" to "Спутниковая антенна",
-        "a" to "Скорая помощь", "b" to "Велосипед", "c" to "Пункт управления", "d" to "Пожарная часть", "e" to "Лошадь",
-        "f" to "Пожарная машина", "g" to "Планер", "h" to "Больница", "i" to "Остров (IOTA)", "j" to "Джип",
-        "k" to "Грузовик", "l" to "Ноутбук", "m" to "Mic-E репитер", "n" to "Узел", "o" to "Штаб", "p" to "Собака",
-        "q" to "Квадрат", "r" to "Репитер", "s" to "Судно", "t" to "Стоянка грузовиков", "u" to "Фура", "v" to "Фургон",
-        "w" to "Водоочистка", "x" to "X-APRS", "y" to "Дом с антенной", "z" to "Убежище",
+        "!" to N_("Полиция"), "#" to "Digipeater", "\$" to N_("Телефон"), "%" to N_("DX-кластер"), "&" to N_("КВ-шлюз"),
+        "'" to N_("Малый самолёт"), "(" to N_("Мобильный спутник"), ")" to N_("Инвалидная коляска"), "*" to N_("Снегоход"),
+        "+" to N_("Красный Крест"), "," to N_("Скауты"), "-" to N_("Дом"), "." to N_("Крестик"), "/" to N_("Точка"), ":" to N_("Пожар"),
+        ";" to N_("Лагерь"), "<" to N_("Мотоцикл"), "=" to N_("Поезд"), ">" to N_("Автомобиль"), "?" to N_("Сервер"), "@" to N_("Ураган"),
+        "A" to N_("Аптечка"), "B" to "BBS", "C" to N_("Каноэ"), "E" to N_("Событие"), "F" to N_("Трактор"), "G" to N_("Квадрат"),
+        "H" to N_("Гостиница"), "I" to "TCP/IP", "K" to N_("Школа"), "L" to N_("Компьютер"), "M" to "MacAPRS", "N" to N_("Станция NTS"),
+        "O" to N_("Аэростат"), "P" to N_("Полиция"), "R" to N_("Дом на колёсах"), "S" to N_("Шаттл"), "T" to "SSTV", "U" to N_("Автобус"),
+        "V" to "ATV", "W" to N_("Метеослужба"), "X" to N_("Вертолёт"), "Y" to N_("Яхта"), "Z" to "WinAPRS", "[" to N_("Пешеход"),
+        "\\" to N_("Пеленг (DF)"), "]" to N_("Почта"), "^" to N_("Самолёт"), "_" to N_("Метеостанция"), "`" to N_("Спутниковая антенна"),
+        "a" to N_("Скорая помощь"), "b" to N_("Велосипед"), "c" to N_("Пункт управления"), "d" to N_("Пожарная часть"), "e" to N_("Лошадь"),
+        "f" to N_("Пожарная машина"), "g" to N_("Планер"), "h" to N_("Больница"), "i" to N_("Остров (IOTA)"), "j" to N_("Джип"),
+        "k" to N_("Грузовик"), "l" to N_("Ноутбук"), "m" to N_("Mic-E репитер"), "n" to N_("Узел"), "o" to N_("Штаб"), "p" to N_("Собака"),
+        "q" to N_("Квадрат"), "r" to N_("Репитер"), "s" to N_("Судно"), "t" to N_("Стоянка грузовиков"), "u" to N_("Фура"), "v" to N_("Фургон"),
+        "w" to N_("Водоочистка"), "x" to "X-APRS", "y" to N_("Дом с антенной"), "z" to N_("Убежище"),
     )
     val SYM_ALT = mapOf(
-        "#" to "Digipeater", "&" to "Шлюз (I-Gate)", "-" to "Дом (КВ)", ">" to "Автомобиль", "_" to "Метеостанция",
-        "S" to "Спутник", "n" to "Треугольник", "O" to "Ракета/зонд", "^" to "Самолёт", "k" to "Внедорожник",
-        "u" to "Грузовик", "v" to "Фургон", "s" to "Катер", "0" to "Круг (IRLP/EchoLink)", "a" to "ARES",
-        "L" to "Маяк", "W" to "Метеостанция", "j" to "Работы на дороге", "!" to "Авария", "[" to "Пешеход",
+        "#" to "Digipeater", "&" to N_("Шлюз (I-Gate)"), "-" to N_("Дом (КВ)"), ">" to N_("Автомобиль"), "_" to N_("Метеостанция"),
+        "S" to N_("Спутник"), "n" to N_("Треугольник"), "O" to N_("Ракета/зонд"), "^" to N_("Самолёт"), "k" to N_("Внедорожник"),
+        "u" to N_("Грузовик"), "v" to N_("Фургон"), "s" to N_("Катер"), "0" to N_("Круг (IRLP/EchoLink)"), "a" to "ARES",
+        "L" to N_("Маяк"), "W" to N_("Метеостанция"), "j" to N_("Работы на дороге"), "!" to N_("Авария"), "[" to N_("Пешеход"),
     )
 
-    /** вид станции: подпись и цвет на карте */
+    /** вид станции: подпись (N_ — показывать через tr) и цвет на карте */
     val KINDS = linkedMapOf(
-        "iss" to ("МКС / спутник" to "#ff5cf0"),
-        "car" to ("Транспорт" to "#ffb84d"),
-        "person" to ("Пешеход" to "#ff8c69"),
-        "home" to ("Дом" to "#7fdc7f"),
-        "wx" to ("Метеостанция" to "#4fd1ff"),
+        "iss" to (N_("МКС / спутник") to "#ff5cf0"),
+        "car" to (N_("Транспорт") to "#ffb84d"),
+        "person" to (N_("Пешеход") to "#ff8c69"),
+        "home" to (N_("Дом") to "#7fdc7f"),
+        "wx" to (N_("Метеостанция") to "#4fd1ff"),
         "digi" to ("Digipeater" to "#c39bff"),
-        "igate" to ("Шлюз I-Gate" to "#a77bff"),
-        "air" to ("Воздушное судно" to "#ffd84d"),
-        "boat" to ("Судно" to "#4f8cff"),
-        "object" to ("Объект" to "#c8c8c8"),
-        "other" to ("Прочее" to "#e8e8e8"),
+        "igate" to (N_("Шлюз I-Gate") to "#a77bff"),
+        "air" to (N_("Воздушное судно") to "#ffd84d"),
+        "boat" to (N_("Судно") to "#4f8cff"),
+        "object" to (N_("Объект") to "#c8c8c8"),
+        "other" to (N_("Прочее") to "#e8e8e8"),
     )
     private val SYM_KIND = mapOf(
         ">" to "car", "k" to "car", "u" to "car", "v" to "car", "j" to "car", "U" to "car", "R" to "car", "<" to "car",
@@ -660,8 +665,8 @@ object Aprs {
 
     fun symbolName(table: String?, code: String?): String {
         if (table.isNullOrEmpty() || code.isNullOrEmpty()) return ""
-        if (table == "/") return SYM_PRIMARY[code] ?: "символ /$code"
-        var name = SYM_ALT[code] ?: "символ \\$code"
+        if (table == "/") return SYM_PRIMARY[code]?.let { tr(it) } ?: tr("символ /{code}", "code" to code)
+        var name = SYM_ALT[code]?.let { tr(it) } ?: tr("символ \\{code}", "code" to code)
         if (table != "\\") name += " [$table]"
         return name
     }
@@ -686,17 +691,17 @@ object Aprs {
     fun viaInfo(path: List<Pair<String, Boolean>>, src: String = ""): Pair<String, Boolean> {
         val used = path.filter { it.second }.map { it.first }
         val viaIss = used.any { Ax25.splitCall(it).first in ISS_CALLS }
-        if (viaIss) return "через МКС" to true
-        if (Ax25.splitCall(src).first in ISS_CALLS) return "МКС (борт)" to true
+        if (viaIss) return tr("через МКС") to true
+        if (Ax25.splitCall(src).first in ISS_CALLS) return tr("МКС (борт)") to true
         if (used.isNotEmpty()) {
             val last = used.last()
             if (RE_GENERIC.matches(last)) {
                 val named = used.filter { !RE_ALIAS.matches(it) }
-                return (if (named.isNotEmpty()) "через " + named.last() else "через ретранслятор") to false
+                return (if (named.isNotEmpty()) tr("через {call}", "call" to named.last()) else tr("через ретранслятор")) to false
             }
-            return "через $last" to false
+            return tr("через {call}", "call" to last) to false
         }
-        return "напрямую" to false
+        return tr("напрямую") to false
     }
 
     private fun finish(p: AprsPacket): AprsPacket {
@@ -713,18 +718,21 @@ object Aprs {
 
     // ------------------------------------------------------------------ текст по-русски
 
-    private fun num(v: Double, nd: Int = 1) = PyNum.fixed(v, nd).replace(".", ",")
+    /** Как Python (PyNum.fixed), с запятой по-русски; свой, а не i18n.num — округление как в Python. */
+    private fun num(v: Double, nd: Int = 1) = PyNum.fixed(v, nd).let { if (I18n.language == "ru") it.replace(".", ",") else it }
 
     fun fmtLat(v: Double): String {
         val d = abs(v).toInt()
         val m = (abs(v) - d) * 60
-        return "$d°${num(m, 3)}′ ${if (v >= 0) "с." else "ю."} ш."
+        return if (v >= 0) tr("{deg}°{min}′ с. ш.", "deg" to d, "min" to num(m, 3))
+        else tr("{deg}°{min}′ ю. ш.", "deg" to d, "min" to num(m, 3))
     }
 
     fun fmtLon(v: Double): String {
         val d = abs(v).toInt()
         val m = (abs(v) - d) * 60
-        return "$d°${num(m, 3)}′ ${if (v >= 0) "в." else "з."} д."
+        return if (v >= 0) tr("{deg}°{min}′ в. д.", "deg" to d, "min" to num(m, 3))
+        else tr("{deg}°{min}′ з. д.", "deg" to d, "min" to num(m, 3))
     }
 
     /** QTH-локатор (Maidenhead), 6 знаков. */
@@ -757,20 +765,20 @@ object Aprs {
     fun wxText(wx: AprsWx): String {
         val out = ArrayList<String>()
         if (wx.windDir != null || wx.windMs != null) {
-            var t = "ветер"
+            var t = ""
             wx.windDir?.let { t += " $it°" }
-            wx.windMs?.let { t += " ${num(it)} м/с" }
-            wx.gustMs?.let { t += ", порывы ${num(it)} м/с" }
-            out.add(t)
+            wx.windMs?.let { t += " " + tr("{v} м/с", "v" to num(it)) }
+            wx.gustMs?.let { t += tr(", порывы {v} м/с", "v" to num(it)) }
+            out.add(tr("ветер {wind}", "wind" to t.removePrefix(" ")))
         }
         wx.tempC?.let { out.add("${num(it)} °C") }
-        wx.humidity?.let { out.add("влажность $it %") }
-        wx.pressureHpa?.let { out.add("давление ${num(it)} гПа") }
-        wx.rain1hMm?.let { out.add("осадки за час ${num(it)} мм") }
-        wx.rain24hMm?.let { out.add("за сутки ${num(it)} мм") }
-        wx.rainMidnightMm?.let { out.add("с полуночи ${num(it)} мм") }
-        wx.snowMm?.let { out.add("снег ${num(it, 0)} мм") }
-        wx.lumWm2?.let { out.add("освещённость $it Вт/м²") }
+        wx.humidity?.let { out.add(tr("влажность {v} %", "v" to it)) }
+        wx.pressureHpa?.let { out.add(tr("давление {v} гПа", "v" to num(it))) }
+        wx.rain1hMm?.let { out.add(tr("осадки за час {v} мм", "v" to num(it))) }
+        wx.rain24hMm?.let { out.add(tr("за сутки {v} мм", "v" to num(it))) }
+        wx.rainMidnightMm?.let { out.add(tr("с полуночи {v} мм", "v" to num(it))) }
+        wx.snowMm?.let { out.add(tr("снег {v} мм", "v" to num(it, 0))) }
+        wx.lumWm2?.let { out.add(tr("освещённость {v} Вт/м²", "v" to it)) }
         return out.joinToString(", ")
     }
 
@@ -778,15 +786,16 @@ object Aprs {
         val out = arrayListOf("${fmtLat(p.lat!!)}, ${fmtLon(p.lon!!)}")
         if (!p.symbol.isNullOrEmpty()) out.add(p.symbol!!)
         val mv = ArrayList<String>()
-        p.speedKmh?.let { mv.add("${PyNum.fixed(it, 0)} км/ч") }
-        p.course?.let { mv.add("курс ${PyNum.fixed(it, 0)}°") }
+        p.speedKmh?.let { mv.add(tr("{v} км/ч", "v" to PyNum.fixed(it, 0))) }
+        p.course?.let { mv.add(tr("курс {v}°", "v" to PyNum.fixed(it, 0))) }
         if (mv.isNotEmpty()) out.add(mv.joinToString(", "))
-        p.altM?.let { out.add("высота ${PyNum.fixed(it, 0)} м") }
+        p.altM?.let { out.add(tr("высота {v} м", "v" to PyNum.fixed(it, 0))) }
         p.phg?.let { g ->
-            out.add("мощность ${g.powerW} Вт, антенна ${PyNum.fixed(g.heightM, 0)} м, ${g.gainDb} dB" +
-                (if (g.dir == null) "" else ", направл. ${g.dir}°"))
+            out.add(tr("мощность {power} Вт, антенна {height} м, {gain} dB", "power" to g.powerW,
+                "height" to PyNum.fixed(g.heightM, 0), "gain" to g.gainDb) +
+                (if (g.dir == null) "" else tr(", направл. {dir}°", "dir" to g.dir)))
         }
-        p.rangeKm?.let { if (it != 0.0) out.add("радиус ${PyNum.fixed(it, 0)} км") }
+        p.rangeKm?.let { if (it != 0.0) out.add(tr("радиус {v} км", "v" to PyNum.fixed(it, 0))) }
         return out.joinToString(" · ")
     }
 
@@ -794,66 +803,73 @@ object Aprs {
     fun describe(p: AprsPacket): String {
         val t = p.type
         val parts = ArrayList<String>()
-        if (p.thirdParty) parts.add("Сторонний пакет через шлюз ${p.gateway}")
+        if (p.thirdParty) parts.add(tr("Сторонний пакет через шлюз {gateway}", "gateway" to p.gateway))
         when (t) {
-            "position" -> parts.add("Позиция: " + posText(p))
+            "position" -> parts.add(tr("Позиция: {pos}", "pos" to posText(p)))
             "mic-e" -> {
-                parts.add("Позиция (Mic-E): " + posText(p))
-                if (!p.miceMsg.isNullOrEmpty()) parts.add("статус «${p.miceMsg}»")
-                if (!p.radio.isNullOrEmpty()) parts.add("радио ${p.radio}")
+                parts.add(tr("Позиция (Mic-E): {pos}", "pos" to posText(p)))
+                if (!p.miceMsg.isNullOrEmpty()) parts.add(tr("статус «{status}»", "status" to p.miceMsg))
+                if (!p.radio.isNullOrEmpty()) parts.add(tr("радио {radio}", "radio" to p.radio))
             }
             "object", "item" -> {
-                val what = if (t == "object") "Объект" else "Элемент"
-                val st = if (p.alive == true) "активен" else "удалён"
-                parts.add("$what «${p.name}» ($st): " + posText(p))
+                val pos = posText(p)
+                parts.add(when {
+                    t == "object" && p.alive == true -> tr("Объект «{name}» (активен): {pos}", "pos" to pos, "name" to p.name)
+                    t == "object" -> tr("Объект «{name}» (удалён): {pos}", "pos" to pos, "name" to p.name)
+                    p.alive == true -> tr("Элемент «{name}» (активен): {pos}", "pos" to pos, "name" to p.name)
+                    else -> tr("Элемент «{name}» (удалён): {pos}", "pos" to pos, "name" to p.name)
+                })
             }
             "weather" -> {
-                if (p.lat != null) parts.add("Метеостанция: ${fmtLat(p.lat!!)}, ${fmtLon(p.lon!!)}")
-                else parts.add("Погода")
-                parts.add(wxText(p.wx ?: AprsWx()).ifEmpty { "нет данных" })
+                if (p.lat != null) parts.add(tr("Метеостанция: {lat}, {lon}", "lat" to fmtLat(p.lat!!), "lon" to fmtLon(p.lon!!)))
+                else parts.add(tr("Погода"))
+                parts.add(wxText(p.wx ?: AprsWx()).ifEmpty { tr("нет данных") })
             }
-            "status" -> parts.add("Статус: «${p.status ?: ""}»")
+            "status" -> parts.add(tr("Статус: «{status}»", "status" to (p.status ?: "")))
             "message" -> {
                 val m = p.message!!
                 val k = m.kind
                 when {
-                    k == "ack" -> parts.add("Подтверждение №${m.id} для ${m.to}")
-                    k == "rej" -> parts.add("Отказ №${m.id} для ${m.to}")
-                    k == "bulletin" -> parts.add("Бюллетень ${m.to}: «${m.text}»")
+                    k == "ack" -> parts.add(tr("Подтверждение №{id} для {to}", "id" to m.id, "to" to m.to))
+                    k == "rej" -> parts.add(tr("Отказ №{id} для {to}", "id" to m.id, "to" to m.to))
+                    k == "bulletin" -> parts.add(tr("Бюллетень {to}: «{text}»", "to" to m.to, "text" to m.text))
                     k.startsWith("tlm_") -> {
-                        val names = mapOf("tlm_parm" to "названия каналов", "tlm_unit" to "единицы",
-                            "tlm_eqns" to "коэффициенты", "tlm_bits" to "биты")
-                        parts.add("Описание телеметрии (${names.getValue(k)}): ${m.text}")
+                        val names = mapOf("tlm_parm" to tr("названия каналов"), "tlm_unit" to tr("единицы"),
+                            "tlm_eqns" to tr("коэффициенты"), "tlm_bits" to tr("биты"))
+                        parts.add(tr("Описание телеметрии ({what}): {text}", "what" to names.getValue(k), "text" to m.text))
                     }
-                    else -> parts.add("Сообщение для ${m.to}: «${m.text}»" +
-                        (if (!m.id.isNullOrEmpty()) " (№${m.id})" else ""))
+                    !m.id.isNullOrEmpty() ->
+                        parts.add(tr("Сообщение для {to}: «{text}» (№{id})", "to" to m.to, "id" to m.id, "text" to m.text))
+                    else -> parts.add(tr("Сообщение для {to}: «{text}»", "to" to m.to, "text" to m.text))
                 }
             }
             "telemetry" -> {
                 val tl = p.telemetry!!
                 val an = tl.analog.joinToString(", ") { if (it == null) "—" else PyNum.g(it) }
-                parts.add("Телеметрия №${tl.seq}: $an" + (if (!tl.bits.isNullOrEmpty()) "; биты ${tl.bits}" else ""))
+                parts.add(if (!tl.bits.isNullOrEmpty())
+                    tr("Телеметрия №{seq}: {values}; биты {bits}", "seq" to tl.seq, "bits" to tl.bits, "values" to an)
+                else tr("Телеметрия №{seq}: {values}", "seq" to tl.seq, "values" to an))
             }
             "nmea" -> parts.add("NMEA GPS: " + posText(p))
-            "capabilities" -> parts.add("Возможности станции: ${p.text ?: ""}")
-            "query" -> parts.add("Запрос: ${p.text ?: ""}")
-            "ax25" -> parts.add("Кадр AX.25 (не APRS): ${p.text ?: ""}")
-            "empty" -> parts.add("Пустой пакет")
-            else -> parts.add("Данные: «${p.text ?: ""}»")
+            "capabilities" -> parts.add(tr("Возможности станции: {text}", "text" to (p.text ?: "")))
+            "query" -> parts.add(tr("Запрос: {text}", "text" to (p.text ?: "")))
+            "ax25" -> parts.add(tr("Кадр AX.25 (не APRS): {text}", "text" to (p.text ?: "")))
+            "empty" -> parts.add(tr("Пустой пакет"))
+            else -> parts.add(tr("Данные: «{text}»", "text" to (p.text ?: "")))
         }
-        if (t != "weather" && p.hasWx) parts.add("погода: " + wxText(p.wx!!))
+        if (t != "weather" && p.hasWx) parts.add(tr("погода: {wx}", "wx" to wxText(p.wx!!)))
         if (t != "telemetry" && p.telemetry != null) {
             val tl = p.telemetry!!
-            parts.add("телеметрия: " + tl.analog.joinToString(", ") {
+            parts.add(tr("телеметрия: {values}", "values" to tl.analog.joinToString(", ") {
                 when {
                     it == null -> "None"
                     tl.base91 -> it.toLong().toString()
                     else -> it.toString()
                 }
-            })
+            }))
         }
-        if (!p.timestamp.isNullOrEmpty()) parts.add("время ${p.timestamp}")
-        if (p.comment.isNotEmpty()) parts.add("«${p.comment}»")
+        if (!p.timestamp.isNullOrEmpty()) parts.add(tr("время {time}", "time" to p.timestamp))
+        if (p.comment.isNotEmpty()) parts.add(tr("«{comment}»", "comment" to p.comment))
         return parts.joinToString(" · ")
     }
 

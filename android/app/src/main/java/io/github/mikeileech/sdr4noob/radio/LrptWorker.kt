@@ -1,5 +1,6 @@
 package io.github.mikeileech.sdr4noob.radio
 
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.lrpt.AutoLrptReceiver
 import io.github.mikeileech.sdr4noob.lrpt.LrptGray
 import io.github.mikeileech.sdr4noob.lrpt.LrptStats
@@ -65,7 +66,7 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
         runCatching { rx.finish() }                                   // последние кадры из буферов
         if (runCatching { rx.stats().framesOk }.getOrDefault(0) > 0) {
             val p = runCatching { full(rx) }.getOrNull()
-            if (p != null) onPassEnd(p) else onError("LRPT: снимок пролёта не сохранён — не хватило памяти")
+            if (p != null) onPassEnd(p) else onError(tr("LRPT: снимок пролёта не сохранён — не хватило памяти"))
         }
         rx.rxs.forEach { runCatching { it.close() } }               // нативные демодуляторы — сразу, не в finalize
         preview = null
@@ -108,7 +109,7 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
                 break
             } catch (e: Throwable) {
                 // сбой или нехватка памяти не роняют приложение: приём начинается заново
-                if (!reported) { reported = true; onError("LRPT: сбой декодера (${e.javaClass.simpleName}), приём начат заново") }
+                if (!reported) { reported = true; onError(tr("LRPT: сбой декодера ({err}), приём начат заново", "err" to e.javaClass.simpleName)) }
                 rx = runCatching { endPass(rx, fs)!! }.getOrElse { AutoLrptReceiver(fs.toDouble()) }   // принятое — сохранить
                 off = Double.NaN; preview = null
             }

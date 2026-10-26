@@ -4,6 +4,8 @@ import io.github.mikeileech.sdr4noob.dsp.DmrCodes.ambeDeinterleave
 import io.github.mikeileech.sdr4noob.dsp.DmrCodes.bitsBytes
 import io.github.mikeileech.sdr4noob.dsp.DmrCodes.bitsInt
 import io.github.mikeileech.sdr4noob.dsp.DmrCodes.intBits
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -81,12 +83,12 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         }
         val H_RX: DoubleArray = rrc().let { h -> val s = h.sum(); DoubleArray(h.size) { h[it] / s } }
 
-        val FLCO_NAMES = mapOf(0 to "групповой", 3 to "индивидуальный")
-        val DT_NAMES = mapOf(0 to "PI-заголовок", 1 to "LC-заголовок", 2 to "Терминатор", 3 to "CSBK",
-            4 to "MBC-заголовок", 5 to "MBC-продолжение", 6 to "Заголовок данных", 7 to "Данные 1/2", 8 to "Данные 3/4",
-            9 to "Idle", 10 to "Данные 1/1", 11 to "USB-данные")
-        val CSBK_NAMES = mapOf(0x04 to "запрос индивидуального вызова", 0x05 to "ответ на запрос",
-            0x07 to "синхронизация каналов", 0x38 to "активация ретранслятора", 0x3D to "преамбула")
+        val FLCO_NAMES = mapOf(0 to N_("групповой"), 3 to N_("индивидуальный"))
+        val DT_NAMES = mapOf(0 to N_("PI-заголовок"), 1 to N_("LC-заголовок"), 2 to N_("Терминатор"), 3 to "CSBK",
+            4 to N_("MBC-заголовок"), 5 to N_("MBC-продолжение"), 6 to N_("Заголовок данных"), 7 to N_("Данные 1/2"), 8 to N_("Данные 3/4"),
+            9 to "Idle", 10 to N_("Данные 1/1"), 11 to N_("USB-данные"))
+        val CSBK_NAMES = mapOf(0x04 to N_("запрос индивидуального вызова"), 0x05 to N_("ответ на запрос"),
+            0x07 to N_("синхронизация каналов"), 0x38 to N_("активация ретранслятора"), 0x3D to N_("преамбула"))
         val CSBK_T3 = mapOf(0x19 to "Aloha (Tier III)", 0x1C to "Ahoy (Tier III)", 0x28 to "C_BCAST (Tier III)")
     }
 
@@ -400,13 +402,13 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
     private fun loseSync() {
         val was = confirmed
         for (s in slots.values) {
-            if (s.active) callEnd(s, null, "конец вызова (потеря синхронизации)")
+            if (s.active) callEnd(s, null, tr("конец вызова (потеря синхронизации)"))
             s.vf = null
         }
         search = next.toLong()
         unlock()
         syncLevel = 0.0
-        if (was) emit("sync_lost", 0, null, text = "потеря синхронизации DMR")
+        if (was) emit("sync_lost", 0, null, text = tr("потеря синхронизации DMR"))
     }
 
     // ---------------------------------------------------------------- пакеты
@@ -445,7 +447,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         }
         if (st.active) {
             st.idle++
-            if (st.idle >= 4) callEnd(st, null, "конец вызова (нет голоса)")
+            if (st.idle >= 4) callEnd(st, null, tr("конец вызова (нет голоса)"))
         }
         return false
     }
@@ -454,7 +456,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         val r = slotType(burst, if (conf) 3 else 1) ?: return false
         val (cc, dt) = r
         st.cc = cc
-        st.last = DT_NAMES[dt] ?: "тип $dt"
+        st.last = DT_NAMES[dt] ?: tr("тип {n}", "n" to dt)
         st.lastT = now()
         st.vf = null
         val info = burst.copyOfRange(0, 98) + burst.copyOfRange(166, 264)
@@ -473,7 +475,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
                     stats["lc_ok"] = stats["lc_ok"]!! + 1
                     val l = parseLc(lc)
                     if (dt == 1) onHeader(st, l) else {
-                        st.last = "Терминатор"
+                        st.last = N_("Терминатор")
                         if (st.active) callEnd(st, l, null)
                     }
                 }
@@ -486,7 +488,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
                         dt == 0 -> {
                             st.pi = true
                             st.encrypted = st.encrypted || st.active
-                            if (conf) emit("data", st.n, st.cc, text = "PI-заголовок: шифрование, алгоритм ${blk[0]}, ключ ${blk[2]}",
+                            if (conf) emit("data", st.n, st.cc, text = tr("PI-заголовок: шифрование, алгоритм {alg}, ключ {key}", "alg" to blk[0], "key" to blk[2]),
                                 encrypted = true)
                         }
                         dt == 3 -> { stats["csbk"] = stats["csbk"]!! + 1; onCsbk(st, blk, conf) }
@@ -494,7 +496,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
                             val grp = blk[0] and 0x80 != 0
                             val dst = (blk[2] shl 16) or (blk[3] shl 8) or blk[4]
                             val src = (blk[5] shl 16) or (blk[6] shl 8) or blk[7]
-                            emit("data", st.n, st.cc, src, dst, grp, text = "передача данных $src → ${if (grp) "TG " else ""}$dst")
+                            emit("data", st.n, st.cc, src, dst, grp, text = tr("передача данных {src} → {dst}", "src" to src, "dst" to "${if (grp) "TG " else ""}$dst"))
                         }
                     }
                 }
@@ -502,7 +504,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         }
         if (dt == 9 && st.active) {
             st.idle++
-            if (st.idle >= 2) callEnd(st, null, "конец вызова (без терминатора)")
+            if (st.idle >= 2) callEnd(st, null, tr("конец вызова (без терминатора)"))
         }
         return true
     }
@@ -523,10 +525,10 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         seen[key] = t
         val text: String
         if (fid == 0 && op in CSBK_NAMES) {
-            val name = CSBK_NAMES.getValue(op)
+            val name = tr(CSBK_NAMES.getValue(op))
             if (op == 0x3D) {
                 val grp = b[2] and 0x40 != 0
-                emit("csbk", st.n, st.cc, src, dst, grp, text = "CSBK $name: $src → ${if (grp) "TG " else ""}$dst, блоков ${b[3]}")
+                emit("csbk", st.n, st.cc, src, dst, grp, text = tr("CSBK {name}: {src} → {dst}, блоков {blocks}", "name" to name, "src" to src, "dst" to "${if (grp) "TG " else ""}$dst", "blocks" to b[3]))
                 return
             }
             text = "CSBK $name: $src → $dst"
@@ -542,7 +544,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
 
     private fun onHeader(st: Slot, lc: Lc) {
         if (st.active && st.lcKnown && lc.src == st.src && lc.dst == st.dst) return
-        if (st.active) callEnd(st, null, "конец вызова")
+        if (st.active) callEnd(st, null, tr("конец вызова"))
         callBegin(st)
         applyLc(st, lc)
     }
@@ -559,9 +561,10 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
 
     private fun announce(st: Slot) {
         st.announced = true
-        val kind = if (st.group) "групповой" else "индивидуальный"
+        val enc = if (st.encrypted) tr(", шифрован") else ""
         emit("call_start", st.n, st.cc, st.src, st.dst, st.group, st.encrypted,
-            "$kind вызов ${who(st)}${if (st.encrypted) ", шифрован" else ""}")
+            if (st.group) tr("групповой вызов {who}{enc}", "who" to who(st), "enc" to enc)
+            else tr("индивидуальный вызов {who}{enc}", "who" to who(st), "enc" to enc))
     }
 
     private fun callBegin(st: Slot) {
@@ -580,7 +583,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         val junk = !st.announced && !st.lcKnown && st.sf < 2
         if ((confirmed || st.announced) && !junk) {
             if (!st.announced) announce(st)
-            emit("call_end", st.n, st.cc, st.src, st.dst, st.group, st.encrypted, "${why ?: "конец вызова"} ${who(st)}")
+            emit("call_end", st.n, st.cc, st.src, st.dst, st.group, st.encrypted, "${why ?: tr("конец вызова")} ${who(st)}")
         }
         val src = st.src; val dst = st.dst; val g = st.group; val enc = st.encrypted
         st.clear()
@@ -595,7 +598,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
         if (isSync) {
             st.vf = 0
             st.sf++
-            st.last = "Голос"
+            st.last = N_("Голос")
             if (st.sf >= 3 && !st.announced && conf) announce(st)
         } else {
             st.vf = (st.vf ?: 0) + 1
@@ -625,7 +628,7 @@ class DmrDecoder(private val synthFactory: () -> AmbeSynth) {
                 } else st.badEmb++
             } else st.badEmb++
             if (st.badEmb >= 4) {
-                callEnd(st, null, "конец вызова (сигнал пропал)")
+                callEnd(st, null, tr("конец вызова (сигнал пропал)"))
                 st.vf = null
                 return false
             }

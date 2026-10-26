@@ -13,6 +13,7 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
+        android:name=".App"
         android:label="SDR4NOOB"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"

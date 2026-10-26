@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.sat
 
+import io.github.mikeileech.sdr4noob.i18n.N_
+import io.github.mikeileech.sdr4noob.i18n.tr
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -127,14 +129,14 @@ class TleLoader(
                 val text = fetcher.fetch(url, timeout)
                 if (TleText.parse(text).isNotEmpty()) {
                     path.writeText(text.replace("\r\n", "\n"), Charsets.US_ASCII)
-                    return text to "обновлено"
+                    return text to tr("обновлено")
                 }
             } catch (e: IOException) {
                 // нет сети — берём кэш
             }
         }
-        if (age == null) return null to "нет данных"
-        return path.readText(Charsets.US_ASCII) to "кэш ${Math.rint(age / 3600).toLong()} ч"
+        if (age == null) return null to tr("нет данных")
+        return path.readText(Charsets.US_ASCII) to tr("кэш {hours} ч", "hours" to Math.rint(age / 3600).toLong())
     }
 
     /** {norad: Tle} и строка состояния; [norads] — досылать по номеру, если нет в группах (плюс [TRACKED]). */
@@ -162,9 +164,9 @@ class TleLoader(
 data class Tracked(val name: String, val color: String, val freq: Double, val note: String)
 
 val TRACKED: Map<Int, Tracked> = linkedMapOf(
-    57166 to Tracked("Метеор-М №2-3", "#ffb84d", 137.9e6, "LRPT 137,900 МГц, 72k OQPSK"),
-    59051 to Tracked("Метеор-М №2-4", "#ff6a4d", 137.9e6, "LRPT 137,900 МГц, 72k OQPSK"),
-    25544 to Tracked("МКС", "#7fd1ff", 145.8e6, "SSTV/голос 145,800 МГц — режим SSTV"),
+    57166 to Tracked(N_("Метеор-М №2-3"), "#ffb84d", 137.9e6, N_("LRPT 137,900 МГц, 72k OQPSK")),
+    59051 to Tracked(N_("Метеор-М №2-4"), "#ff6a4d", 137.9e6, N_("LRPT 137,900 МГц, 72k OQPSK")),
+    25544 to Tracked(N_("МКС"), "#7fd1ff", 145.8e6, N_("SSTV/голос 145,800 МГц — режим SSTV")),
 )
 
 // ---------------------------------------------------------------- геометрия
@@ -371,7 +373,7 @@ class Orbit(val tle: Tle) {
                 if (!lk.el.isNaN() && (k < 0 || lk.el > mx)) { k = q; mx = lk.el; azK = lk.az }
             }
             // как np.nanargmax: угол места не посчитан ни в одной точке — ошибка (all_passes пропустит спутник)
-            if (k < 0) throw ArithmeticException("угол места не определён на пролёте")
+            if (k < 0) throw ArithmeticException("угол места не определён на пролёте")   // noqa: i18n — ловит allPasses, не показывается
             if (j < n && i > 0 && mx >= minEl && los > t0 && aos < t0 + hours * 3600) {
                 out.add(Pass(tle.norad, tle.name, aos, los, fine[k], mx, az0, azN, azK))
             }

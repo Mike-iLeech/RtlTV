@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.ui.RadioActivity
 
 /**
@@ -60,7 +61,7 @@ class RadioService : Service() {
         private fun build(ctx: Context, text: String): Notification {
             val nm = ctx.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
-                nm.createNotificationChannel(NotificationChannel(CHANNEL, "Приём в фоне", NotificationManager.IMPORTANCE_LOW))
+                nm.createNotificationChannel(NotificationChannel(CHANNEL, tr("Приём в фоне"), NotificationManager.IMPORTANCE_LOW))
             }
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             // вернуть то же окно радио (а не открыть новое с другим приёмником): REORDER_TO_FRONT; если окна уже
@@ -73,12 +74,12 @@ class RadioService : Service() {
             @Suppress("DEPRECATION")
             val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(ctx, CHANNEL) else Notification.Builder(ctx)
             return b.setSmallIcon(android.R.drawable.stat_sys_headset)
-                .setContentTitle("SDR4NOOB — приём")
+                .setContentTitle(tr("SDR4NOOB — приём"))
                 .setContentText(text)
                 .setContentIntent(open)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .addAction(Notification.Action.Builder(null as android.graphics.drawable.Icon?, "Стоп", stop).build())
+                .addAction(Notification.Action.Builder(null as android.graphics.drawable.Icon?, tr("Стоп"), stop).build())
                 .build()
         }
 
@@ -97,7 +98,7 @@ class RadioService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val n = build(this, intent?.getStringExtra(EXTRA_TEXT) ?: "Радио")
+        val n = build(this, intent?.getStringExtra(EXTRA_TEXT) ?: tr("Радио"))
         live = true
         if (Build.VERSION.SDK_INT >= 29) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         else startForeground(ID, n)

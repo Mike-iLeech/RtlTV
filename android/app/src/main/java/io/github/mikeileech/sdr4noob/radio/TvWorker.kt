@@ -1,5 +1,7 @@
 package io.github.mikeileech.sdr4noob.radio
 
+import io.github.mikeileech.sdr4noob.i18n.num
+import io.github.mikeileech.sdr4noob.i18n.tr
 import io.github.mikeileech.sdr4noob.dsp.AnalogFrame
 import io.github.mikeileech.sdr4noob.dsp.AnalogVideoDecoder
 import io.github.mikeileech.sdr4noob.dsp.MuxAnalyzer
@@ -70,7 +72,7 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
                 break
             } catch (_: Changed) {
             } catch (e: Throwable) {        // и нехватка памяти: необработанная ошибка потока закрыла бы приложение
-                if (!reported) { reported = true; onError("ТВ: сбой измерителя (${e.javaClass.simpleName}), измерение начато заново") }
+                if (!reported) { reported = true; onError(tr("ТВ: сбой измерителя ({err}), измерение начато заново", "err" to e.javaClass.simpleName)) }
                 try { Thread.sleep(200) } catch (_: InterruptedException) { break }
             }
         }
@@ -122,8 +124,7 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
         if (fs >= 2_000_000) return true
         if (rateWarned != fs) {
             rateWarned = fs
-            onError("Полоса " + String.format(java.util.Locale.ROOT, "%.3f", fs / 1e6).replace('.', ',') +
-                " МГц мала для ТВ: нужна не уже 2 МГц (у записи IQ полоса своя)")
+            onError(tr("Полоса {bw} МГц мала для ТВ: нужна не уже 2 МГц (у записи IQ полоса своя)", "bw" to num(fs / 1e6, 3)))
         }
         while (true) next(serial)
     }
