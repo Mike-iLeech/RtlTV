@@ -200,7 +200,7 @@ def elf_exports(data):
                 end = data.index(b"\0", p, stroff + strsize)
                 out.add(data[p:end].decode("latin-1"))
         return out
-    except (struct.error, ValueError):
+    except (struct.error, ValueError, OverflowError, IndexError):
         return set()
 
 

@@ -89,20 +89,23 @@ def run_setup(timeout=300):
     pkexec = shutil.which("pkexec")
     if not pkexec:
         return False, ("Не найдена программа pkexec (polkit). Выполните в терминале:\n\n" + manual_commands())
-    d = tempfile.mkdtemp(prefix="sdr4noob-setup-")
-    rules, black = os.path.join(d, "60-sdr4noob.rules"), os.path.join(d, "blacklist-sdr4noob.conf")
+    d = None
     try:
+        d = tempfile.mkdtemp(prefix="sdr4noob-setup-")
+        rules, black = os.path.join(d, "60-sdr4noob.rules"), os.path.join(d, "blacklist-sdr4noob.conf")
         with open(rules, "w", encoding="utf-8") as f:
             f.write(udev_rules_text())
         with open(black, "w", encoding="utf-8") as f:
             f.write(blacklist_text())
         os.chmod(d, 0o755)
         r = subprocess.run([pkexec, "sh", "-c", setup_script(rules, black)], capture_output=True, text=True,
+                           errors="replace",
                            timeout=timeout)
     except (OSError, subprocess.SubprocessError) as e:
         return False, f"Не удалось запустить pkexec: {e}"
     finally:
-        shutil.rmtree(d, ignore_errors=True)
+        if d:
+            shutil.rmtree(d, ignore_errors=True)
     if r.returncode == 126:
         return False, "Настройка отменена (пароль администратора не введён)."
     if r.returncode == 127:

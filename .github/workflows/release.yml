@@ -222,6 +222,7 @@ jobs:
         timeout-minutes: 5
         run: |
           set -e
+          unset QTWEBENGINE_DISABLE_SANDBOX   # программа ставит её сама (rtltv/__main__.py)
           export XDG_CONFIG_HOME="$RUNNER_TEMP/cfg" XDG_DATA_HOME="$RUNNER_TEMP/data"
           img=$(ls release/SDR4NOOB-*-${{ matrix.arch }}.AppImage)
           export APPIMAGE_EXTRACT_AND_RUN=1

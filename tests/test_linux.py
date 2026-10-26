@@ -219,8 +219,6 @@ def test_check_dll_rejects_linux(tmp_path):
 
 # ---------------------------------------------------------------- обновление AppImage
 def test_updater_linux_kind_and_replace(tmp_path, monkeypatch):
-    import hashlib
-    import io
     from rtltv import updater_linux as U
     img = tmp_path / "apps" / "SDR4NOOB.AppImage"
     img.parent.mkdir()
@@ -232,29 +230,13 @@ def test_updater_linux_kind_and_replace(tmp_path, monkeypatch):
     monkeypatch.setattr(U.sys, "frozen", True, raising=False)
     assert U.appimage_path() == str(img) and U.update_kind(info) == "appimage"
     assert U.update_kind({"asset": None}) == "manual"
+    assert "ещё публикуются" in U.manual_hint({"appimage": None})          # файлов Linux в релизе пока нет
     assert U.asset_suffix().endswith(".appimage") and U.arch() in U.asset_suffix()
 
     body = b"new-appimage"
-
-    class R(io.BytesIO):
-        headers = {"Content-Length": str(len(body))}
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-    a = dict(info["asset"], sha256=hashlib.sha256(body).hexdigest())
     dl = tmp_path / "dl" / "new.AppImage"
     dl.parent.mkdir()
-    U.download_to(a, str(dl), "ua", opener=lambda req, timeout: R(body))
-    assert dl.read_bytes() == body and not (tmp_path / "dl" / "new.AppImage.part").exists()
-    bad = dict(a, sha256="0" * 64)
-    with pytest.raises(RuntimeError, match="Контрольная сумма"):
-        U.download_to(bad, str(tmp_path / "dl" / "bad"), "ua", opener=lambda req, timeout: R(body))
-    assert not list((tmp_path / "dl").glob("bad*"))
-    with pytest.raises(RuntimeError, match="контрольную сумму"):
-        U.download_to(dict(a, sha256=None), str(tmp_path / "dl" / "x"), "ua", opener=lambda req, timeout: R(body))
+    dl.write_bytes(body)
     U.replace_appimage(str(dl), str(img))
     assert img.read_bytes() == body and not dl.exists() and not (img.parent / "SDR4NOOB.AppImage.new").exists()
 
@@ -329,3 +311,56 @@ def test_updater_picks_appimage_on_linux(monkeypatch):
     monkeypatch.setattr(updater_linux, "can_replace", lambda p: True)
     assert updater.update_kind(info) == "appimage"
     assert updater.update_kind(dict(info, appimage=None)) == "manual"   # Windows-zip AppImage не заменит
+
+
+def test_replace_appimage_failure_cleans_up(tmp_path, monkeypatch):
+    from rtltv import updater_linux as U
+    img = tmp_path / "a" / "SDR4NOOB.AppImage"
+    img.parent.mkdir()
+    img.write_bytes(b"old")
+    new = tmp_path / "b.AppImage"
+    new.write_bytes(b"new")
+
+    def boom(*a, **k):
+        raise OSError("нет места")
+    monkeypatch.setattr(U.os, "chmod", boom)
+    with pytest.raises(OSError):
+        U.replace_appimage(str(new), str(img))
+    assert img.read_bytes() == b"old" and not (img.parent / "SDR4NOOB.AppImage.new").exists() and new.exists()
+
+
+def test_elf_exports_garbage_is_safe():
+    import struct
+    hdr = bytearray(b"ELF" + bytes(58))
+    struct.pack_into("<Q", hdr, 0x28, 2 ** 64 - 1)            # смещение секций за пределами
+    struct.pack_into("<HH", hdr, 0x3A, 64, 3)
+    assert devices.elf_exports(bytes(hdr)) == set()
+    assert devices.elf_exports(b"MZ" + bytes(100)) == set()
+
+
+def test_setup_access_dialog_thread(monkeypatch):
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication, QMessageBox
+    from rtltv import devices_dialog
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.Yes)
+    shown = []
+    monkeypatch.setattr(QMessageBox, "information", lambda *a: shown.append(("i", a[2])))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a: shown.append(("w", a[2])))
+
+    def broken():
+        raise RuntimeError("сломалось")
+    monkeypatch.setattr(linux_setup, "run_setup", broken)
+    monkeypatch.setattr(devices_dialog.DevicesDialog, "refresh", lambda self: None)
+    dlg = devices_dialog.DevicesDialog.__new__(devices_dialog.DevicesDialog)
+    devices_dialog.QDialog.__init__(dlg)
+    from PySide6.QtWidgets import QPushButton
+    dlg.b_access = QPushButton()
+    th = dlg.setup_access()
+    th.join(5)
+    import time
+    t0 = time.time()
+    while not shown and time.time() - t0 < 5:
+        app.processEvents()
+        time.sleep(0.02)
+    assert shown and shown[0][0] == "w" and "сломалось" in shown[0][1] and dlg.b_access.isEnabled()

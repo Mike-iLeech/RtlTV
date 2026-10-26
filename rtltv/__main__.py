@@ -38,7 +38,8 @@ def _route_urls_linux(app):
     class _Opener(QObject):
         @Slot("QUrl")
         def open(self, url):
-            osplat.open_path(url.toString())
+            from PySide6.QtCore import QUrl
+            osplat.open_path(url.toLocalFile() if url.isLocalFile() else url.toString(QUrl.FullyEncoded))
     app._url_opener = _Opener(app)
     for scheme in ("http", "https", "file", "mailto"):
         QDesktopServices.setUrlHandler(scheme, app._url_opener, "open")

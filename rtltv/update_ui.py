@@ -87,7 +87,7 @@ class UpdateDialog(QDialog):
         notes.setOpenExternalLinks(True)
         notes.setMarkdown(info.get("notes") or "Описание изменений не указано.")
         v.addWidget(notes, 1)
-        manual = (updater_linux.manual_hint() if osplat.IS_LINUX else
+        manual = (updater_linux.manual_hint(info) if osplat.IS_LINUX else
                   "Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "
                   "вручную (может понадобиться запуск от имени администратора).")
         hint = QLabel(manual if self.kind == "manual" and (updater.frozen() or osplat.IS_LINUX) else "Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "

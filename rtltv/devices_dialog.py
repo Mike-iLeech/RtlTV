@@ -241,19 +241,31 @@ class DevicesDialog(QDialog):
             what = "Доступ уже настроен. Установить файлы заново?\n\n" + what
         if QMessageBox.question(self, "Доступ к USB", what) != QMessageBox.Yes:
             return
-        from PySide6.QtCore import QEventLoop
         import threading
-        res, loop = {}, QEventLoop()   # pkexec ждёт пароль в своём окне — окно программы не замирает
-        th = threading.Thread(target=lambda: (res.update(r=linux_setup.run_setup()), loop.quit()), daemon=True)
+        from PySide6.QtCore import QTimer
+        res = {}
+
+        def work():   # pkexec ждёт пароль в своём окне — окно программы при этом не замирает
+            try:
+                res["r"] = linux_setup.run_setup()
+            except Exception as e:  # noqa: BLE001
+                res["r"] = (False, f"Настройка не удалась: {e}")
+        th = threading.Thread(target=work, daemon=True, name="usb-access-setup")
         self.b_access.setEnabled(False)
         th.start()
-        if "r" not in res:
-            loop.exec()
-        th.join()
-        self.b_access.setEnabled(True)
-        ok, msg = res["r"]
-        (QMessageBox.information if ok else QMessageBox.warning)(self, "Доступ к USB", msg)
-        self.refresh()
+        timer = QTimer(self)
+
+        def check():
+            if th.is_alive():
+                return
+            timer.stop()
+            self.b_access.setEnabled(True)
+            ok, msg = res.get("r", (False, "Настройка не удалась."))
+            (QMessageBox.information if ok else QMessageBox.warning)(self, "Доступ к USB", msg)
+            self.refresh()
+        timer.timeout.connect(check)
+        timer.start(200)
+        return th
 
     def _open_dir(self):
         os.makedirs(devices.DRIVERS_DIR, exist_ok=True)
