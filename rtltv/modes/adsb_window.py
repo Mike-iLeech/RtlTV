@@ -837,7 +837,7 @@ class AdsbWindow(ModeWindow):
             return
         src = self.src_combo.currentData()
         if src == "none":
-            self._error("Нет устройства. Выберите демо-генератор или подключите донгл.")
+            self._error("Нет устройства. Выберите демо-генератор или подключите приёмник.")
             self.btn_start.setChecked(False)
             return
         fs = int(self.rate.currentData())

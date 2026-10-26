@@ -97,7 +97,7 @@ class RtlStreamSource(RtlSource):
                 if r == -7:   # LIBUSB_ERROR_TIMEOUT: управление отвечает, а поток данных молчит
                     raise rtlsdr.RtlSdrError(rtlsdr.TIMEOUT_HINT)
                 if r < 0:
-                    raise rtlsdr.RtlSdrError(f"Чтение USB: ошибка {r} (донгл отключён?)")
+                    raise rtlsdr.RtlSdrError(f"Чтение USB: ошибка {r} (приёмник отключён?)")
                 self.q.put((self.cur, self._seq, got.value))
                 self._seq += 1
         except Exception as e:  # noqa: BLE001

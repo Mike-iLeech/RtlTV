@@ -9,7 +9,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
 
 from . import devices
 
-INTRO = ("Встроенный драйвер SDR4NOOB работает с RTL-SDR. Для других приёмников загрузите DLL их драйвера "
+INTRO = ("SDR4NOOB работает с USB радиоприёмниками (SDR). Для RTL-SDR драйвер встроен; для других приёмников "
+         "загрузите DLL их драйвера "
          "(HackRF: hackrf.dll; Airspy R2/Mini: airspy.dll; обоим нужны libusb-1.0.dll и pthreadVC2.dll) — "
          "файлы копируются в папку драйверов SDR4NOOB. Приёмник на другом компьютере подключается как "
          "сетевой rtl_tcp. Драйвер Windows (WinUSB) ставится программой Zadig: "

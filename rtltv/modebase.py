@@ -29,7 +29,7 @@ class ModeWindow(QMainWindow):
         act.triggered.connect(self.request_switch)
         m.addAction(act)
         act_dev = QAction("Устройства…", self)
-        act_dev.setToolTip("Другие приёмники: HackRF, Airspy, сетевой rtl_tcp, свой драйвер RTL-SDR")
+        act_dev.setToolTip("Приёмники SDR: RTL-SDR (встроенный драйвер или свой), HackRF, Airspy, сетевой rtl_tcp")
         act_dev.triggered.connect(self.show_devices)
         m.addAction(act_dev)
         act_set = QAction("Настройки…", self)
@@ -83,7 +83,7 @@ class ModeWindow(QMainWindow):
         box.setIconPixmap(app_icon().pixmap(72, 72))
         box.setTextFormat(Qt.RichText)
         box.setText(f"<h3>SDR4NOOB {__version__}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
-                          "Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p><p>Руководство для начинающих — меню «Справка → "
+                          "Любой USB радиоприёмник (SDR): ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p><p>Руководство для начинающих — меню «Справка → "
                           "Руководство» (F1).</p><p>Сайт и вики: <a href='https://mike-ileech.github.io/SDR4NOOB/'>"
                           "mike-ileech.github.io/SDR4NOOB</a><br>Исходники и релизы: <a href='https://github.com/"
                           "Mike-iLeech/SDR4NOOB'>github.com/Mike-iLeech/SDR4NOOB</a><br>Лицензия GPL-3.0-or-later.</p>")
