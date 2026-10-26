@@ -50,8 +50,20 @@ def _call_name(node):
     return f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
 
 
+LOGGERS = {"log", "logger", "logging", "_log", "LOG"}
+
+
 def _is_log_call(node):
-    return isinstance(node.func, ast.Attribute) and node.func.attr in LOG_METHODS
+    """log.info(…), logging.getLogger(…).warning(…) — но не QMessageBox.warning(…) (это окно для пользователя)."""
+    f = node.func
+    if not (isinstance(f, ast.Attribute) and f.attr in LOG_METHODS):
+        return False
+    obj = f.value
+    if isinstance(obj, ast.Name):
+        return obj.id in LOGGERS
+    if isinstance(obj, ast.Attribute):          # self.log.info(…)
+        return obj.attr in LOGGERS
+    return isinstance(obj, ast.Call) and _call_name(obj) == "getLogger"
 
 
 def scan(src):
@@ -151,6 +163,18 @@ def test_every_key_translated():
     assert not wrong, "\n".join(wrong[:60])
 
 
+def test_plural_forms_have_same_fields():
+    """trn(n, one, few, many): у всех трёх русских форм одни и те же {подстановки} (иначе KeyError только по-русски)."""
+    bad = []
+    for rel, src in SOURCES.items():
+        for node in ast.walk(ast.parse(src)):
+            if isinstance(node, ast.Call) and _call_name(node) == "trn" and len(node.args) >= 4:
+                forms = [a.value for a in node.args[1:4] if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+                if len(forms) == 3 and len({frozenset(_fields(f)) for f in forms}) != 1:
+                    bad.append(f"  {rel}:{node.lineno}: {forms}")
+    assert not bad, "\n".join(bad)
+
+
 def test_no_stale_catalog_keys():
     """В словаре нет мёртвых ключей (строку в коде поменяли — перевод надо поправить там же)."""
     used = set()
@@ -172,9 +196,11 @@ def test_scan_catches_bare_and_fstrings():
     """Положительный контроль самого сканера."""
     src = ('"""Модуль."""\nfrom rtltv.i18n import tr\n'
            'a = "Привет"\nb = tr("Мир")\nc = f"Частота {x}"\nlog.info("журнал %s", 1)\n'
-           'd = "данные"  # noqa: i18n\ne = trn(n, "{n} борт", "{n} борта", "{n} бортов")\n')
+           'd = "данные"  # noqa: i18n\ne = trn(n, "{n} борт", "{n} борта", "{n} бортов")\n'
+           'QMessageBox.warning(None, "Ой", f"Ошибка {e}")\nlogging.getLogger("x").warning("журнал")\n'
+           'self.log.error("журнал")\n')
     bad, keys = scan(src)
-    assert sorted(n for n, _t in bad) == [3, 5]
+    assert sorted(n for n, _t in bad) == [3, 5, 9, 9]
     assert [k for _l, k, _f, _i in keys] == ["Мир", "{n} борт", "{n} борта", "{n} бортов"]
 
 
@@ -215,7 +241,8 @@ def test_resolve_choice(monkeypatch):
     monkeypatch.setattr(i18n, "system_language", lambda: "ru")
     assert i18n.resolve("auto") == "ru" and i18n.resolve("en") == "en"
     monkeypatch.setenv("RTLTV_LANG", "en")
-    assert i18n.resolve("ru") == "en"
+    assert i18n.resolve() == "en"
+    assert i18n.resolve("ru") == "ru"          # явный выбор в «Настройках» сильнее переменной окружения
     monkeypatch.delenv("RTLTV_LANG")
     monkeypatch.setattr(i18n, "ENGLISH_READY", False)
-    assert i18n.resolve("en") == "ru"
+    assert i18n.resolve() == "ru"              # при запуске, пока перевод не готов, — русский

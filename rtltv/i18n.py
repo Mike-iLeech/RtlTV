@@ -60,13 +60,15 @@ def configured():
 
 
 def resolve(choice=None):
-    """Какой язык включить при выборе choice ('auto' | 'ru' | 'en')."""
-    env = os.environ.get("RTLTV_LANG", "").lower()
-    if env in LANGS:
-        return env
-    if not ENGLISH_READY:
-        return "ru"
-    choice = configured() if choice is None else choice
+    """Какой язык включить: choice — явный выбор пользователя ('auto' | 'ru' | 'en', из «Настроек»);
+    None — при запуске: RTLTV_LANG, затем сохранённый выбор (пока перевод не готов — русский)."""
+    if choice is None:
+        env = os.environ.get("RTLTV_LANG", "").lower()
+        if env in LANGS:
+            return env
+        if not ENGLISH_READY:
+            return "ru"
+        choice = configured()
     return choice if choice in LANGS else system_language()
 
 

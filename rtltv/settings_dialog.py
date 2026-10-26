@@ -5,6 +5,7 @@ import sys
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QGroupBox,
+                               QScrollArea, QWidget,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QProgressDialog, QPushButton,
                                QVBoxLayout)
 
@@ -23,10 +24,18 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(tr("SDR4NOOB — настройки"))
-        self.resize(840, 860)
+        self.resize(820, 700)
         self.setMinimumSize(640, 560)
         self.app_s = settings.load("app", {})
-        v = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        # содержимое — в прокрутке: на низком экране (1366×768) группы не налезают друг на друга
+        body = QWidget()
+        v = QVBoxLayout(body)
+        v.setContentsMargins(0, 0, 0, 0)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(body)
+        outer.addWidget(scroll, 1)
 
         self.lang = None
         if i18n.selectable():
@@ -120,11 +129,17 @@ class SettingsDialog(QDialog):
         bb.button(QDialogButtonBox.Cancel).setText(tr("Отмена"))
         bb.accepted.connect(self._save)
         bb.rejected.connect(self.reject)
-        v.addWidget(bb)
+        outer.addWidget(bb)
 
         self.path.textChanged.connect(self._refresh)
         self.cb_service.toggled.connect(self._refresh)
         self._refresh()
+        # по содержимому, но не выше экрана (ноутбук 1366×768: кнопки «Сохранить/Отмена» должны быть видны)
+        h = max(700, body.sizeHint().height() + bb.sizeHint().height() + 40)
+        scr = self.screen().availableGeometry() if self.screen() is not None else None
+        if scr is not None and scr.height() > 0:
+            h = min(h, scr.height() - 40)
+        self.resize(820, h)
 
     # ---------------------------------------------------------------- вид
     def _root(self):

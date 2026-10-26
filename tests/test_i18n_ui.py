@@ -13,6 +13,14 @@ from rtltv import i18n
 CYR = re.compile("[А-Яа-яЁё]")
 
 
+@pytest.fixture(autouse=True)
+def _no_stale_launcher():
+    """Лаунчеры тестов удаляются (deleteLater) — не оставлять на них ссылку в rtltv.launcher._launchers."""
+    yield
+    from rtltv import launcher
+    launcher._launchers.clear()
+
+
 @pytest.fixture
 def qapp():
     from PySide6.QtWidgets import QApplication
