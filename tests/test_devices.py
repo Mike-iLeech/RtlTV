@@ -567,7 +567,8 @@ def test_airspy_stub_stream_resampled(stubs):
 # ======================================================================
 def test_devices_dialog_offscreen(rtltcp_server, monkeypatch):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    os.environ.setdefault("QT_QPA_FONTDIR", "C:/Windows/Fonts")
+    if os.name == "nt":
+        os.environ.setdefault("QT_QPA_FONTDIR", "C:/Windows/Fonts")
     from PySide6.QtWidgets import QApplication, QComboBox
     from rtltv.devices_dialog import DevicesDialog
     app = QApplication.instance() or QApplication([])
