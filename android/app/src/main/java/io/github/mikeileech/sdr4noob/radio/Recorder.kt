@@ -134,7 +134,57 @@ object Storage {
 
     class Out(val channel: FileChannel, val shownPath: String, val finish: () -> Unit)
 
+    // ---------------- своя папка данных (выбрана в «Настройках» через системный выбор папки) ----------------
+    private const val PREF_TREE = "data_tree"
+
+    /** Своя папка данных (дерево SAF) или null — стандартные «Загрузки»/«Изображения». */
+    fun tree(context: Context): Uri? =
+        context.getSharedPreferences("sdr4noob", Context.MODE_PRIVATE).getString(PREF_TREE, null)?.let(Uri::parse)
+            ?.takeIf { t -> context.contentResolver.persistedUriPermissions.any { it.uri == t && it.isWritePermission } }
+
+    fun setTree(context: Context, uri: Uri?) {
+        context.getSharedPreferences("sdr4noob", Context.MODE_PRIVATE).edit().putString(PREF_TREE, uri?.toString()).apply()
+    }
+
+    /** Как папку показывать человеку: последняя часть пути дерева (например «primary:Radio» → «Radio»). */
+    fun treeName(uri: Uri): String =
+        android.provider.DocumentsContract.getTreeDocumentId(uri).substringAfter(':').ifEmpty { "корень карты памяти" }
+
+    /** Найти или создать вложенную папку [path] ("SDR4NOOB/Звук/IQ") в дереве; документ папки. */
+    private fun safDir(context: Context, tree: Uri, path: String): Uri {
+        val cr = context.contentResolver
+        var doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
+        for (seg in path.split('/').filter { it.isNotEmpty() }) {
+            val id = android.provider.DocumentsContract.getDocumentId(doc)
+            val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(tree, id)
+            var found: Uri? = null
+            cr.query(children, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE), null, null, null)?.use { c ->
+                while (c.moveToNext()) if (c.getString(1) == seg && c.getString(2) == android.provider.DocumentsContract.Document.MIME_TYPE_DIR) {
+                    found = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0)); break
+                }
+            }
+            doc = found ?: android.provider.DocumentsContract.createDocument(cr, doc, android.provider.DocumentsContract.Document.MIME_TYPE_DIR, seg)
+                ?: throw IllegalStateException("не удалось создать папку $seg в ${treeName(tree)}")
+        }
+        return doc
+    }
+
+    private fun safCreate(context: Context, tree: Uri, sub: String, name: String, mime: String): Pair<Uri, String> {
+        val dir = safDir(context, tree, "$ROOT/$sub")
+        val uri = android.provider.DocumentsContract.createDocument(context.contentResolver, dir, mime, name)
+            ?: throw IllegalStateException("не удалось создать файл в ${treeName(tree)}")
+        return uri to "${treeName(tree)}/$ROOT/$sub/$name"
+    }
+
     fun open(context: Context, sub: String, name: String, mime: String = "audio/x-wav"): Out {
+        tree(context)?.let { t ->
+            val (uri, shown) = safCreate(context, t, sub, name, mime)
+            val pfd: ParcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "rw")
+                ?: throw IllegalStateException("не удалось открыть файл в ${treeName(t)}")
+            return Out(FileOutputStream(pfd.fileDescriptor).channel, shown) { runCatching { pfd.close() } }
+        }
         if (Build.VERSION.SDK_INT >= 29) {
             val cr = context.contentResolver
             val v = ContentValues().apply {
@@ -173,8 +223,14 @@ object Storage {
     const val SSTV = "SSTV"           // как paths.PICS_SSTV в настольной версии
     const val METEOR = "Метеор"       // как paths.PICS_METEOR
 
-    /** Где лежат картинки — для подсказок: Pictures/SDR4NOOB/SSTV. */
+    /** Где лежат картинки — для подсказок: Pictures/SDR4NOOB/SSTV (или своя папка данных). */
     fun picturesPath(sub: String) = "${Environment.DIRECTORY_PICTURES}/$ROOT/$sub"
+
+    /** Где окажутся файлы [sub] — для «Настроек» и подсказок. */
+    fun whereLabel(context: Context, sub: String, picture: Boolean): String =
+        tree(context)?.let { "${treeName(it)}/$ROOT/$sub" }
+            ?: if (Build.VERSION.SDK_INT >= 29) (if (picture) picturesPath(sub) else "${Environment.DIRECTORY_DOWNLOADS}/$ROOT/$sub")
+            else "Android/data/${context.packageName}/files/" + (if (picture) "Pictures/" else "") + "$ROOT/$sub"
 
     /** Имя картинки, как в окне SSTV на ПК: sstv_20261024_101500_Martin_M1.png (местное время). */
     fun sstvName(mode: String, now: Date = Date()) =
@@ -182,6 +238,18 @@ object Storage {
 
     /** Сохранить PNG в «Изображения/SDR4NOOB/[sub]»; возвращает путь для показа. */
     fun savePng(context: Context, sub: String, name: String, bmp: android.graphics.Bitmap): String {
+        tree(context)?.let { t ->
+            val (uri, shown) = safCreate(context, t, sub, name, "image/png")
+            try {
+                (context.contentResolver.openOutputStream(uri) ?: throw IllegalStateException("файл не открылся")).use {
+                    if (!bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("PNG не записан")
+                }
+            } catch (e: Exception) {
+                runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }
+                throw e
+            }
+            return shown
+        }
         if (Build.VERSION.SDK_INT >= 29) {
             val cr = context.contentResolver
             val v = ContentValues().apply {
@@ -214,6 +282,20 @@ object Storage {
 
     /** Последние (до 60) картинки этой программы в «Изображения/SDR4NOOB/[sub]»: (имя, адрес), новые первыми. */
     fun listPictures(context: Context, sub: String): List<Pair<String, Uri>> {
+        tree(context)?.let { t ->
+            val dir = safDir(context, t, "$ROOT/$sub")
+            val id = android.provider.DocumentsContract.getDocumentId(dir)
+            val out = ArrayList<Triple<String, Uri, Long>>()
+            context.contentResolver.query(android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(t, id),
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID, android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null)?.use { c ->
+                while (c.moveToNext()) {
+                    val n = c.getString(1) ?: continue
+                    if (n.endsWith(".png")) out += Triple(n, android.provider.DocumentsContract.buildDocumentUriUsingTree(t, c.getString(0)), c.getLong(2))
+                }
+            }
+            return out.sortedByDescending { it.third }.take(60).map { it.first to it.second }
+        }
         if (Build.VERSION.SDK_INT >= 29) {
             val out = ArrayList<Pair<String, Uri>>()
             val col = MediaStore.Images.Media.EXTERNAL_CONTENT_URI

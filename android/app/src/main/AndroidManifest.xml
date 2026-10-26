@@ -44,6 +44,11 @@
             android:label="Радио" />
 
         <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:label="Настройки" />
+
+        <activity
             android:name=".ui.GuideActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
