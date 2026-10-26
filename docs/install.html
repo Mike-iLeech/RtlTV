@@ -48,9 +48,10 @@
 <h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Что</th><th>Требование</th></tr>
-<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 14 и новее (Apple Silicon или Intel).</td></tr>
+<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 14 и новее (Apple Silicon или Intel); или Linux x86_64
+(glibc 2.35+: Ubuntu 22.04+, Debian 12+) или aarch64 (Ubuntu 24.04+) — см. <a href="#linux">«Linux»</a>.</td></tr>
 <tr><td>Приёмник</td><td>USB радиоприёмник (SDR): RTL-SDR Blog V4 или V3 и другие на RTL2832U (встроенный драйвер), HackRF One, Airspy R2/Mini
-(с их библиотекой: DLL в Windows, .dylib на Mac); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
+(с их библиотекой: DLL в Windows, .dylib на Mac, системные libhackrf/libairspy в Linux); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
 <tr><td>Драйвер</td><td>Windows: WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
 <tr><td>Антенна</td><td>Комплектный диполь для начала; для спутников и самолётов — см.
 <a href="guide/antennas.html">«Антенны и кабели»</a>.</td></tr>

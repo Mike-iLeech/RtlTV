@@ -90,7 +90,8 @@ def check_latest(timeout=15):
     for a in data.get("assets") or []:
         name = a.get("name", "")
         low = name.lower()
-        kind = "asset" if low.endswith(suffix) else "setup" if low.endswith("-setup.exe") else             "appimage" if low.endswith(updater_linux.asset_suffix()) else None
+        kind = "asset" if low.endswith(suffix) else "setup" if low.endswith("-setup.exe") else \
+            "appimage" if low.endswith(updater_linux.asset_suffix()) else None
         if kind:
             digest = a.get("digest") or ""
             found[kind] = {"name": name, "url": a.get("browser_download_url"), "size": a.get("size", 0),

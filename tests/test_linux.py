@@ -230,7 +230,7 @@ def test_updater_linux_kind_and_replace(tmp_path, monkeypatch):
     monkeypatch.setattr(U.sys, "frozen", True, raising=False)
     assert U.appimage_path() == str(img) and U.update_kind(info) == "appimage"
     assert U.update_kind({"asset": None}) == "manual"
-    assert "ещё публикуются" in U.manual_hint({"appimage": None})          # файлов Linux в релизе пока нет
+    assert "пока нет файла AppImage" in U.manual_hint({"appimage": None})          # файлов Linux в релизе пока нет
     assert U.asset_suffix().endswith(".appimage") and U.arch() in U.asset_suffix()
 
     body = b"new-appimage"
