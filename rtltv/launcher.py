@@ -230,7 +230,7 @@ class Launcher(QWidget):
             return
         self._save_app(last=key)
         from . import devices
-        if not devices.has_hardware():   # приёмник могли подключить после запуска — опросить заново
+        if not self.cb_test.isChecked() and not devices.has_hardware():   # приёмник могли подключить после запуска
             devices.scan_hardware(refresh=True)
         opts = dict(self.opts)
         opts["theme"] = self.app_s.get("theme", "Тёмная")

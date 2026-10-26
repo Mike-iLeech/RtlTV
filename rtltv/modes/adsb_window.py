@@ -1,5 +1,6 @@
 """Режим ADS-B: самолёты на карте OpenStreetMap и таблица бортов (приём Mode S / ADS-B на 1090 МГц)."""
 import csv
+import functools
 import os
 import time
 
@@ -103,10 +104,16 @@ def alt_color(alt_ft, on_ground=False):
         return "#9aa0a6"
     if alt_ft is None:
         return "#d0d0d0"
-    x = min(max(alt_ft, 0), 42000) / 42000.0
+    # шаг 500 футов: глаз разницы не видит, а цвет берётся из кэша, и трек истории режется на отрезки одного
+    # цвета не на каждой точке (при сотнях бортов перерисовка карты шла сотни миллисекунд)
+    return _alt_color_step(int(min(max(alt_ft, 0), 42000) // 500))
+
+
+@functools.lru_cache(maxsize=None)
+def _alt_color_step(step):
+    x = step * 500 / 42000.0
     hue = (25 + x * 270) / 360.0
-    c = QColor.fromHsvF(hue % 1.0, 0.85, 1.0)
-    return c.name()
+    return QColor.fromHsvF(hue % 1.0, 0.85, 1.0).name()
 
 
 class _NumItem(QTableWidgetItem):
