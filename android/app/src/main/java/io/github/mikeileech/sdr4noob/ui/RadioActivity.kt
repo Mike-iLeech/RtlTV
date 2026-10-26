@@ -256,6 +256,9 @@ class RadioActivity : Activity() {
         Modulation.WFM -> 101_000_000L
         Modulation.NFM -> 145_500_000L
         Modulation.AM -> 127_000_000L
+        Modulation.USB -> 14_230_000L
+        Modulation.LSB -> 7_100_000L
+        Modulation.CW -> 7_030_000L
     }
 
     private fun setMode(m: Modulation, freq: Long? = null) {
@@ -272,7 +275,10 @@ class RadioActivity : Activity() {
     }
 
     private fun applyModeUi() {
-        spectrum.snapHz = when (mode) { Modulation.WFM -> 100_000L; Modulation.NFM -> 6_250L; Modulation.AM -> 1_000L }
+        spectrum.snapHz = when (mode) {
+            Modulation.WFM -> 100_000L; Modulation.NFM -> 6_250L; Modulation.AM -> 1_000L
+            Modulation.USB, Modulation.LSB -> 100L; Modulation.CW -> 10L
+        }
         spectrum.channelBw = mode.defaultBw
         stereoBox.visibility = if (mode == Modulation.WFM) View.VISIBLE else View.GONE
     }
