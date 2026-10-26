@@ -11,7 +11,8 @@ from PySide6.QtGui import QAction, QActionGroup, QColor, QKeySequence, QPalette
 from PySide6.QtWidgets import QApplication, QMainWindow
 
 from . import audio, settings
-from .themes import THEMES, qss
+from .i18n import tr
+from .themes import DEFAULT_THEME, THEMES, qss
 
 
 class ModeWindow(QMainWindow):
@@ -23,30 +24,30 @@ class ModeWindow(QMainWindow):
         self.setWindowTitle(title)
         self.resize(1360, 860)
         self._switching = False
-        m = self.menuBar().addMenu("Режим")
-        act = QAction("Выбрать другой режим…", self)
+        m = self.menuBar().addMenu(tr("Режим"))
+        act = QAction(tr("Выбрать другой режим…"), self)
         act.setShortcut(QKeySequence("Ctrl+M"))
         act.triggered.connect(self.request_switch)
         m.addAction(act)
-        act_dev = QAction("Устройства…", self)
-        act_dev.setToolTip("Другие приёмники: HackRF, Airspy, сетевой rtl_tcp, свой драйвер RTL-SDR")
+        act_dev = QAction(tr("Устройства…"), self)
+        act_dev.setToolTip(tr("Другие приёмники: HackRF, Airspy, сетевой rtl_tcp, свой драйвер RTL-SDR"))
         act_dev.triggered.connect(self.show_devices)
         m.addAction(act_dev)
-        act_set = QAction("Настройки…", self)
+        act_set = QAction(tr("Настройки…"), self)
         act_set.setShortcut(QKeySequence("Ctrl+,"))
-        act_set.setToolTip("Где хранить записи, снимки, звук, журналы и служебные файлы")
+        act_set.setToolTip(tr("Где хранить записи, снимки, звук, журналы и служебные файлы"))
         act_set.triggered.connect(lambda: __import__("rtltv.settings_dialog", fromlist=["x"]).show_settings(self))
         m.addAction(act_set)
-        tm = self.menuBar().addMenu("Оформление")
+        tm = self.menuBar().addMenu(tr("Оформление"))
         for name in THEMES:
-            a = QAction(name, self)
+            a = QAction(tr(name), self)
             a.triggered.connect(lambda _c=False, n=name: self.set_theme(n))
             tm.addAction(a)
-        self.theme_name = self.opts.get("theme") or "Тёмная"
+        self.theme_name = self.opts.get("theme") or DEFAULT_THEME
         self.view_s = settings.load("app", {}).get("view") or {}
-        self.view_menu = self.menuBar().addMenu("Вид")
+        self.view_menu = self.menuBar().addMenu(tr("Вид"))
         self._build_view_menu()
-        self.sound_menu = self.menuBar().addMenu("Звук")
+        self.sound_menu = self.menuBar().addMenu(tr("Звук"))
         self.sound_menu.aboutToShow.connect(self._fill_sound_menu)
         self._build_help_menu()
         QTimer.singleShot(0, self._init_audio)
@@ -55,18 +56,18 @@ class ModeWindow(QMainWindow):
     GUIDE_PAGE = None  # страница руководства для F1; None — по классу окна (guide_window.MODE_PAGES)
 
     def _build_help_menu(self):
-        hm = self.menuBar().addMenu("Справка")
-        act = QAction("Руководство (F1)…", self)
+        hm = self.menuBar().addMenu(tr("Справка"))
+        act = QAction(tr("Руководство (F1)…"), self)
         act.setShortcut(QKeySequence("F1"))  # во всех режимах F1 — общее руководство
         act.triggered.connect(self.open_guide)
         hm.addAction(act)
-        upd = QAction("Проверить обновления…", self)
+        upd = QAction(tr("Проверить обновления…"), self)
         upd.triggered.connect(lambda: __import__("rtltv.update_ui", fromlist=["x"]).check_now(self))
         hm.addAction(upd)
-        site = QAction("Сайт и вики SDR4NOOB", self)
-        site.triggered.connect(lambda: __import__("webbrowser").open("https://mike-ileech.github.io/SDR4NOOB/"))
+        site = QAction(tr("Сайт и вики SDR4NOOB"), self)
+        site.triggered.connect(lambda: __import__("webbrowser").open(__import__("rtltv").site_url()))
         hm.addAction(site)
-        about = QAction("О программе", self)
+        about = QAction(tr("О программе"), self)
         about.triggered.connect(self.show_about)
         hm.addAction(about)
 
@@ -76,17 +77,20 @@ class ModeWindow(QMainWindow):
 
     def show_about(self):
         from PySide6.QtWidgets import QMessageBox
-        from . import __version__
+        from . import __version__, site_url
         from .branding import app_icon
         box = QMessageBox(self)
-        box.setWindowTitle("О программе")
+        box.setWindowTitle(tr("О программе"))
         box.setIconPixmap(app_icon().pixmap(72, 72))
         box.setTextFormat(Qt.RichText)
-        box.setText(f"<h3>SDR4NOOB {__version__}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
-                          "Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p><p>Руководство для начинающих — меню «Справка → "
-                          "Руководство» (F1).</p><p>Сайт и вики: <a href='https://mike-ileech.github.io/SDR4NOOB/'>"
-                          "mike-ileech.github.io/SDR4NOOB</a><br>Исходники и релизы: <a href='https://github.com/"
-                          "Mike-iLeech/SDR4NOOB'>github.com/Mike-iLeech/SDR4NOOB</a><br>Лицензия GPL-3.0-or-later.</p>")
+        site = site_url()
+        box.setText(tr("<h3>SDR4NOOB {version}</h3><p><b>Всё в одном для начинающего радиолюбителя.</b><br>"
+                       "Приёмник на RTL-SDR: ТВ, радио, SSTV, спутники, самолёты (ADS-B), APRS.</p>"
+                       "<p>Руководство для начинающих — меню «Справка → Руководство» (F1).</p>"
+                       "<p>Сайт и вики: <a href='{site}'>{site_name}</a><br>Исходники и релизы: "
+                       "<a href='https://github.com/Mike-iLeech/SDR4NOOB'>github.com/Mike-iLeech/SDR4NOOB</a><br>"
+                       "Лицензия GPL-3.0-or-later.</p>",
+                       version=__version__, site=site, site_name=site.split("://", 1)[-1].rstrip("/")))
         box.exec()
 
     # ---------- устройства: диалог «Устройства…» и обновление списка источников ----------
@@ -132,9 +136,9 @@ class ModeWindow(QMainWindow):
                 grp.addAction(a)
                 sub.addAction(a)
 
-        group("Частота кадров изображения (ТВ)", "video_fps",
-              [(8, "8 к/с"), (12, "12 к/с"), (25, "25 к/с (как в эфире)")])
-        note = QAction("Спектр и водопад — панель «Спектр и водопад» в окне режима", self)
+        group(tr("Частота кадров изображения (ТВ)"), "video_fps",
+              [(8, tr("{n} к/с", n=8)), (12, tr("{n} к/с", n=12)), (25, tr("25 к/с (как в эфире)"))])
+        note = QAction(tr("Спектр и водопад — панель «Спектр и водопад» в окне режима"), self)
         note.setEnabled(False)
         m.addAction(note)
         QTimer.singleShot(0, self.apply_view)
@@ -168,7 +172,7 @@ class ModeWindow(QMainWindow):
         for a in outs:
             a.device = dev
             a.on_error = lambda msg: QTimer.singleShot(0, lambda: self.statusBar().showMessage(
-                msg + " — выберите другое устройство в меню «Звук».", 15000))
+                tr("{error} — выберите другое устройство в меню «Звук».", error=msg), 15000))
 
     def _fill_sound_menu(self):
         self.sound_menu.clear()
@@ -182,7 +186,7 @@ class ModeWindow(QMainWindow):
             self.sound_menu.addAction(act)
         if outs and outs[0].info:
             self.sound_menu.addSeparator()
-            info = QAction("Сейчас: " + outs[0].info, self)
+            info = QAction(tr("Сейчас: {device}", device=outs[0].info), self)
             info.setEnabled(False)
             self.sound_menu.addAction(info)
 
@@ -193,7 +197,7 @@ class ModeWindow(QMainWindow):
         for a in self.audio_outputs():
             a.set_device(idx)
             if a.stream is not None:
-                self.statusBar().showMessage("Звук: " + a.info, 6000)
+                self.statusBar().showMessage(tr("Звук: {device}", device=a.info), 6000)
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -211,7 +215,7 @@ class ModeWindow(QMainWindow):
             self.close()
 
     def set_theme(self, name):
-        self.theme_name = name if name in THEMES else "Тёмная"
+        self.theme_name = name if name in THEMES else DEFAULT_THEME
         t = THEMES[self.theme_name]
         app_s = settings.load("app", {})
         if app_s.get("theme") != self.theme_name and not self.opts.get("shot"):

@@ -81,7 +81,7 @@ def interactive_dirs():
 def theme_colors(name):
     """Цвета темы приложения (rtltv/themes.py) — для перекраски схем: {fg: '#..', ...}."""
     src = read(os.path.join(ROOT, "rtltv", "themes.py"))
-    i = src.index(f'"{name}": dict(')
+    i = re.search(r'(?:N_\()?"%s"\)?: dict\(' % re.escape(name), src).start()
     j = src.index("cmap=", i)
     return dict(re.findall(r'(\w+)="(#[0-9a-fA-F]{6})"', src[i:j]))
 
