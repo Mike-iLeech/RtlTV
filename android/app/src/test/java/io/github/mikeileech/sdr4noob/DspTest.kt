@@ -230,7 +230,13 @@ class DspTest {
         val t0 = System.nanoTime()
         assertEquals(120_000, src.read(re, im, 120_000))
         var got = 0
-        while (System.nanoTime() - t0 < 300_000_000L) got += src.read(re, im, 120_000)
+        var reads = 0
+        while (System.nanoTime() - t0 < 300_000_000L) {
+            val k = src.read(re, im, 120_000)
+            assertTrue("только полные блоки: $k", k == 0 || k == 120_000)   // не крутить обработку на мелочи
+            got += k; reads++
+        }
+        assertTrue("источник спит, а не опрашивается вхолостую: $reads", reads < 60)
         assertTrue("темп реального времени после простоя: $got", got in 400_000..1_200_000)
     }
 

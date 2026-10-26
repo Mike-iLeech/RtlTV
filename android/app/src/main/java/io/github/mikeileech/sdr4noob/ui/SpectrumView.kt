@@ -27,6 +27,8 @@ class SpectrumView @JvmOverloads constructor(context: Context, attrs: AttributeS
     var snapHz = 100_000L
     /** Полоса канала для подсветки, Гц. */
     var channelBw = 200_000
+    /** Сдвиг середины полосы канала от VFO, Гц: у USB полоса над несущей, у LSB — под ней. */
+    var channelShift = 0
     var onTuned: ((Long) -> Unit)? = null
 
     private val density = resources.displayMetrics.density
@@ -124,7 +126,8 @@ class SpectrumView @JvmOverloads constructor(context: Context, attrs: AttributeS
         e?.let {
             val vx = freqToX(it.vfoHz)
             val bw = channelBw.toFloat() / rate * w
-            canvas.drawRect(vx - bw / 2, 0f, vx + bw / 2, h.toFloat(), bandPaint)
+            val cx = freqToX(it.vfoHz + channelShift)
+            canvas.drawRect(cx - bw / 2, 0f, cx + bw / 2, h.toFloat(), bandPaint)
             canvas.drawLine(vx, 0f, vx, h.toFloat(), vfoPaint)
         }
         // кривая спектра

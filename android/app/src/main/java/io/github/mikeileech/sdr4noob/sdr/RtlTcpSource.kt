@@ -101,15 +101,19 @@ class RtlTcpSource(private val host: String, private val port: Int) : SdrSource 
         if (buf.size < want) buf = ByteArray(want)
         var have = 0
         if (odd) { buf[0] = pendingByte; have = 1; odd = false }
-        val n = try {
-            inp!!.read(buf, have, want - have)
-        } catch (e: SocketTimeoutException) {
-            0
-        } catch (e: IOException) {
-            throw SdrException("rtl_tcp $host:$port: связь потеряна", e)
+        // дочитываем до полного блока (как приёмник по USB): мелкие порции гоняли бы обработку впустую
+        var total = have
+        while (total < want) {
+            val n = try {
+                inp!!.read(buf, total, want - total)
+            } catch (e: SocketTimeoutException) {
+                break
+            } catch (e: IOException) {
+                throw SdrException("rtl_tcp $host:$port: связь потеряна", e)
+            }
+            if (n < 0) throw SdrException("rtl_tcp $host:$port: сервер закрыл соединение")
+            total += n
         }
-        if (n < 0) throw SdrException("rtl_tcp $host:$port: сервер закрыл соединение")
-        var total = have + n
         if (total % 2 == 1) { pendingByte = buf[total - 1]; odd = true; total-- }
         return U8.convert(buf, total, re, im)
     }

@@ -3,6 +3,12 @@
 
     <!-- rtl_tcp и проверка обновлений -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- приём в фоне: сервис переднего плана «воспроизведение», уведомление, процессор и Wi-Fi не засыпают -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- USB-приёмник через OTG; без USB Host программа работает с rtl_tcp и тестовым сигналом -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
@@ -33,6 +39,7 @@
         <activity
             android:name=".ui.RadioActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:label="Радио" />
 
@@ -41,5 +48,9 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:label="Справка" />
+        <service
+            android:name=".radio.RadioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
     </application>
 </manifest>

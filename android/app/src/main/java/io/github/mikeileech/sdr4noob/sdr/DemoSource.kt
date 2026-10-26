@@ -76,12 +76,12 @@ class DemoSource : SdrSource {
         // отстали больше чем на секунду (поток стоял) — не догоняем, а продолжаем с текущего момента
         if (due - produced > fs) produced = due - maxSamples
         val lag = due - produced
-        if (lag <= 0) {
-            val waitMs = (-lag + maxSamples / 4) * 1000L / fs
-            Thread.sleep(maxOf(1L, waitMs))
+        // отдаём полными блоками, как приёмник: иначе поток обработки крутился бы без сна на крошечных порциях
+        if (lag < maxSamples) {
+            Thread.sleep(maxOf(1L, (maxSamples - lag) * 1000L / fs))
             return 0
         }
-        val n = minOf(lag, maxSamples.toLong()).toInt()
+        val n = maxSamples
         noise(re, im, n)
         for ((k, st) in STATIONS.withIndex()) {
             val off = st.freq - center

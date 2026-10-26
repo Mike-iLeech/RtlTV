@@ -8,6 +8,7 @@ import io.github.mikeileech.sdr4noob.sdr.SdrSource
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 
 /**
@@ -100,7 +101,7 @@ class RadioEngine(
     /** Настроиться на станцию. В пределах полосы приёмника меняется только VFO, иначе — и центр. */
     fun tune(hz: Long) {
         vfoHz = hz   // сразу — чтобы шкала не прыгала назад до выполнения команды
-        post { vfoHz = hz; tuneNow(hz) }
+        post { vfoHz = hz; tuneNow(hz); demod.resetStation() }
     }
 
     /** Сдвинуть центр приёмника (перетаскивание спектра), VFO остаётся на станции, если она в полосе. */
@@ -112,11 +113,37 @@ class RadioEngine(
         demod.offsetHz = (vfoHz - centerHz).toDouble()
     }
 
-    fun setMode(m: Modulation) = post {
-        mode = m
-        demod.setMode(m)
-        tuneNow(vfoHz)
+    fun setMode(m: Modulation) {
+        bandwidth = m.defaultBw
+        post {
+            mode = m
+            demod.setMode(m)
+            tuneNow(vfoHz)
+        }
     }
+
+    /** Полоса канала, Гц (в пределах режима). */
+    @Volatile var bandwidth = mode.defaultBw; private set
+    fun setBandwidth(bw: Int) {
+        bandwidth = bw.coerceIn(mode.minBw, mode.maxBw)
+        post { demod.setBandwidth(bandwidth) }
+    }
+
+    @Volatile var agcOn = true; private set
+    fun setAgc(on: Boolean) { agcOn = on; post { demod.agc.on = on } }
+
+    /** RDS текущей станции (поля читаются из потока интерфейса — только для показа). */
+    val rds get() = demod.rds
+
+    // запись: писатели подменяются атомарно, поток приёма берёт текущий на каждый блок
+    private val audioRec = AtomicReference<WavWriter?>()
+    private val iqRec = AtomicReference<WavWriter?>()
+    val audioRecording get() = audioRec.get()
+    val iqRecording get() = iqRec.get()
+    fun startAudioRec(w: WavWriter) { audioRec.getAndSet(w)?.close() }
+    fun startIqRec(w: WavWriter) { iqRec.getAndSet(w)?.close() }
+    fun stopAudioRec() { audioRec.getAndSet(null)?.close() }
+    fun stopIqRec() { iqRec.getAndSet(null)?.close() }
 
     private fun tuneNow(hz: Long) {
         val off = hz - centerHz
@@ -130,7 +157,10 @@ class RadioEngine(
     fun setSampleRate(rate: Int) = post {
         sampleRate = rate
         source.setSampleRate(rate)
-        demod = RadioDemod(rate, mode).also { it.stereo = stereoWanted; it.squelchDb = squelch }
+        demod = RadioDemod(rate, mode).also {
+            it.stereo = stereoWanted; it.squelchDb = squelch; it.setBandwidth(bandwidth); it.agc.on = agcOn
+        }
+        stopIqRec()   // в записи IQ одна частота дискретизации
         centerHz = vfoHz + offsetFor(rate)
         source.setFrequency(centerHz)
         demod.offsetHz = (vfoHz - centerHz).toDouble()
@@ -165,14 +195,14 @@ class RadioEngine(
             listener?.onOpened(this)
             var block = sampleRate / 20
             var re = FloatArray(block); var im = FloatArray(block)
-            var aud = FloatArray(2 * (block / 5 + 8))
+            var aud = FloatArray(2 * (block / 5 + 64))
             var dcRe = 0f; var dcIm = 0f
             var lastSpec = 0L
             while (running) {
                 while (true) { (commands.poll() ?: break).invoke() }
                 if (sampleRate / 20 != block) {
                     block = sampleRate / 20
-                    re = FloatArray(block); im = FloatArray(block); aud = FloatArray(2 * (block / 5 + 8))
+                    re = FloatArray(block); im = FloatArray(block); aud = FloatArray(2 * (block / 5 + 64))
                 }
                 val n = source.read(re, im, block)
                 if (n == 0) continue
@@ -193,8 +223,10 @@ class RadioEngine(
                     }
                     listener?.onSpectrum()
                 }
+                iqRec.get()?.writeIq(re, im, n)      // до демодулятора: он переносит частоту на месте
                 val frames = demod.process(re, im, n, aud)
                 audio.write(aud, frames)
+                audioRec.get()?.write(aud, frames * 2)
                 dropped = source.droppedSamples
             }
         } catch (e: SdrException) {
@@ -205,6 +237,7 @@ class RadioEngine(
             running = false
             try { source.close() } catch (_: Exception) {}
             audio.close()
+            stopAudioRec(); stopIqRec()
         }
     }
 
