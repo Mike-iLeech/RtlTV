@@ -7,13 +7,19 @@ from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QDialog, QFileDialo
                                QHBoxLayout, QHeaderView, QInputDialog, QLabel, QListWidget, QMessageBox,
                                QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout)
 
-from . import devices
+from . import devices, osplat
 
-INTRO = ("Встроенный драйвер SDR4NOOB работает с RTL-SDR. Для других приёмников загрузите DLL их драйвера "
+INTRO_WIN = ("Встроенный драйвер SDR4NOOB работает с RTL-SDR. Для других приёмников загрузите DLL их драйвера "
          "(HackRF: hackrf.dll; Airspy R2/Mini: airspy.dll; обоим нужны libusb-1.0.dll и pthreadVC2.dll) — "
          "файлы копируются в папку драйверов SDR4NOOB. Приёмник на другом компьютере подключается как "
          "сетевой rtl_tcp. Драйвер Windows (WinUSB) ставится программой Zadig: "
          f'<a href="{devices.ZADIG_URL}">{devices.ZADIG_URL}</a> — SDR4NOOB его не меняет.')
+INTRO_UNIX = ("Встроенный драйвер SDR4NOOB работает с приёмниками на RTL2832U (RTL-SDR и совместимые). "
+              "Для HackRF и Airspy R2/Mini SDR4NOOB берёт системную библиотеку "
+              + ("(brew install hackrf airspy)" if osplat.IS_MAC else "(пакеты libhackrf0, libairspy0)")
+              + f" или файл {osplat.LIB_EXT}, загруженный сюда. Приёмник на другом компьютере подключается "
+              "как сетевой rtl_tcp.")
+INTRO = INTRO_WIN if osplat.IS_WIN else INTRO_UNIX
 
 
 class DevicesDialog(QDialog):
@@ -137,7 +143,7 @@ class DevicesDialog(QDialog):
 
     # ---------- действия ----------
     def load_dll(self):
-        files, _f = QFileDialog.getOpenFileNames(self, "Драйвер устройства (DLL)", "", "Библиотеки DLL (*.dll)")
+        files, _f = QFileDialog.getOpenFileNames(self, "Драйвер устройства", "", osplat.lib_filter())
         if not files:
             return
         done, problems, new_rtl = [], [], []
@@ -217,4 +223,4 @@ class DevicesDialog(QDialog):
 
     def _open_dir(self):
         os.makedirs(devices.DRIVERS_DIR, exist_ok=True)
-        os.startfile(devices.DRIVERS_DIR)
+        osplat.open_path(devices.DRIVERS_DIR)

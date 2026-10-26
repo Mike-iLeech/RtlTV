@@ -16,11 +16,11 @@
 Здесь же генератор синтетического DMR-сигнала (test_signal) — для тестов и rtltv/radiotest.py.
 """
 import ctypes as C
-import os
-import sys
 import time
 
 import numpy as np
+
+from . import osplat
 from scipy.signal import firwin, lfilter, resample_poly
 
 FS = 48000
@@ -414,10 +414,7 @@ _mbe = None
 
 
 def _mbe_path():
-    base = getattr(sys, "_MEIPASS", None)
-    if base:
-        return os.path.join(base, "rtltv", "driver", "mbelib.dll")
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "driver", "mbelib.dll")
+    return osplat.bundled_lib("mbelib")
 
 
 def mbelib():

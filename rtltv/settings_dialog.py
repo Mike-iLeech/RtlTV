@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDia
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QProgressDialog, QPushButton,
                                QVBoxLayout)
 
-from . import paths, settings
+from . import osplat, paths, settings
 
 
 def _fmt_size(b):
@@ -146,7 +146,7 @@ class SettingsDialog(QDialog):
     def _open(self, d):
         d = os.path.abspath(d)
         os.makedirs(d, exist_ok=True)
-        os.startfile(d)  # noqa: S606 — только Windows
+        osplat.open_path(d)
 
     # ---------------------------------------------------------------- действия
     def _check_root(self, root):

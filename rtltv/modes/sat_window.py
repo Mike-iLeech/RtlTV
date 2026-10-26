@@ -31,7 +31,7 @@ from .sat_gallery import DIRS as GALLERY_DIRS
 from .sat_gallery import GalleryWidget, write_meta
 from .sat_userdlg import UserSatsDialog
 from .sat_widgets import ConstellationView, FileDialog, ImageScroll, scroll_panel, wrap_label
-from .. import paths
+from .. import osplat, paths
 
 
 class _ListenDemo(RadioTestSignal):
@@ -1431,7 +1431,7 @@ class SatWindow(ModeWindow):
     def _open_dir(self, path):
         os.makedirs(path, exist_ok=True)
         try:
-            os.startfile(path)  # noqa: S606 — открыть папку в проводнике
+            osplat.open_path(path)
         except OSError:
             pass
 
