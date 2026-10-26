@@ -6,6 +6,8 @@ import io.github.mikeileech.sdr4noob.dsp.SpectrumAnalyzer
 import io.github.mikeileech.sdr4noob.sdr.SdrException
 import io.github.mikeileech.sdr4noob.sdr.SdrSource
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 /**
@@ -61,7 +63,9 @@ class RadioEngine(
 
     /**
      * Приёмник один, движок — тоже: запуск нового останавливает прежний (например, окно радио с тестовым
-     * сигналом осталось под новым, открытым после подключения приёмника) и ждёт, пока тот закроет устройство.
+     * сигналом осталось под новым, открытым после подключения приёмника). Владение приёмником — семафор
+     * [OWNER]: поток держит его от открытия до закрытия источника, поэтому двух владельцев не бывает,
+     * даже если прежний поток закрывается дольше [CLOSE_WAIT_MS].
      */
     fun start() {
         if (running) return
@@ -69,17 +73,18 @@ class RadioEngine(
         val old = current
         if (old != null && old !== this) { old.preempted = true; old.stop() }
         current = this
-        val prev = previous
         val t = Thread({
-            prev?.join(CLOSE_WAIT_MS)
-            if (prev?.isAlive == true) {
-                listener?.onError("Приёмник ещё занят прежним окном радио — попробуйте через несколько секунд.")
+            if (!OWNER.tryAcquire(CLOSE_WAIT_MS, TimeUnit.MILLISECONDS)) {
+                if (running) listener?.onError("Приёмник ещё занят прежним окном радио — попробуйте через несколько секунд.")
                 running = false
             } else {
-                loop()
+                try {
+                    if (running) loop()   // вытеснили, пока ждали, — приёмник не открываем
+                } finally {
+                    OWNER.release()
+                }
             }
         }, "sdr4noob-radio").apply { priority = Thread.MAX_PRIORITY }
-        previous = t
         thread = t
         t.start()
     }
@@ -204,7 +209,7 @@ class RadioEngine(
     }
 
     companion object {
-        @Volatile private var previous: Thread? = null
+        private val OWNER = Semaphore(1)
         @Volatile private var current: RadioEngine? = null
         private const val CLOSE_WAIT_MS = 10_000L
 

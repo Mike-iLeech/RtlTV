@@ -213,7 +213,7 @@ class RadioActivity : Activity() {
     }
 
     private fun opened(e: RadioEngine) {
-        if (!alive || e !== engine) return
+        if (!alive || e !== engine || e.preempted) return
         val gains = e.gains
         val savedGain = prefs.getInt("gain", -1)
         if (gains.isEmpty()) {
@@ -242,7 +242,7 @@ class RadioActivity : Activity() {
     }
 
     private fun fail(message: String) {
-        if (!alive) return
+        if (!alive || engine?.preempted == true) return
         statusText.text = message
         AlertDialog.Builder(this)
             .setTitle("Приёмник")
