@@ -141,12 +141,27 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
     /** Сохранить снимок в «Изображения/SDR4NOOB/Метеор» (вызывается из потока декодера — сохраняет в фоне). */
     private fun savePicture(p: io.github.mikeileech.sdr4noob.radio.LrptPicture, auto: Boolean) {
         val name = "meteor_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(Date()) + "_${p.key}.png"
+        val app = act.applicationContext       // окно могли закрыть посреди пролёта — не держать его
         thread(name = "lrpt-save") {
             val msg = try {
-                val b = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
-                (if (auto) "Снимок пролёта сохранён: " else "Снимок сохранён: ") + Storage.savePng(act, Storage.METEOR, name, b)
+                (if (auto) "Снимок пролёта сохранён: " else "Снимок сохранён: ") + Storage.savePng(app, Storage.METEOR, name, bitmap(p))
             } catch (e: Throwable) { "Снимок не сохранён: ${e.message ?: e.javaClass.simpleName}" }
-            ui.post { if (alive) toast(msg) }
+            // окно закрыто — сообщить всё равно (короткий тост от приложения)
+            ui.post { if (alive) toast(msg) else android.widget.Toast.makeText(app, msg, android.widget.Toast.LENGTH_LONG).show() }
+        }
+    }
+
+    /** Растр снимка; не хватило памяти — вдвое меньше по обеим осям (снимок важнее разрешения). */
+    private fun bitmap(p: io.github.mikeileech.sdr4noob.radio.LrptPicture): android.graphics.Bitmap {
+        var argb = p.argb; var w = p.width; var h = p.height
+        while (true) {
+            try { return android.graphics.Bitmap.createBitmap(argb, w, h, android.graphics.Bitmap.Config.ARGB_8888) }
+            catch (e: OutOfMemoryError) {
+                if (w < 200) throw e
+                val w2 = w / 2; val h2 = h / 2; val src = argb; val sw = w
+                argb = IntArray(w2 * h2) { src[(it / w2) * 2 * sw + (it % w2) * 2] }
+                w = w2; h = h2
+            }
         }
     }
 

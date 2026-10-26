@@ -69,7 +69,7 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
             } catch (_: InterruptedException) {
                 break
             } catch (_: Changed) {
-            } catch (e: Exception) {
+            } catch (e: Throwable) {        // и нехватка памяти: необработанная ошибка потока закрыла бы приложение
                 if (!reported) { reported = true; onError("ТВ: сбой измерителя (${e.javaClass.simpleName}), измерение начато заново") }
                 try { Thread.sleep(200) } catch (_: InterruptedException) { break }
             }
