@@ -39,6 +39,19 @@ SDR4NOOB распространяется под лицензией **GPL-3.0-or
 Функция декодирования голоса DMR предназначена для исследовательских и учебных целей;
 **пользуйтесь ею на свой страх и риск** и с учётом законов вашей страны.
 
+## Android-версия
+
+В `SDR4NOOB-<версия>-android.apk` входят собранные из исходников при сборке APK (`android/app/build.gradle.kts`,
+задача `fetchNativeDeps`, архивы сверяются по SHA-256) и статически скомпонованные в `libsdr4noob.so`:
+
+| Компонент | Лицензия | Исходники | Примечание |
+|---|---|---|---|
+| **librtlsdr**, сборка rtl-sdr-blog 1.4.0 | GPL-2.0-or-later | https://github.com/rtlsdrblog/rtl-sdr-blog/archive/refs/tags/V1.4.0.tar.gz | Исходники не изменены; открытие по файловому дескриптору Android — прослойкой `android/app/src/main/cpp/usb_fd_shim.[ch]` (часть SDR4NOOB, GPL-3.0-or-later). |
+| **libusb** 1.0.30 | LGPL-2.1-or-later | https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2 | Без изменений. Вся программа открыта (GPL-3.0), поэтому требование LGPL о возможности пересборки с другой libusb выполняется: замените архив в `fetchNativeDeps` и соберите APK. |
+
+Остальное в APK — код SDR4NOOB (Kotlin, GPL-3.0-or-later) и руководство из `rtltv/guide`. Сторонних
+библиотек Java/Kotlin, кроме стандартной библиотеки Kotlin (Apache-2.0, https://kotlinlang.org/), нет.
+
 ## Python и библиотеки Python
 
 | Компонент | Лицензия | Сайт |
