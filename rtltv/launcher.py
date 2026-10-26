@@ -1,27 +1,32 @@
 """Экран выбора режима при запуске и переключение между режимами."""
 import importlib
 
-from PySide6.QtCore import QRectF, Qt, Signal
+from PySide6.QtCore import QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
-from PySide6.QtWidgets import (QApplication, QCheckBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout, QWidget)
 
-from . import __version__, settings
-from .themes import THEMES, qss
+from . import TAGLINE, __version__, i18n, settings
+from .i18n import N_, tr
+from .themes import DEFAULT_THEME, THEMES, qss
+
+_launchers = []  # действующий лаунчер (и ссылка на него: после смены языка окно без родителя живёт только здесь)
 
 MODES = [
-    # ключ, модуль, класс, название, описание, значок
-    ("tv", "rtltv.app", "MainWindow", "ТВ",
-     "Аналоговое ТВ (PAL/SECAM/NTSC) и измеритель цифровых мультиплексов DVB-T2", "tv"),
-    ("radio", "rtltv.modes.radio_window", "RadioWindow", "Радио",
-     "Как SDR++: WFM-стерео, NFM, AM, USB/LSB, CW и DMR с голосом; спектр, водопад, закладки", "radio"),
+    # ключ, модуль, класс, название, описание, значок (название и описание переводятся при показе — tr())
+    ("tv", "rtltv.app", "MainWindow", N_("ТВ"),
+     N_("Аналоговое ТВ (PAL/SECAM/NTSC) и измеритель цифровых мультиплексов DVB-T2"), "tv"),
+    ("radio", "rtltv.modes.radio_window", "RadioWindow", N_("Радио"),
+     N_("Как SDR++: WFM-стерео, NFM, AM, USB/LSB, CW и DMR с голосом; спектр, водопад, закладки"), "radio"),
     ("sstv", "rtltv.modes.sstv_window", "SstvWindow", "SSTV",
-     "Картинки по радио: КВ 14,230 МГц, МКС 145,800 МГц; Robot, Martin, Scottie, PD", "sstv"),
-    ("sat", "rtltv.modes.sat_window", "SatWindow", "Спутники",
-     "«Метеор-М» и «Электро-Л» (снимки), МКС и любительские спутники: пролёты на карте, прослушивание с доплером", "sat"),
-    ("adsb", "rtltv.modes.adsb_window", "AdsbWindow", "Самолёты (ADS-B)",
-     "1090 МГц: борта на карте с курсом, высотой, скоростью и позывным", "plane"),
-    ("aprs", "rtltv.modes.aprs_window", "AprsWindow", "APRS", "Пакеты радиолюбителей на карте: 144,800 МГц и МКС 145,825 МГц", "radio"),
+     N_("Картинки по радио: КВ 14,230 МГц, МКС 145,800 МГц; Robot, Martin, Scottie, PD"), "sstv"),
+    ("sat", "rtltv.modes.sat_window", "SatWindow", N_("Спутники"),
+     N_("«Метеор-М» и «Электро-Л» (снимки), МКС и любительские спутники: пролёты на карте, прослушивание с доплером"),
+     "sat"),
+    ("adsb", "rtltv.modes.adsb_window", "AdsbWindow", N_("Самолёты (ADS-B)"),
+     N_("1090 МГц: борта на карте с курсом, высотой, скоростью и позывным"), "plane"),
+    ("aprs", "rtltv.modes.aprs_window", "AprsWindow", "APRS",
+     N_("Пакеты радиолюбителей на карте: 144,800 МГц и МКС 145,825 МГц"), "radio"),
 ]
 
 
@@ -72,12 +77,12 @@ class Tile(QWidget):
 
     def __init__(self, title, desc, icon):
         super().__init__()
-        self.title, self.desc, self.icon = title, desc, icon
+        self.title, self.desc, self.icon = tr(title), tr(desc), icon
         self.hover = False
-        self.colors = THEMES["Тёмная"]
+        self.colors = THEMES[DEFAULT_THEME]
         self.setMinimumSize(250, 190)
         self.setCursor(Qt.PointingHandCursor)
-        self.setToolTip(desc)
+        self.setToolTip(self.desc)
 
     def enterEvent(self, _e):
         self.hover = True
@@ -126,10 +131,12 @@ class Launcher(QWidget):
     def __init__(self, opts=None):
         super().__init__()
         self.opts = dict(opts or {})
-        self.app_s = settings.load("app", {"theme": "Тёмная", "last": "radio"})
-        self.setWindowTitle(f"SDR4NOOB {__version__} — выбор режима")
+        self.app_s = settings.load("app", {"theme": DEFAULT_THEME, "last": "radio"})
+        self.setWindowTitle(tr("SDR4NOOB {version} — выбор режима", version=__version__))
         self.resize(900, 560)
         self.current = None
+        self.current_key = None
+        _launchers[:] = [self]   # действующий лаунчер — тот, что создан последним (по нему switch_language)
         v = QVBoxLayout(self)
         v.setContentsMargins(24, 18, 24, 18)
         from .branding import app_icon
@@ -143,14 +150,23 @@ class Launcher(QWidget):
         head = QLabel("SDR4NOOB")
         head.setStyleSheet("font-size: 26pt; font-weight: bold;")
         names.addWidget(head)
-        idea = QLabel("Всё в одном для начинающего радиолюбителя")
+        idea = QLabel(tr(TAGLINE))
         idea.setStyleSheet("font-size: 12pt;")
         names.addWidget(idea)
         top.addLayout(names)
         top.addStretch(1)
+        self.lang = None
+        if i18n.selectable():
+            self.lang = QComboBox()
+            for code, name in i18n.LANGS.items():
+                self.lang.addItem(name, code)
+            self.lang.setCurrentIndex(max(0, self.lang.findData(i18n.language())))
+            self.lang.setToolTip(tr("Язык интерфейса"))
+            self.lang.currentIndexChanged.connect(self._lang_changed)
+            top.addWidget(self.lang, 0, Qt.AlignTop)
         v.addLayout(top)
-        sub = QLabel("Любой USB радиоприёмник (SDR): ТВ, радио, цифровая связь, SSTV, спутники, самолёты, APRS. "
-                     "Выберите режим — вернуться сюда можно из меню «Режим» (Ctrl+M).")
+        sub = QLabel(tr("Любой USB радиоприёмник (SDR): ТВ, радио, цифровая связь, SSTV, спутники, самолёты, APRS. "
+                        "Выберите режим — вернуться сюда можно из меню «Режим» (Ctrl+M)."))
         sub.setObjectName("dim")
         v.addWidget(sub)
         grid = QGridLayout()
@@ -162,21 +178,23 @@ class Launcher(QWidget):
             grid.addWidget(t, i // 3, i % 3)
             self.tiles.append(t)
         v.addLayout(grid, 1)
-        self.cb_test = QCheckBox("Без антенны: тестовый эфир вместо приёмника")
+        self.cb_test = QCheckBox(tr("Без антенны: тестовый эфир вместо приёмника"))
         self.cb_test.setChecked(self.opts.get("source") == "test")
         bottom = QHBoxLayout()
         bottom.addWidget(self.cb_test, 1)
-        bottom.addWidget(QPushButton("📖 Руководство", toolTip="Руководство для начинающего радиолюбителя (F1 в окне режима)", clicked=lambda: importlib.import_module("rtltv.guide_window").show_guide("index", self)))
-        self.btn_devices = QPushButton("Устройства…")
-        self.btn_devices.setToolTip("Приёмники SDR: RTL-SDR (встроенный драйвер или свой), HackRF, Airspy, сетевой rtl_tcp")
+        bottom.addWidget(QPushButton(tr("📖 Руководство"),
+                                     toolTip=tr("Руководство для начинающего радиолюбителя (F1 в окне режима)"),
+                                     clicked=lambda: importlib.import_module("rtltv.guide_window").show_guide("index", self)))
+        self.btn_devices = QPushButton(tr("Устройства…"))
+        self.btn_devices.setToolTip(tr("Приёмники SDR: RTL-SDR (встроенный драйвер или свой), HackRF, Airspy, сетевой rtl_tcp"))
         self.btn_devices.clicked.connect(self.show_devices)
         bottom.addWidget(self.btn_devices)
-        b_set = QPushButton("⚙ Настройки")
-        b_set.setToolTip("Где хранить записи, снимки, звук, журналы и служебные файлы")
+        b_set = QPushButton(tr("⚙ Настройки"))
+        b_set.setToolTip(tr("Где хранить записи, снимки, звук, журналы и служебные файлы"))
         b_set.clicked.connect(lambda: importlib.import_module("rtltv.settings_dialog").show_settings(self))
         bottom.addWidget(b_set)
-        b_upd = QPushButton("⟳ Обновления")
-        b_upd.setToolTip("Проверить новую версию на GitHub")
+        b_upd = QPushButton(tr("⟳ Обновления"))
+        b_upd.setToolTip(tr("Проверить новую версию на GitHub"))
         b_upd.clicked.connect(lambda: importlib.import_module("rtltv.update_ui").check_now(self))
         bottom.addWidget(b_upd)
         v.addLayout(bottom)
@@ -185,8 +203,8 @@ class Launcher(QWidget):
         self.apply_theme()
 
     def apply_theme(self):
-        name = self.app_s.get("theme", "Тёмная")
-        t = THEMES.get(name, THEMES["Тёмная"])
+        name = self.app_s.get("theme", DEFAULT_THEME)
+        t = THEMES.get(name, THEMES[DEFAULT_THEME])
         QApplication.instance().setStyleSheet(qss(t))
         for tile in self.tiles:
             tile.colors = t
@@ -211,24 +229,75 @@ class Launcher(QWidget):
             cls = getattr(importlib.import_module(entry[1]), entry[2])
         except Exception as e:  # noqa: BLE001
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "SDR4NOOB", f"Режим «{entry[3]}» не загрузился:\n{e}")
+            QMessageBox.warning(self, "SDR4NOOB", tr("Режим «{mode}» не загрузился:\n{error}",
+                                                     mode=tr(entry[3]), error=e))
             return
         self._save_app(last=key)
         opts = dict(self.opts)
-        opts["theme"] = self.app_s.get("theme", "Тёмная")
+        opts["theme"] = self.app_s.get("theme", DEFAULT_THEME)
         if self.cb_test.isChecked():
             opts["source"] = "test"
         win = cls(opts)
         win.switchRequested.connect(self._back)
         self.current = win
+        self.current_key = key
         self.hide()
         win.show()
 
     def _back(self):
         win = self.current
         self.current = None
+        self.current_key = None
         if win is not None:
             self._save_app(theme=getattr(win, "theme_name", self.app_s.get("theme")))
             win.deleteLater()
         self.apply_theme()
         self.show()  # сразу, иначе приложение решит, что окон не осталось, и завершится
+
+    def _lang_changed(self):
+        code = self.lang.currentData()
+        if code and code != i18n.language():
+            self._save_app(language=code)
+            QTimer.singleShot(0, lambda: switch_language(code))
+
+
+
+
+def switch_language(code):
+    """Сменить язык на лету: окна строятся заново — новый лаунчер и тот же режим.
+
+    Окно режима закрывается штатно (shutdown() отпускает приёмник), потом открывается снова уже на новом языке.
+    Прочие окна закрываются (справку можно открыть снова — уже на новом языке); окно, у которого есть
+    метод retranslate(), вместо закрытия перестраивается на месте."""
+    import logging
+    i18n.set_language(code)
+    app = QApplication.instance()
+    old = _launchers[0] if _launchers else None
+    opts = dict(old.opts) if old is not None else {}
+    key, test = None, False
+    if old is not None:
+        old.setProperty("retired", True)
+        test = old.cb_test.isChecked()
+        key, win = old.current_key, old.current
+        old.current = old.current_key = None
+        if win is not None:
+            old._save_app(theme=getattr(win, "theme_name", old.app_s.get("theme")))
+            win.close()
+            win.deleteLater()
+    logging.getLogger("rtltv").info("язык интерфейса: %s (заново открывается режим %s)", code, key)
+    new = Launcher(opts)
+    new.cb_test.setChecked(test)
+    if key:
+        new.open_mode(key)
+    else:
+        new.show()
+    for w in app.topLevelWidgets():
+        if w is new or w is new.current or not w.isVisible():
+            continue
+        if hasattr(w, "retranslate"):   # справка перестраивается на месте (та же страница)
+            w.retranslate()
+        else:
+            w.close()
+    if old is not None:
+        old.deleteLater()
+    return new

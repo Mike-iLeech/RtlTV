@@ -11,6 +11,7 @@ cd /d "%~dp0"
   --add-data "rtltv\driver;rtltv\driver" ^
   --add-data "rtltv\guide;rtltv\guide" ^
   --add-data "rtltv\assets;rtltv\assets" ^
+  --add-data "rtltv\locale;rtltv\locale" ^
   --icon "rtltv\assets\sdr4noob.ico" ^
   --hidden-import PySide6.QtSvg ^
   --hidden-import PySide6.QtWebEngineWidgets ^
