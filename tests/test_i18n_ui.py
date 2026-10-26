@@ -76,6 +76,7 @@ def visible_texts(root):
 
     def russian(t):
         t = re.sub(r"[A-Za-z]:\\[^<\n]*", "", t)  # пути Windows (папки пользователя) — не текст интерфейса
+        t = re.sub(r"(?:^|(?<=[>\s]))/[^<\n]*", "", t)   # … и пути macOS/Linux
         for n in native:
             t = t.replace(n, "")
         return CYR.search(t)

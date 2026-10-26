@@ -158,7 +158,7 @@ class SettingsDialog(QDialog):
                 (os.path.join(paths.LOGS, paths.LOGS_APRS), tr("журналы пакетов APRS"))]
         service = os.path.join(root, paths.SERVICE) if self.cb_service.isChecked() else paths.LOCAL
         html = "<table cellspacing='3'>" + "".join(
-            f"<tr><td><b>{root}\\{sub}</b></td><td>&nbsp;— {what}</td></tr>" for sub, what in rows)
+            f"<tr><td><b>{os.path.join(root, sub)}</b></td><td>&nbsp;— {what}</td></tr>" for sub, what in rows)
         html += f"<tr><td><b>{service}</b></td><td>&nbsp;— {tr('служебные файлы')}</td></tr></table>"
         self.layout_lbl.setText(html)
         self.items = paths.legacy_items(root, self.cb_service.isChecked())
