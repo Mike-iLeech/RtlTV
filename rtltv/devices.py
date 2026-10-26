@@ -1211,17 +1211,69 @@ def _usb_raw_setupapi():
     return out
 
 
+MAC_SVC = "macOS"   # «служба» устройства на macOS: системный драйвер не нужен, libusb открывает его напрямую
+_IOREG_KEYS = ("idVendor", "idProduct", "locationID", "USB Product Name", "USB Serial Number")
+
+
+def _usb_raw_ioreg(text=None):
+    """macOS: USB-устройства из `ioreg -p IOUSB -l -w0` в формате _usb_raw_setupapi."""
+    if text is None:
+        import subprocess
+        text = subprocess.run(["ioreg", "-p", "IOUSB", "-l", "-w0"], capture_output=True, text=True,
+                              timeout=10).stdout
+    devs, cur = [], None
+    for line in text.splitlines():
+        if "+-o " in line:
+            cur = {"name": line.split("+-o ", 1)[1].split("@")[0].split("<")[0].strip()}
+            devs.append(cur)
+            continue
+        if cur is None:
+            continue
+        for k in _IOREG_KEYS:
+            tag = f'"{k}" = '
+            if tag in line:
+                cur[k] = line.split(tag, 1)[1].strip().strip('"')
+    out = []
+    for i, d in enumerate(devs):
+        try:
+            vid, pid = int(d["idVendor"]), int(d["idProduct"])
+        except (KeyError, ValueError):
+            continue
+        where = d.get("locationID") or d.get("USB Serial Number") or str(i)
+        out.append((f"USB\\VID_{vid:04X}&PID_{pid:04X}\\{where}", "", MAC_SVC, d.get("USB Product Name") or d["name"]))
+    return out
+
+
 def usb_raw():
     """Сырые записи о USB-устройствах этой ОС в формате _usb_raw_setupapi (пусто, если ОС не умеет)."""
     if osplat.IS_WIN:
         return _usb_raw_setupapi()
+    if osplat.IS_MAC:
+        return _usb_raw_ioreg()
     return []
+
+
+def _mac_driver_state(kind):
+    """macOS: драйвер ОС не нужен — RTL-SDR работает со встроенной librtlsdr, HackRF/Airspy — с их библиотекой."""
+    if kind == "rtl":
+        return True, "драйвер не нужен", "Готово: работает со встроенным драйвером SDR4NOOB."
+    if kind in ("hackrf", "airspy"):
+        if find_driver(kind):
+            return True, "драйвер не нужен", "Готово."
+        return False, f"нет библиотеки {kind}", (f"Установите её (brew install {kind}) или загрузите "
+                                                 f"{PREFERRED_NAMES[kind][0]} кнопкой «Загрузить драйвер…».")
+    return None
 
 
 def _driver_state(kind, svc):
     """(готово ли, текст состояния, что делать) для вида устройства и службы интерфейса 0."""
+    if svc == MAC_SVC:
+        st = _mac_driver_state(kind)
+        if st:
+            return st
+        svc = "USB"   # неподдерживаемые модели: дальше общий текст «не поддерживается»
     s = (svc or "").lower()
-    zadig = f"Привяжите WinUSB через Zadig ({ZADIG_URL}): Options → List All Devices → нужное устройство → WinUSB."
+    zadig =f"Привяжите WinUSB через Zadig ({ZADIG_URL}): Options → List All Devices → нужное устройство → WinUSB."
     if kind == "rtl":
         if s == "winusb":
             return True, "WinUSB", "Готово: работает со встроенным драйвером SDR4NOOB."
