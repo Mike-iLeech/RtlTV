@@ -67,6 +67,13 @@ Airspy R2/Mini, сетевой rtl_tcp). Python не нужен.
 
 Подробно, с картинками и ответами на вопросы — [«Установка и обновление»](https://mike-ileech.github.io/SDR4NOOB/install.html).
 
+### Android
+
+`SDR4NOOB-<версия>-android.apk` из [последнего выпуска](https://github.com/Mike-iLeech/SDR4NOOB/releases/latest)
+(Android 7 и новее): любой USB радиоприёмник (SDR) через OTG-переходник — для приёмников на RTL2832U драйвер
+встроен, — сетевой rtl_tcp или тестовый сигнал. Пока есть радио и спектр (WFM-стерео, NFM, AM, водопад) и
+руководство; остальные режимы переносятся по плану. Подробности и сборка — [android/README.md](android/README.md).
+
 ### Драйвер WinUSB (Zadig)
 
 Librtlsdr (сборка [rtl-sdr-blog](https://github.com/rtlsdrblog/rtl-sdr-blog) с поддержкой V4) уже встроен
@@ -234,6 +241,7 @@ rtltv/driver/            librtlsdr.dll, mbelib.dll, lrpt_dsp.dll
 tools/                   build_site.py (сайт), lrpt_dsp.c и bat-файлы сборки DLL
 tests/                   pytest
 docs/                    сайт GitHub Pages (собирается tools/build_site.py; снимки — docs/img/screens)
+android/                 Android-версия: Kotlin + NDK (libusb, librtlsdr по дескриптору USB), см. android/README.md
 ```
 
 ## Лицензия
