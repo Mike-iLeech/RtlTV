@@ -51,7 +51,7 @@ class AprsTest {
 
     private val rows: List<List<String>> by lazy {
         val txt = javaClass.getResourceAsStream("/aprs_ref.tsv")!!.readBytes().toString(Charsets.UTF_8)
-        txt.split("\n").filter { it.isNotEmpty() && !it.startsWith("#") }.map { ln -> ln.split("\t").map { unesc(it) } }
+        txt.split(Regex("\r?\n")).filter { it.isNotEmpty() && !it.startsWith("#") }.map { ln -> ln.split("\t").map { unesc(it) } }
     }
 
     private fun rows(tag: String) = rows.filter { it[0] == tag }
