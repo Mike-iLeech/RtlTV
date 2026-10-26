@@ -112,7 +112,7 @@ object I18n {
         return if (runCatching { ctx.assets.open(alt).close() }.isSuccess) alt else path
     }
 
-    private val FIELD = Regex("""\{(\w+)}""")
+    private val FIELD = Regex("""\{(\w+)\}""")      // «\}»: ICU на Android не принимает голую «}» (JVM принимает)
 
     /** Подстановка {имя} за один проход: «{…}» внутри подставленных значений (текст из эфира) не трогается. */
     fun format(s: String, kw: Array<out Pair<String, Any?>>): String {
