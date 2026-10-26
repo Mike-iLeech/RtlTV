@@ -335,7 +335,7 @@ class RdsDecoder(val fs: Int = 240_000) {
                 val day = mjd - 14956 - (y * 365.25).toInt() - (mo * 30.6001).toInt()
                 val k = if (mo == 14 || mo == 15) 1 else 0
                 val t = hour * 60 + minute + off
-                val v = intArrayOf(1900 + y + k, mo - 1 - k * 12, day, Math.floorMod(t / 60, 24), Math.floorMod(t, 60))
+                val v = intArrayOf(1900 + y + k, mo - 1 - k * 12, day, Math.floorMod(Math.floorDiv(t, 60), 24), Math.floorMod(t, 60))
                 if (!v.contentEquals(ct)) { ct = v; changed = true }
             }
         }

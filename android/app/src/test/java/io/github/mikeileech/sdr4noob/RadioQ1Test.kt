@@ -67,6 +67,53 @@ class RadioQ1Test {
         assertArrayEquals(intArrayOf(2026, 10, 26, 12, 34), st.ct)
     }
 
+    /** Часы RDS при отрицательном сдвиге пояса: UTC 00:30, сдвиг −1 ч → 23:30 (эталон — rds.py, t // 60). */
+    @Test fun rdsClockNegativeOffset() {
+        val fs = 240_000
+        val groups = RdsEncoder.groups(0x7A01, "X", "Y", ct = intArrayOf(2026, 10, 26, 0, 30)).toMutableList()
+        val g = groups.last().copyOf()
+        g[6] = g[6] or (1 shl 5) or 2          // блок D: знак «−» и 2 получаса
+        groups[groups.size - 1] = g
+        val enc = RdsEncoder(groups)
+        val dec = RdsDecoder(fs)
+        val block = fs / 20
+        val mpx = FloatArray(block)
+        var n = 0L
+        repeat(20 * 6) {
+            for (i in 0 until block) {
+                val t = (n + i).toDouble() / fs
+                val p = 2 * PI * 19_000 * t
+                mpx[i] = (0.1 * sin(p) + 0.05 * enc.value(t) * sin(3 * p)).toFloat()
+            }
+            n += block
+            dec.process(mpx, block, null, null)
+        }
+        assertArrayEquals(intArrayOf(2026, 10, 26, 23, 30), dec.state().ct)
+    }
+
+    /** Смена режима сразу меняет и диапазон полосы (раньше полоса USB зажималась по диапазону WFM). */
+    @Test fun engineModeAndBandwidthTogether() {
+        val e = io.github.mikeileech.sdr4noob.radio.RadioEngine(DemoSource(), 960_000, 101_000_000L, Modulation.WFM)
+        e.setMode(Modulation.USB, 2_800)
+        assertEquals(Modulation.USB, e.mode)
+        assertEquals(2_800, e.bandwidth)
+        e.setMode(Modulation.WFM)
+        assertEquals(200_000, e.bandwidth)
+        e.setBandwidth(1_000_000)
+        assertEquals(220_000, e.bandwidth)
+    }
+
+    /** Мелкие блоки (rtl_tcp по тайм-ауту): выход АРУ длиннее входа — без выхода за массивы. */
+    @Test fun tinyBlocksWithAgc() {
+        val d = RadioDemod(960_000, Modulation.AM)
+        val aud = FloatArray(2 * (960_000 / 20 / 5 + 64))
+        repeat(200) { k ->
+            val n = 20 + (k * 37) % 300
+            val re = FloatArray(n) { 0.1f }; val im = FloatArray(n)
+            d.process(re, im, n, aud)
+        }
+    }
+
     /** Тестовый эфир 101,0 МГц: стерео и RDS через полную цепочку демодулятора (8 с в реальном темпе). */
     @Test fun rdsFromDemoStation() {
         val fs = 1_200_000

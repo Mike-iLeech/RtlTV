@@ -165,7 +165,9 @@ class RadioDemod(val fs: Int, mode: Modulation = Modulation.WFM) {
     private fun ensure(n: Int) {
         if (r1.size < n) {
             r1 = FloatArray(n); i1 = FloatArray(n); r2 = FloatArray(n); i2 = FloatArray(n)
-            mpx = FloatArray(n); dif = FloatArray(n); mono = FloatArray(n); side = FloatArray(n)
+            mpx = FloatArray(n); dif = FloatArray(n)
+            // выход АРУ длиннее входа на неполный кусок из прошлого блока
+            mono = FloatArray(n + 2 * Agc.CH); side = FloatArray(n + 2 * Agc.CH)
             c57r = FloatArray(n); c57i = FloatArray(n); agcOut = FloatArray(n + Agc.CH * 2)
         }
     }

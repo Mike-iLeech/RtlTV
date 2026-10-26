@@ -29,7 +29,7 @@ class RecorderTest {
         val w = WavWriter(RandomAccessFile(f, "rw").channel, 48_000, 2) { closed = true }
         val x = FloatArray(2 * 4800) { if (it % 2 == 0) 0.5f else -2f }   // −2 обрезается до −1
         repeat(10) { w.write(x, x.size) }
-        w.close()
+        w.close(); w.await()
         assertTrue(closed)
         val w2 = Wav(f)
         assertTrue(w2.riffOk)
@@ -46,11 +46,38 @@ class RecorderTest {
         val f = File.createTempFile("iqrec", ".wav")
         val w = WavWriter(RandomAccessFile(f, "rw").channel, 1_200_000, 2)
         w.writeIq(FloatArray(1000) { 0.1f }, FloatArray(1000) { -0.1f }, 1000)
-        w.close()
+        w.close(); w.await()
         val w2 = Wav(f)
         assertEquals(1_200_000, w2.rate)
         assertEquals(1_000, w2.frames)
         assertEquals(3277.toShort(), w2.sample(0)); assertEquals((-3277).toShort(), w2.sample(1))
+        f.delete()
+    }
+
+    /** Ошибка диска не роняет приложение: поток записи останавливается и сообщает причину. */
+    @Test fun diskErrorIsReportedNotThrown() {
+        val f = File.createTempFile("broken", ".wav")
+        val ch = RandomAccessFile(f, "rw").channel
+        ch.close()                                   // любая запись теперь бросает ClosedChannelException
+        var closed = false
+        val w = WavWriter(ch, 48_000, 2) { closed = true }
+        w.await(2_000)
+        assertTrue("причина записана", w.failed != null)
+        w.write(FloatArray(100), 100)                // после сбоя — молча игнорируется
+        w.close(); w.await()
+        assertTrue(closed)
+        f.delete()
+    }
+
+    @Test fun closeDoesNotWait() {
+        val f = File.createTempFile("async", ".wav")
+        val w = WavWriter(RandomAccessFile(f, "rw").channel, 48_000, 2)
+        w.write(FloatArray(96_000), 96_000)
+        val t0 = System.nanoTime()
+        w.close()
+        assertTrue((System.nanoTime() - t0) < 50_000_000L)
+        w.await()
+        assertEquals(48_000, Wav(f).frames)
         f.delete()
     }
 

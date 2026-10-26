@@ -94,7 +94,7 @@ object FreqMan {
                 if (c == '"') { if (i + 1 < text.length && text[i + 1] == '"') { f.append('"'); i++ } else q = false }
                 else f.append(c)
             } else when (c) {
-                '"' -> q = true
+                '"' -> if (f.isEmpty()) q = true else f.append(c)   // как csv в Python: кавычки — только в начале поля
                 d -> { row.add(f.toString()); f.setLength(0) }
                 '\r' -> {}
                 '\n' -> { row.add(f.toString()); f.setLength(0); rows.add(row); row = ArrayList() }
@@ -123,6 +123,7 @@ object FreqMan {
         for (r in body) {
             fun col(k: String) = idx[k]?.let { r.getOrNull(it)?.trim() }.orEmpty()
             val freq = try { parseFreq(col("freq")) } catch (_: NumberFormatException) { continue }
+            if (!usable(freq)) continue
             val bw = if (col("bw").isNotEmpty()) runCatching { parseFreq(col("bw"), guessMhz = false) }.getOrDefault(0.0) else 0.0
             out.add(normalize(col("name"), freq, col("mode"), bw, col("group")))
         }
@@ -137,13 +138,13 @@ object FreqMan {
         for (i in 0 until list.length) {
             val m = list.item(i) as Element
             fun tx(tag: String) = m.getElementsByTagName(tag).item(0)?.textContent.orEmpty()
-            val freq = tx("Frequency").toDoubleOrNull() ?: continue
+            val freq = tx("Frequency").toDoubleOrNull()?.takeIf(::usable) ?: continue
             out.add(normalize(tx("Name"), freq, tx("DetectorType"), tx("FilterBandwidth").toDoubleOrNull() ?: 0.0, tx("GroupName")))
         }
         return out
     }
 
-    private fun xmlEsc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+    private fun xmlEsc(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")   // как ElementTree
 
     fun exportSdrSharpXml(entries: List<FreqEntry>): String {
         val sb = StringBuilder("<?xml version='1.0' encoding='utf-8'?>\n<ArrayOfMemoryEntry " +
@@ -166,6 +167,9 @@ object FreqMan {
         return if (head.startsWith("<")) importSdrSharpXml(bytes) else importCsv(String(bytes, Charsets.UTF_8))
     }
 
+    /** Частота, которую можно сохранить: конечная, положительная, не больше 10 ГГц. */
+    fun usable(f: Double) = f.isFinite() && f > 0 && f <= 1e10
+
     /** Добавить записи без повторов (та же частота с точностью 1 Гц, тот же режим и группа). */
     fun merge(existing: MutableList<FreqEntry>, new: List<FreqEntry>): Int {
         val seen = existing.map { Triple(it.freq.roundToLong(), it.mode, it.group) }.toMutableSet()
@@ -182,16 +186,16 @@ object FreqMan {
         if (!file.isFile) return mutableListOf()
         return runCatching {
             val a = JSONArray(file.readText())
-            MutableList(a.length()) { i ->
-                val o = a.getJSONObject(i)
-                normalize(o.optString("name"), o.optDouble("freq"), o.optString("mode"), o.optDouble("bw"), o.optString("group"))
-            }
+            (0 until a.length()).map { a.getJSONObject(it) }.filter { usable(it.optDouble("freq")) }.map { o ->
+                normalize(o.optString("name"), o.optDouble("freq"), o.optString("mode"),
+                    o.optDouble("bw").takeIf { it.isFinite() }, o.optString("group"))
+            }.toMutableList()
         }.getOrDefault(mutableListOf())
     }
 
     fun save(file: File, entries: List<FreqEntry>) {
         val a = JSONArray()
-        for (e in entries) a.put(JSONObject().put("name", e.name).put("freq", e.freq).put("mode", e.mode).put("bw", e.bw).put("group", e.group))
+        for (e in entries.filter { usable(it.freq) }) a.put(JSONObject().put("name", e.name).put("freq", e.freq).put("mode", e.mode).put("bw", e.bw).put("group", e.group))
         val tmp = File(file.path + ".tmp")
         tmp.writeText(a.toString(1))
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }

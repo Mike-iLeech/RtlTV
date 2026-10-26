@@ -3,6 +3,7 @@ package io.github.mikeileech.sdr4noob
 import io.github.mikeileech.sdr4noob.radio.FreqEntry
 import io.github.mikeileech.sdr4noob.radio.FreqMan
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -58,6 +59,17 @@ class FreqManTest {
         assertEquals(101.2e6, FreqMan.parseFreq("101,2"), 1e-3)
         assertEquals(7.03e6, FreqMan.parseFreq("7,03 МГц"), 1e-3)
         assertEquals(8330.0, FreqMan.parseFreq("8330", guessMhz = false), 0.0)
+    }
+
+    @Test fun badInputIgnored() {
+        // кавычка в середине поля — часть текста (как csv в Python), строки не склеиваются
+        val got = FreqMan.importCsv("Название;Частота, Гц;Режим\nРадио \"Маяк\";101700000;WFM\nЭхо;101200000;WFM\n")
+        assertEquals(listOf("Радио \"Маяк\"", "Эхо"), got.map { it.name })
+        // бесконечные и отрицательные частоты отбрасываются
+        assertEquals(1, FreqMan.importCsv("a;1e400\nb;-5\nc;101.2\n").size)
+        assertEquals(0, FreqMan.importSdrSharpXml("<a><MemoryEntry><Frequency>Infinity</Frequency></MemoryEntry></a>".toByteArray()).size)
+        // в XML кавычки не экранируются (как ElementTree)
+        assertTrue(FreqMan.exportSdrSharpXml(listOf(FreqMan.normalize("\"А\"", 1e8, "WFM", null, null))).contains("<Name>\"А\"</Name>"))
     }
 
     @Test fun storeAndLoad() {

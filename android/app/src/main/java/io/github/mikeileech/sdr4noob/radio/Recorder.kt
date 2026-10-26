@@ -21,25 +21,30 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
 
 /**
- * WAV 16 бит PCM в произвольный канал с перемоткой (файл или документ MediaStore): заголовок пишется
- * сразу, размеры дописываются при закрытии. Запись идёт в отдельном потоке — поток приёма не ждёт диск;
- * если диск не успевает, лишние блоки отбрасываются (счётчик [dropped]).
+ * WAV 16 бит PCM в произвольный канал с перемоткой (файл или документ MediaStore). Всё, что касается диска,
+ * делает отдельный поток записи: заголовок, данные, размеры в заголовке и закрытие — поток приёма и интерфейс
+ * диск не ждут. Если диск не успевает, лишние блоки отбрасываются ([dropped]); если запись не удалась (нет места,
+ * карта извлечена) или файл дорос до предела WAV в 4 ГБ — поток останавливается, причина — в [failed],
+ * приложение при этом не падает.
  */
 class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int, private val onClose: () -> Unit = {}) {
+    companion object {
+        /** Предел формата WAV: размер в заголовке — 32 бита. */
+        const val LIMIT = 0xFFFFFFFFL - 44
+    }
+
     private val queue = ArrayBlockingQueue<ByteBuffer>(64)
     private val stopMark = ByteBuffer.allocate(0)
     @Volatile var bytes = 0L; private set
+    /** Почему запись остановилась сама (null — пишет или закрыта штатно). */
+    @Volatile var failed: String? = null; private set
     val dropped = AtomicLong()
+    @Volatile private var closing = false
     private val thread = Thread(::run, "sdr4noob-wav").apply { start() }
-
-    init {
-        ch.position(0)
-        ch.write(header(0))
-    }
 
     private fun header(dataBytes: Long): ByteBuffer {
         val b = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
-        val size = dataBytes.coerceAtMost(0xFFFFFFFFL - 36)
+        val size = dataBytes.coerceAtMost(LIMIT)
         b.put("RIFF".toByteArray(Charsets.US_ASCII)).putInt((36 + size).toInt()).put("WAVE".toByteArray(Charsets.US_ASCII))
         b.put("fmt ".toByteArray(Charsets.US_ASCII)).putInt(16).putShort(1).putShort(channels.toShort()).putInt(rate)
             .putInt(rate * channels * 2).putShort((channels * 2).toShort()).putShort(16)
@@ -48,46 +53,66 @@ class WavWriter(private val ch: FileChannel, val rate: Int, val channels: Int, p
         return b
     }
 
+    val alive get() = thread.isAlive && !closing && failed == null
+
+    private fun offer(b: ByteBuffer, n: Int) {
+        if (!alive || !queue.offer(b)) dropped.addAndGet(n.toLong())
+    }
+
     /** Отсчёты float ±1 (чередование каналов), [n] — число значений (а не кадров). */
     fun write(x: FloatArray, n: Int) {
+        if (!alive) return
         val b = ByteBuffer.allocate(n * 2).order(ByteOrder.LITTLE_ENDIAN)
         for (i in 0 until n) b.putShort((x[i].coerceIn(-1f, 1f) * 32767f).roundToInt().toShort())
         b.flip()
-        if (!queue.offer(b)) dropped.addAndGet(n.toLong())
+        offer(b, n)
     }
 
     /** Комплексные отсчёты (I — левый канал, Q — правый), как IqRecorder в rtltv/iqfile.py. */
     fun writeIq(re: FloatArray, im: FloatArray, n: Int) {
+        if (!alive) return
         val b = ByteBuffer.allocate(n * 4).order(ByteOrder.LITTLE_ENDIAN)
         for (i in 0 until n) {
             b.putShort((re[i].coerceIn(-1f, 1f) * 32767f).roundToInt().toShort())
             b.putShort((im[i].coerceIn(-1f, 1f) * 32767f).roundToInt().toShort())
         }
         b.flip()
-        if (!queue.offer(b)) dropped.addAndGet(n.toLong())
+        offer(b, n)
     }
 
     val seconds get() = bytes.toDouble() / (rate * channels * 2)
 
     private fun run() {
         try {
+            ch.position(0)
+            ch.write(header(0))
             while (true) {
                 val b = queue.take()
                 if (b === stopMark) break
+                if (bytes + b.remaining() > LIMIT) { failed = "файл дорос до предела WAV (4 ГБ)"; break }
                 while (b.hasRemaining()) bytes += ch.write(b)
             }
-            ch.write(header(bytes), 0)
+        } catch (e: Throwable) {
+            failed = if (e.message?.contains("ENOSPC") == true || e.message?.contains("space", true) == true)
+                "нет места на телефоне" else "ошибка записи: ${e.message ?: e.javaClass.simpleName}"
         } finally {
+            queue.clear()
+            runCatching { ch.write(header(bytes), 0) }
             runCatching { ch.force(true) }
             runCatching { ch.close() }
-            onClose()
+            runCatching { onClose() }
         }
     }
 
+    /** Закончить запись, не дожидаясь диска: остаток очереди допишет поток записи. */
     fun close() {
-        queue.put(stopMark)
-        thread.join()
+        if (closing) return
+        closing = true
+        if (!queue.offer(stopMark)) { queue.clear(); queue.offer(stopMark) }   // очередь полна — хвост отбрасываем
     }
+
+    /** Дождаться окончания записи (для тестов и выхода). */
+    fun await(ms: Long = 10_000) { thread.join(ms) }
 }
 
 /**

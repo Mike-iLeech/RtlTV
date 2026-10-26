@@ -27,6 +27,8 @@ class RadioEngine(
         fun onOpened(engine: RadioEngine) {}
         fun onSpectrum() {}
         fun onError(message: String) {}
+        /** Запись остановилась сама (нет места, предел 4 ГБ, перестройка центра для IQ). */
+        fun onRecordStopped(message: String) {}
     }
 
     @Volatile var listener: Listener? = null
@@ -106,6 +108,7 @@ class RadioEngine(
 
     /** Сдвинуть центр приёмника (перетаскивание спектра), VFO остаётся на станции, если она в полосе. */
     fun setCenter(hz: Long) = post {
+        if (hz != centerHz) stopIqOnRetune()
         centerHz = hz
         source.setFrequency(hz)
         val half = sampleRate / 2 - mode.defaultBw / 2
@@ -113,11 +116,13 @@ class RadioEngine(
         demod.offsetHz = (vfoHz - centerHz).toDouble()
     }
 
-    fun setMode(m: Modulation) {
-        bandwidth = m.defaultBw
+    /** Режим и полоса меняются сразу (для интерфейса), демодулятор — командой в потоке приёма. */
+    fun setMode(m: Modulation, bw: Int = m.defaultBw) {
+        mode = m
+        bandwidth = bw.coerceIn(m.minBw, m.maxBw)
+        val b = bandwidth
         post {
-            mode = m
-            demod.setMode(m)
+            demod.setMode(m, b)
             tuneNow(vfoHz)
         }
     }
@@ -145,9 +150,23 @@ class RadioEngine(
     fun stopAudioRec() { audioRec.getAndSet(null)?.close() }
     fun stopIqRec() { iqRec.getAndSet(null)?.close() }
 
+    /** В потоке приёма: остановить запись, которая прервалась сама, и сообщить причину. */
+    private fun checkRec(ref: AtomicReference<WavWriter?>, what: String) {
+        val w = ref.get() ?: return
+        val why = w.failed ?: return
+        if (ref.compareAndSet(w, null)) { w.close(); listener?.onRecordStopped("Запись $what остановлена: $why") }
+    }
+
+    private fun stopIqOnRetune() {
+        val w = iqRec.getAndSet(null) ?: return
+        w.close()
+        listener?.onRecordStopped("Запись IQ остановлена: центр приёмника перестроен (в одном файле — одна частота)")
+    }
+
     private fun tuneNow(hz: Long) {
         val off = hz - centerHz
         if (abs(off) > sampleRate / 2 - mode.defaultBw / 2 - 20_000 || abs(off) < 15_000) {
+            stopIqOnRetune()
             centerHz = hz + offsetFor(sampleRate)
             source.setFrequency(centerHz)
         }
@@ -227,6 +246,7 @@ class RadioEngine(
                 val frames = demod.process(re, im, n, aud)
                 audio.write(aud, frames)
                 audioRec.get()?.write(aud, frames * 2)
+                checkRec(audioRec, "звука"); checkRec(iqRec, "IQ")
                 dropped = source.droppedSamples
             }
         } catch (e: SdrException) {

@@ -32,9 +32,48 @@ class RadioService : Service() {
         /** Что сделать по кнопке «Стоп» (ставит окно радио). */
         @Volatile var onStop: (() -> Unit)? = null
 
-        fun start(ctx: Context, text: String, wifi: Boolean) {
+        @Volatile private var source = ""
+
+        /** Запустить из видимого окна (Android 12+ запрещает запуск сервиса переднего плана из фона). */
+        fun start(ctx: Context, text: String, sourceId: String, wifi: Boolean): Boolean {
+            source = sourceId
             val i = Intent(ctx, RadioService::class.java).putExtra(EXTRA_TEXT, text).putExtra(EXTRA_WIFI, wifi)
-            if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
+            return try {
+                if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
+                true
+            } catch (e: Exception) {   // ForegroundServiceStartNotAllowedException и т. п. — без приёма в фоне
+                false
+            }
+        }
+
+        /** Обновить текст уведомления (частота) без перезапуска сервиса. */
+        fun update(ctx: Context, text: String) {
+            val nm = ctx.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            runCatching { nm.notify(ID, build(ctx, text)) }
+        }
+
+        private fun build(ctx: Context, text: String): Notification {
+            val nm = ctx.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
+                nm.createNotificationChannel(NotificationChannel(CHANNEL, "Приём в фоне", NotificationManager.IMPORTANCE_LOW))
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            // вернуть то же окно радио (а не открыть новое с другим приёмником): REORDER_TO_FRONT; если окна уже
+            // нет — откроется новое с тем же приёмником
+            val open = PendingIntent.getActivity(ctx, 0, Intent(ctx, RadioActivity::class.java)
+                .putExtra(RadioActivity.EXTRA_SOURCE, source)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP), flags)
+            val stop = PendingIntent.getService(ctx, 1, Intent(ctx, RadioService::class.java).setAction(ACTION_STOP), flags)
+            @Suppress("DEPRECATION")
+            val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(ctx, CHANNEL) else Notification.Builder(ctx)
+            return b.setSmallIcon(android.R.drawable.stat_sys_headset)
+                .setContentTitle("SDR4NOOB — приём")
+                .setContentText(text)
+                .setContentIntent(open)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .addAction(Notification.Action.Builder(null as android.graphics.drawable.Icon?, "Стоп", stop).build())
+                .build()
         }
 
         fun stop(ctx: Context) { ctx.stopService(Intent(ctx, RadioService::class.java)) }
@@ -51,40 +90,22 @@ class RadioService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val n = notification(intent?.getStringExtra(EXTRA_TEXT) ?: "Радио")
+        val n = build(this, intent?.getStringExtra(EXTRA_TEXT) ?: "Радио")
         if (Build.VERSION.SDK_INT >= 29) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         else startForeground(ID, n)
         if (wake == null) {
             wake = (getSystemService(POWER_SERVICE) as PowerManager)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "sdr4noob:radio").apply { setReferenceCounted(false); acquire() }
         }
-        if (intent?.getBooleanExtra(EXTRA_WIFI, false) == true && wifi == null) {
+        // rtl_tcp: Wi-Fi без энергосбережения. На Android 14+ такой замок при выключенном экране не действует
+        // (WIFI_MODE_FULL_HIGH_PERF устарел), там поток держат сервис и пробуждение процессора.
+        if (intent?.getBooleanExtra(EXTRA_WIFI, false) == true && wifi == null && Build.VERSION.SDK_INT < 34) {
             @Suppress("DEPRECATION")
             val mode = if (Build.VERSION.SDK_INT >= 29) WifiManager.WIFI_MODE_FULL_HIGH_PERF else WifiManager.WIFI_MODE_FULL
             wifi = (applicationContext.getSystemService(WIFI_SERVICE) as WifiManager)
                 .createWifiLock(mode, "sdr4noob:rtltcp").apply { setReferenceCounted(false); acquire() }
         }
         return START_NOT_STICKY
-    }
-
-    private fun notification(text: String): Notification {
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Приём в фоне", NotificationManager.IMPORTANCE_LOW))
-        }
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        val open = PendingIntent.getActivity(this, 0,
-            Intent(this, RadioActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), flags)
-        val stop = PendingIntent.getService(this, 1, Intent(this, RadioService::class.java).setAction(ACTION_STOP), flags)
-        @Suppress("DEPRECATION")
-        val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
-        return b.setSmallIcon(android.R.drawable.stat_sys_headset)
-            .setContentTitle("SDR4NOOB — приём")
-            .setContentText(text)
-            .setContentIntent(open)
-            .setOngoing(true)
-            .addAction(Notification.Action.Builder(null as android.graphics.drawable.Icon?, "Стоп", stop).build())
-            .build()
     }
 
     override fun onDestroy() {
