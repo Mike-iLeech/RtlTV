@@ -82,6 +82,26 @@ abstract class NativeRateSource(private val context: Context, private val device
     protected abstract fun chooseNative(fs: Int): Int
     protected abstract fun applyRate(native: Int): Int
     protected abstract fun nativeRead(out: FloatArray, max: Int, timeoutMs: Int): Int
+    /** Диапазон перестройки устройства и сама перестройка (частота уже с поправкой ppm). */
+    protected abstract val tuneRange: LongRange
+    protected abstract fun nativeTune(hz: Long)
+    protected abstract fun nativeFlush()
+
+    private var ppm = 0
+    private var lastHz = 0L
+
+    /** Перестройка с поправкой ppm, как _tune на ПК: hz / (1 + ppm·10⁻⁶); затем сброс старых отсчётов. */
+    final override fun setFrequency(hz: Long) {
+        if (hz !in tuneRange) return
+        lastHz = hz
+        nativeTune(Math.round(hz / (1.0 + ppm * 1e-6)))
+        nativeFlush()
+    }
+
+    final override fun setPpm(ppm: Int) {
+        this.ppm = ppm
+        if (lastHz > 0) setFrequency(lastHz)
+    }
 
     override fun open(sampleRate: Int, frequencyHz: Long) {
         val um = context.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -108,6 +128,7 @@ abstract class NativeRateSource(private val context: Context, private val device
         val r = applyRate(native)
         if (r != 0) throw SdrException("$name: частота дискретизации ${native / 1e6} МГц не принята (код $r)")
         rs = if (native == fs) null else StreamResampler(native, fs)
+        if (h != 0L) nativeFlush()          // отсчёты старой частоты не пускать в новый пересчёт (как _flush на ПК)
     }
 
     /** Прочитать ≤ [maxSamples] отсчётов частоты радиорежима. */
@@ -153,10 +174,9 @@ class HackRfUsbSource(context: Context, device: UsbDevice) : NativeRateSource(co
 
     override fun start() { if (HackRfNative.start(h) != 0) throw SdrException("HackRF: не удалось запустить приём") }
 
-    override fun setFrequency(hz: Long) {
-        if (hz !in 1_000_000L..6_000_000_000L) return
-        HackRfNative.setFreq(h, hz); HackRfNative.flush(h)
-    }
+    override val tuneRange = 1_000_000L..6_000_000_000L
+    override fun nativeTune(hz: Long) { HackRfNative.setFreq(h, hz) }
+    override fun nativeFlush() = HackRfNative.flush(h)
 
     override fun setGain(tenthsDb: Int) {
         val (amp, lna, vga) = GainMap.hackrfSplit(tenthsDb)
@@ -185,10 +205,9 @@ class AirspyUsbSource(context: Context, device: UsbDevice) : NativeRateSource(co
 
     override fun start() { if (AirspyNative.start(h) != 0) throw SdrException("Airspy: не удалось запустить приём") }
 
-    override fun setFrequency(hz: Long) {
-        if (hz !in 24_000_000L..1_800_000_000L) return
-        AirspyNative.setFreq(h, hz); AirspyNative.flush(h)
-    }
+    override val tuneRange = 24_000_000L..1_800_000_000L
+    override fun nativeTune(hz: Long) { AirspyNative.setFreq(h, hz) }
+    override fun nativeFlush() = AirspyNative.flush(h)
 
     override fun setGain(tenthsDb: Int) { AirspyNative.setGain(h, if (tenthsDb < 0) -1 else GainMap.airspyStep(tenthsDb)) }
     override fun setBiasTee(on: Boolean) { AirspyNative.setBias(h, on) }

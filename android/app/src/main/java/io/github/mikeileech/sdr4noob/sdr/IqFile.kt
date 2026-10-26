@@ -148,7 +148,15 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
                     }
                     return WavInfo(kind, f[2], off, size)
                 }
-                else -> { var skip = size + (size % 2); while (skip > 0) { val k = s.skip(skip); if (k <= 0) break; skip -= k }; off += size + (size % 2) }
+                else -> {
+                    // skip() у потоков ContentResolver может вернуть 0 — дочитываем по байту, иначе смещение данных собьётся
+                    var skip = size + (size % 2)
+                    while (skip > 0) {
+                        val k = s.skip(skip)
+                        if (k > 0) skip -= k else if (s.read() < 0) throw IqFormatException("В WAV нет данных") else skip--
+                    }
+                    off += size + (size % 2)
+                }
             }
         }
         throw IqFormatException("В WAV нет данных")

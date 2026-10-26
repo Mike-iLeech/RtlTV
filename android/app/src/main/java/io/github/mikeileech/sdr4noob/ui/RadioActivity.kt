@@ -462,7 +462,9 @@ class RadioActivity : Activity() {
         AlertDialog.Builder(this).setTitle("Поиск DMR — где искать")
             .setItems(bands.map { it.first }.toTypedArray()) { _, i ->
                 val (_, lo, hi) = bands[i]
-                e.startScan(io.github.mikeileech.sdr4noob.dsp.DmrScanner(e.sampleRate, lo, hi))
+                if (!e.startScan(io.github.mikeileech.sdr4noob.dsp.DmrScanner(e.sampleRate, lo, hi))) {
+                    toast("В записи IQ поиск невозможен: центр частоты задаёт файл"); return@setItems
+                }
                 toast("Поиск идёт по кругу, звук на это время выключен. Результаты — меню ⋮ → «Поиск DMR: результаты…»")
             }.show()
     }

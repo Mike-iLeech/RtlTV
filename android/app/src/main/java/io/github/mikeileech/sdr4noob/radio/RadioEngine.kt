@@ -157,8 +157,9 @@ class RadioEngine(
     private var lastScanLine = ""
 
     /** Начать поиск: частота дискретизации сканера должна совпадать с текущей. */
-    fun startScan(s: DmrScanner) {
-        if (!source.retunable) return                   // в записи искать нечего: центр не перестраивается
+    /** Начать поиск; false — источник не перестраивается (запись IQ): искать нечего. */
+    fun startScan(s: DmrScanner): Boolean {
+        if (!source.retunable) return false
         scanner = s
         post {
             if (scanner !== s) return@post               // успели остановить или запустить другой
@@ -168,6 +169,7 @@ class RadioEngine(
             scan = s
             scanTune(s)
         }
+        return true
     }
 
     fun stopScan() {
