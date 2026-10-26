@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.0</small></a>
+  <a class="brand" href="../index.html"><img src="../assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.1</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -62,7 +62,7 @@
 </table></div>
 
 <h2 id="analog">Аналоговое ТВ<a class="anchor" href="#analog" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Аналоговый канал занимает 6–8 МГц, а RTL-SDR видит максимум ~3,2 МГц. Поэтому:</p>
+<p>Аналоговый канал занимает 6–8 МГц, а недорогой приёмник вроде RTL-SDR видит максимум ~3,2 МГц. Поэтому:</p>
 <ul>
 <li>картинка <b>чёрно-белая</b>: цветовая поднесущая (4,43 МГц от несущей изображения) в полосу не попадает;
 по горизонтали около 130 различимых точек;</li>
@@ -75,7 +75,7 @@
 Например, ДМВ 30 — 543,25 МГц (центр канала 546 МГц).</p>
 
 <h2 id="digital">Цифровое ТВ: измеритель DVB-T2<a class="anchor" href="#digital" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Показать картинку DVB-T2 донгл не может: мультиплекс занимает ~7,8 МГц, в АЦП попадает только треть
+<p>Показать картинку DVB-T2 недорогой приёмник вроде RTL-SDR не может: мультиплекс занимает ~7,8 МГц, в АЦП попадает только треть
 поднесущих OFDM. Аппаратный демодулятор RTL2832U умеет только старый DVB-T и только с родным драйвером.
 Поэтому режим работает как <b>прибор для наведения антенны</b>:</p>
 <ul>
@@ -85,7 +85,7 @@
 поворачивайте антенну, пока стол не станет ровным;</li>
 <li><b>«OFDM (по префиксу)»</b> — по циклическому префиксу определяются режим FFT (1K…32K) и защитный интервал:
 это доказывает, что в канале именно DVB-T/T2, а не помеха;</li>
-<li><b>«Уход частоты»</b> — ошибка частоты донгла относительно передатчика.</li>
+<li><b>«Уход частоты»</b> — ошибка частоты приёмника относительно передатчика.</li>
 </ul>
 <p>Проверено на V4 в Москве: мультиплексы ДМВ 30 (546 МГц) и ДМВ 34 (578 МГц) определяются как DVB-T2 32K,
 GI 1/16; пустые каналы — «нет».</p>
@@ -100,7 +100,7 @@ GI 1/16; пустые каналы — «нет».</p>
 
 <h2>Ограничения</h2>
 <ul>
-<li>Нет цвета и картинки DVB-T2 — это физика донгла, а не недоработка.</li>
+<li>Нет цвета и картинки DVB-T2 — это ограничение полосы приёмника (у RTL-SDR ~3 МГц), а не недоработка.</li>
 <li>Полоса 3,2 МГц «может терять отсчёты» — при рывках выберите 2,4–2,88 МГц.</li>
 </ul>
 <p>См. также: <a href="modulation.html#digital">OFDM</a>, <a href="decibels.html#snr">C/N</a>,
@@ -109,7 +109,7 @@ GI 1/16; пустые каналы — «нет».</p>
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.3.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.3.1 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
