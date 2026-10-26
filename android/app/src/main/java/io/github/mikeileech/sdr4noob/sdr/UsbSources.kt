@@ -146,8 +146,8 @@ abstract class NativeRateSource(private val context: Context, private val device
         val was = streaming
         if (was) { nativeStop(); streaming = false }
         val r = applyRate(native)
-        if (was) start()
         if (r != 0) throw SdrException("$name: частота дискретизации ${native / 1e6} МГц не принята (код $r)")
+        if (was) start()
         rs = if (native == fs) null else StreamResampler(native, fs)
         if (h != 0L) nativeFlush()          // отсчёты старой частоты не пускать в новый пересчёт (как _flush на ПК)
     }
@@ -176,6 +176,7 @@ abstract class NativeRateSource(private val context: Context, private val device
     }
 
     override fun close() {
+        streaming = false
         if (h != 0L) { nativeClose(); h = 0L }
         conn?.close(); conn = null
     }

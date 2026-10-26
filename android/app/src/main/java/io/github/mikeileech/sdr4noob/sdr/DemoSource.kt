@@ -1,13 +1,18 @@
 package io.github.mikeileech.sdr4noob.sdr
 
+import io.github.mikeileech.sdr4noob.dsp.Afsk
+import io.github.mikeileech.sdr4noob.dsp.Aprs
+import io.github.mikeileech.sdr4noob.dsp.Ax25
 import io.github.mikeileech.sdr4noob.dsp.DmrGen
+import io.github.mikeileech.sdr4noob.dsp.Sstv
 import io.github.mikeileech.sdr4noob.dsp.RdsEncoder
 import kotlin.math.PI
 import kotlin.math.sin
 
 /**
  * Тестовый эфир без приёмника (как --test в настольной версии, rtltv/radiotest.py): ЧМ-стерео с RDS,
- * узкая ЧМ, АМ, SSB (USB), телеграф и DMR (групповой и индивидуальный вызовы), плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
+ * узкая ЧМ, АМ, SSB (USB), телеграф, DMR (групповой и индивидуальный вызовы), APRS (144,800 МГц) и SSTV
+ * (145,800 МГц, Robot 36), плюс шум. Отдаёт отсчёты в реальном темпе, поэтому звук и водопад — как вживую.
  */
 class DemoSource : SdrSource {
     private class Station(val freq: Long, val kind: Char, val notesL: IntArray, val notesR: IntArray, val level: Float)
@@ -32,7 +37,34 @@ class DemoSource : SdrSource {
             Station(14_230_000, 'U', intArrayOf(700, 1200, 1900), intArrayOf(), 0.15f),     // USB: тоны над несущей
             Station(7_030_000, 'C', intArrayOf(), intArrayOf(), 0.10f),                     // телеграф
             Station(446_100_000, 'D', intArrayOf(), intArrayOf(), 0.15f),                   // DMR, BS, CC 1
+            Station(144_800_000, 'P', intArrayOf(), intArrayOf(), 0.20f),                   // APRS, AFSK 1200
+            Station(145_800_000, 'V', intArrayOf(), intArrayOf(), 0.20f),                   // SSTV, Robot 36
         )
+
+        /** APRS: три станции у Москвы (позиция, объект, погода), затем тишина — ~12 с по кругу, 48 кГц. */
+        private val APRS_AUDIO: FloatArray by lazy {
+            val frames = listOf(
+                Ax25.makeFrame("RA3AAA-9", "APRS", listOf("WIDE1-1"), Aprs.encodePosition(55.7512, 37.6184, "/", ">", "Тестовый эфир SDR4NOOB")),
+                Ax25.makeFrame("UA3BBB-10", "APRS", listOf("WIDE2-1"), Aprs.encodePosition(55.8304, 37.3297, "/", "-", "дом")),
+                Ax25.makeFrame("R3CCC", "APRS", emptyList(), "!5541.20N/03745.00E_090/005g010t050r000p000P000h80b10132"),
+            )
+            val x = Afsk.encodePackets(frames, gap = 1.0)
+            x.copyOf(maxOf(x.size, 12 * 48_000))
+        }
+
+        /** SSTV: цветные полосы с сеткой, Robot 36 (~36 с), затем 10 с тишины. */
+        private val SSTV_AUDIO: FloatArray by lazy {
+            val w = 320; val h = 240
+            val bars = intArrayOf(0xFFFFFFFF.toInt(), 0xFFFFFF00.toInt(), 0xFF00FFFF.toInt(), 0xFF00FF00.toInt(),
+                0xFFFF00FF.toInt(), 0xFFFF0000.toInt(), 0xFF0000FF.toInt(), 0xFF000000.toInt())
+            val img = IntArray(w * h) { i ->
+                val x = i % w; val y = i / w
+                if (x % 40 == 0 || y % 40 == 0) 0xFF808080.toInt() else bars[x * bars.size / w]
+            }
+            val x = Sstv.encode(img, w, h, "Robot 36")
+            x.copyOf(x.size + 10 * 48_000)
+        }
+
 
         /** Сигнал DMR — мгновенная частота, Гц, 48 кГц, ~13 с по кругу (генератор как в rtltv/dmr.py). */
         private val DMR_FREQ: FloatArray by lazy { DmrGen.testSignal() }
@@ -115,6 +147,7 @@ class DemoSource : SdrSource {
         // станции без нот (телеграф, DMR) — до выбора ноты: у них пустой список
         if (st.kind == 'U' || st.kind == 'C') { renderSsb(k, st, off, re, im, n, t); return }
         if (st.kind == 'D') { renderDmr(k, st, off, re, im, n, t); return }
+        if (st.kind == 'P' || st.kind == 'V') { renderAudioFm(k, st, off, re, im, n, t); return }
         val step = (t / 0.4).toInt()
         val fl = st.notesL[step % st.notesL.size].toDouble()
         val fr = if (st.notesR.isEmpty()) fl else st.notesR[step % st.notesR.size].toDouble()
@@ -170,6 +203,21 @@ class DemoSource : SdrSource {
         for (i in 0 until n) {
             val idx = (((t + i.toDouble() / fs) * k48).toLong() % sig.size).toInt()
             ph += inc(off + sig[idx])
+            re[i] += a * c(ph); im[i] += a * s(ph)
+        }
+        carPh[k] = ph
+    }
+
+    /** Узкая ЧМ звуком из буфера 48 кГц по кругу (APRS, SSTV): девиация 5 кГц на единицу амплитуды. */
+    private fun renderAudioFm(k: Int, st: Station, off: Double, re: FloatArray, im: FloatArray, n: Int, t: Double) {
+        val sig = if (st.kind == 'P') APRS_AUDIO else SSTV_AUDIO
+        val a = st.level
+        var ph = carPh[k]
+        val dc = inc(off)
+        val dev = 5_000.0 / fs * 4294967296.0
+        for (i in 0 until n) {
+            val idx = (((t + i.toDouble() / fs) * 48_000.0).toLong() % sig.size).toInt()
+            ph += dc + (sig[idx] * dev).toInt()
             re[i] += a * c(ph); im[i] += a * s(ph)
         }
         carPh[k] = ph
