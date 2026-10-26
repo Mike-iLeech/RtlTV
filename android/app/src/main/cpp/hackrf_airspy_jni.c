@@ -70,15 +70,25 @@ JNIEXPORT jlong JNICALL HJ(open)(JNIEnv *env, jobject self, jint fd, jintArray e
 }
 
 static hrf_t *HH(jlong h) { return (hrf_t *)(uintptr_t)h; }
+/* нулевой хэндл (устройство не открыто или уже закрыто) — ошибка, а не SIGSEGV */
+#define HGET(s, h, ret) hrf_t *s = HH(h); if (!s) return ret
 
 JNIEXPORT jint JNICALL HJ(start)(JNIEnv *env, jobject self, jlong h)
 {
-	hrf_t *s = HH(h);
+	HGET(s, h, -1);
 	ring_set_running(&s->ring, 1);
 	int r = hackrf_start_rx(s->dev, hrf_rx, s);
 	if (r != HACKRF_SUCCESS)
 		ring_set_running(&s->ring, 0);
 	return r;
+}
+
+/* Остановить приём (для смены частоты дискретизации, как _rx_stop на ПК); start — запустить снова. */
+JNIEXPORT void JNICALL HJ(stop)(JNIEnv *env, jobject self, jlong h)
+{
+	HGET(s, h, );
+	ring_set_running(&s->ring, 0);
+	hackrf_stop_rx(s->dev);
 }
 
 JNIEXPORT void JNICALL HJ(close)(JNIEnv *env, jobject self, jlong h)
@@ -96,7 +106,9 @@ JNIEXPORT void JNICALL HJ(close)(JNIEnv *env, jobject self, jlong h)
 /* Прочитать до max отсчётов (I, Q подряд). 0 — тайм-аут, −1 — приём остановлен или устройство пропало. */
 JNIEXPORT jint JNICALL HJ(readIq)(JNIEnv *env, jobject self, jlong h, jfloatArray out, jint max, jint timeout_ms)
 {
-	hrf_t *s = HH(h);
+	HGET(s, h, -1);
+	if (max <= 0 || (*env)->GetArrayLength(env, out) < 2 * max)
+		return 0;
 	float *tmp = malloc((size_t)max * 2 * sizeof(float));
 	if (!tmp)
 		return 0;
@@ -109,12 +121,12 @@ JNIEXPORT jint JNICALL HJ(readIq)(JNIEnv *env, jobject self, jlong h, jfloatArra
 	return n;
 }
 
-JNIEXPORT void JNICALL HJ(flush)(JNIEnv *env, jobject self, jlong h) { ring_flush(&HH(h)->ring); }
-JNIEXPORT jlong JNICALL HJ(dropped)(JNIEnv *env, jobject self, jlong h) { return HH(h)->ring.dropped; }
+JNIEXPORT void JNICALL HJ(flush)(JNIEnv *env, jobject self, jlong h) { HGET(s, h, ); ring_flush(&s->ring); }
+JNIEXPORT jlong JNICALL HJ(dropped)(JNIEnv *env, jobject self, jlong h) { HGET(s, h, 0); return s->ring.dropped; }
 
 JNIEXPORT jint JNICALL HJ(setSampleRate)(JNIEnv *env, jobject self, jlong h, jdouble rate)
 {
-	hrf_t *s = HH(h);
+	HGET(s, h, -1);
 	int r = hackrf_set_sample_rate(s->dev, rate);
 	if (r == HACKRF_SUCCESS)
 		hackrf_set_baseband_filter_bandwidth(s->dev, hackrf_compute_baseband_filter_bw((uint32_t)(rate * 0.75)));
@@ -123,12 +135,13 @@ JNIEXPORT jint JNICALL HJ(setSampleRate)(JNIEnv *env, jobject self, jlong h, jdo
 
 JNIEXPORT jint JNICALL HJ(setFreq)(JNIEnv *env, jobject self, jlong h, jlong hz)
 {
-	return hackrf_set_freq(HH(h)->dev, (uint64_t)hz);
+	HGET(s, h, -1);
+	return hackrf_set_freq(s->dev, (uint64_t)hz);
 }
 
 JNIEXPORT jint JNICALL HJ(setGains)(JNIEnv *env, jobject self, jlong h, jboolean amp, jint lna, jint vga)
 {
-	hrf_t *s = HH(h);
+	HGET(s, h, -1);
 	int r = hackrf_set_amp_enable(s->dev, amp ? 1 : 0);
 	if (r == HACKRF_SUCCESS)
 		r = hackrf_set_lna_gain(s->dev, (uint32_t)lna);
@@ -139,14 +152,16 @@ JNIEXPORT jint JNICALL HJ(setGains)(JNIEnv *env, jobject self, jlong h, jboolean
 
 JNIEXPORT jint JNICALL HJ(setBias)(JNIEnv *env, jobject self, jlong h, jboolean on)
 {
-	return hackrf_set_antenna_enable(HH(h)->dev, on ? 1 : 0);
+	HGET(s, h, -1);
+	return hackrf_set_antenna_enable(s->dev, on ? 1 : 0);
 }
 
 JNIEXPORT jstring JNICALL HJ(boardName)(JNIEnv *env, jobject self, jlong h)
 {
 	uint8_t id = 0;
 	const char *name = "HackRF";
-	if (hackrf_board_id_read(HH(h)->dev, &id) == HACKRF_SUCCESS) {
+	hrf_t *s = HH(h);
+	if (s && hackrf_board_id_read(s->dev, &id) == HACKRF_SUCCESS) {
 		const char *n = hackrf_board_id_name((enum hackrf_board_id)id);
 		if (n)
 			name = n;
@@ -173,6 +188,7 @@ static int asp_rx(airspy_transfer *t)
 #define AJ(name) Java_io_github_mikeileech_sdr4noob_sdr_AirspyNative_##name
 
 static asp_t *AH(jlong h) { return (asp_t *)(uintptr_t)h; }
+#define AGET(s, h, ret) asp_t *s = AH(h); if (!s) return ret
 
 JNIEXPORT jlong JNICALL AJ(open)(JNIEnv *env, jobject self, jint fd, jintArray err)
 {
@@ -197,10 +213,13 @@ JNIEXPORT jlong JNICALL AJ(open)(JNIEnv *env, jobject self, jint fd, jintArray e
 JNIEXPORT jintArray JNICALL AJ(sampleRates)(JNIEnv *env, jobject self, jlong h)
 {
 	uint32_t cnt = 0;
-	airspy_get_samplerates(AH(h)->dev, &cnt, 0);
+	asp_t *s = AH(h);
+	if (!s)
+		return (*env)->NewIntArray(env, 0);
+	airspy_get_samplerates(s->dev, &cnt, 0);
 	uint32_t *buf = calloc(cnt ? cnt : 1, sizeof(uint32_t));
 	if (cnt)
-		airspy_get_samplerates(AH(h)->dev, buf, cnt);
+		airspy_get_samplerates(s->dev, buf, cnt);
 	jintArray arr = (*env)->NewIntArray(env, (jsize)cnt);
 	if (arr && cnt)
 		(*env)->SetIntArrayRegion(env, arr, 0, (jsize)cnt, (const jint *)buf);
@@ -210,12 +229,19 @@ JNIEXPORT jintArray JNICALL AJ(sampleRates)(JNIEnv *env, jobject self, jlong h)
 
 JNIEXPORT jint JNICALL AJ(start)(JNIEnv *env, jobject self, jlong h)
 {
-	asp_t *s = AH(h);
+	AGET(s, h, -1);
 	ring_set_running(&s->ring, 1);
 	int r = airspy_start_rx(s->dev, asp_rx, s);
 	if (r != AIRSPY_SUCCESS)
 		ring_set_running(&s->ring, 0);
 	return r;
+}
+
+JNIEXPORT void JNICALL AJ(stop)(JNIEnv *env, jobject self, jlong h)
+{
+	AGET(s, h, );
+	ring_set_running(&s->ring, 0);
+	airspy_stop_rx(s->dev);
 }
 
 JNIEXPORT void JNICALL AJ(close)(JNIEnv *env, jobject self, jlong h)
@@ -232,7 +258,9 @@ JNIEXPORT void JNICALL AJ(close)(JNIEnv *env, jobject self, jlong h)
 
 JNIEXPORT jint JNICALL AJ(readIq)(JNIEnv *env, jobject self, jlong h, jfloatArray out, jint max, jint timeout_ms)
 {
-	asp_t *s = AH(h);
+	AGET(s, h, -1);
+	if (max <= 0 || (*env)->GetArrayLength(env, out) < 2 * max)
+		return 0;
 	float *tmp = malloc((size_t)max * 2 * sizeof(float));
 	if (!tmp)
 		return 0;
@@ -245,23 +273,25 @@ JNIEXPORT jint JNICALL AJ(readIq)(JNIEnv *env, jobject self, jlong h, jfloatArra
 	return n;
 }
 
-JNIEXPORT void JNICALL AJ(flush)(JNIEnv *env, jobject self, jlong h) { ring_flush(&AH(h)->ring); }
-JNIEXPORT jlong JNICALL AJ(dropped)(JNIEnv *env, jobject self, jlong h) { return AH(h)->ring.dropped; }
+JNIEXPORT void JNICALL AJ(flush)(JNIEnv *env, jobject self, jlong h) { AGET(s, h, ); ring_flush(&s->ring); }
+JNIEXPORT jlong JNICALL AJ(dropped)(JNIEnv *env, jobject self, jlong h) { AGET(s, h, 0); return s->ring.dropped; }
 
 JNIEXPORT jint JNICALL AJ(setSampleRate)(JNIEnv *env, jobject self, jlong h, jint rate)
 {
-	return airspy_set_samplerate(AH(h)->dev, (uint32_t)rate);
+	AGET(s, h, -1);
+	return airspy_set_samplerate(s->dev, (uint32_t)rate);
 }
 
 JNIEXPORT jint JNICALL AJ(setFreq)(JNIEnv *env, jobject self, jlong h, jlong hz)
 {
-	return airspy_set_freq(AH(h)->dev, (uint32_t)hz);
+	AGET(s, h, -1);
+	return airspy_set_freq(s->dev, (uint32_t)hz);
 }
 
 /* step < 0 — АРУ (МШУ и смеситель), иначе ступень linearity 0–21. */
 JNIEXPORT jint JNICALL AJ(setGain)(JNIEnv *env, jobject self, jlong h, jint step)
 {
-	asp_t *s = AH(h);
+	AGET(s, h, -1);
 	if (step < 0) {
 		int r = airspy_set_lna_agc(s->dev, 1);
 		return r == AIRSPY_SUCCESS ? airspy_set_mixer_agc(s->dev, 1) : r;
@@ -273,5 +303,6 @@ JNIEXPORT jint JNICALL AJ(setGain)(JNIEnv *env, jobject self, jlong h, jint step
 
 JNIEXPORT jint JNICALL AJ(setBias)(JNIEnv *env, jobject self, jlong h, jboolean on)
 {
-	return airspy_set_rf_bias(AH(h)->dev, on ? 1 : 0);
+	AGET(s, h, -1);
+	return airspy_set_rf_bias(s->dev, on ? 1 : 0);
 }

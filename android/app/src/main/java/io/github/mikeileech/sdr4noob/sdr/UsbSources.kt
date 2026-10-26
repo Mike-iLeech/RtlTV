@@ -13,6 +13,7 @@ object HackRfNative {
     init { System.loadLibrary("sdr4noob") }
     external fun open(fd: Int, err: IntArray): Long
     external fun start(h: Long): Int
+    external fun stop(h: Long)
     external fun close(h: Long)
     external fun readIq(h: Long, out: FloatArray, max: Int, timeoutMs: Int): Int
     external fun flush(h: Long)
@@ -30,6 +31,7 @@ object AirspyNative {
     external fun open(fd: Int, err: IntArray): Long
     external fun sampleRates(h: Long): IntArray
     external fun start(h: Long): Int
+    external fun stop(h: Long)
     external fun close(h: Long)
     external fun readIq(h: Long, out: FloatArray, max: Int, timeoutMs: Int): Int
     external fun flush(h: Long)
@@ -86,6 +88,17 @@ abstract class NativeRateSource(private val context: Context, private val device
     protected abstract val tuneRange: LongRange
     protected abstract fun nativeTune(hz: Long)
     protected abstract fun nativeFlush()
+    protected abstract fun nativeStart(): Int
+    protected abstract fun nativeStop()
+
+    private var streaming = false
+    /** Когда последний раз пришли отсчёты: без данных дольше [NO_DATA_MS] — ошибка, как на ПК. */
+    private var lastData = 0L
+
+    final override fun start() {
+        if (nativeStart() != 0) throw SdrException("$name: не удалось запустить приём")
+        streaming = true; lastData = System.nanoTime()
+    }
 
     private var ppm = 0
     private var lastHz = 0L
@@ -96,7 +109,10 @@ abstract class NativeRateSource(private val context: Context, private val device
         lastHz = hz
         nativeTune(Math.round(hz / (1.0 + ppm * 1e-6)))
         nativeFlush()
+        resetResampler()            // история фильтра — со старой частоты (как rs.reset() в _flush на ПК)
     }
+
+    private fun resetResampler() { if (rs != null) rs = StreamResampler(native, fs) }
 
     final override fun setPpm(ppm: Int) {
         this.ppm = ppm
@@ -125,7 +141,12 @@ abstract class NativeRateSource(private val context: Context, private val device
     override fun setSampleRate(rate: Int) {
         fs = rate
         native = chooseNative(rate)
+        // на ПК частота меняется при остановленном потоке (_rx_stop → _set_rate → _rx_start): libairspy
+        // сбрасывает конечную точку USB, и на ходу поток может сорваться
+        val was = streaming
+        if (was) { nativeStop(); streaming = false }
         val r = applyRate(native)
+        if (was) start()
         if (r != 0) throw SdrException("$name: частота дискретизации ${native / 1e6} МГц не принята (код $r)")
         rs = if (native == fs) null else StreamResampler(native, fs)
         if (h != 0L) nativeFlush()          // отсчёты старой частоты не пускать в новый пересчёт (как _flush на ПК)
@@ -138,7 +159,13 @@ abstract class NativeRateSource(private val context: Context, private val device
         if (raw.size < 2 * want) raw = FloatArray(2 * want)
         val n = nativeRead(raw, want, 500)
         if (n < 0) throw SdrException("$name: приёмник отключён или поток остановлен")
-        if (n == 0) return 0
+        val now = System.nanoTime()
+        if (n == 0) {
+            if (streaming && now - lastData > NO_DATA_MS * 1_000_000L)
+                throw SdrException("$name: нет данных от приёмника дольше ${NO_DATA_MS / 1000} с — переподключите его")
+            return 0
+        }
+        lastData = now
         if (r == null) {
             for (i in 0 until n) { re[i] = raw[2 * i]; im[i] = raw[2 * i + 1] }
             return n
@@ -154,6 +181,8 @@ abstract class NativeRateSource(private val context: Context, private val device
     }
 
     protected abstract fun nativeClose()
+
+    companion object { const val NO_DATA_MS = 3000L }
 }
 
 /** HackRF One / Jawbreaker / rad1o: libhackrf по дескриптору USB. */
@@ -171,8 +200,8 @@ class HackRfUsbSource(context: Context, device: UsbDevice) : NativeRateSource(co
     override fun applyRate(native: Int) = HackRfNative.setSampleRate(h, native.toDouble())
     override fun nativeRead(out: FloatArray, max: Int, timeoutMs: Int) = HackRfNative.readIq(h, out, max, timeoutMs)
     override fun nativeClose() = HackRfNative.close(h)
-
-    override fun start() { if (HackRfNative.start(h) != 0) throw SdrException("HackRF: не удалось запустить приём") }
+    override fun nativeStart() = HackRfNative.start(h)
+    override fun nativeStop() = HackRfNative.stop(h)
 
     override val tuneRange = 1_000_000L..6_000_000_000L
     override fun nativeTune(hz: Long) { HackRfNative.setFreq(h, hz) }
@@ -202,8 +231,8 @@ class AirspyUsbSource(context: Context, device: UsbDevice) : NativeRateSource(co
     override fun applyRate(native: Int) = AirspyNative.setSampleRate(h, native)
     override fun nativeRead(out: FloatArray, max: Int, timeoutMs: Int) = AirspyNative.readIq(h, out, max, timeoutMs)
     override fun nativeClose() = AirspyNative.close(h)
-
-    override fun start() { if (AirspyNative.start(h) != 0) throw SdrException("Airspy: не удалось запустить приём") }
+    override fun nativeStart() = AirspyNative.start(h)
+    override fun nativeStop() = AirspyNative.stop(h)
 
     override val tuneRange = 24_000_000L..1_800_000_000L
     override fun nativeTune(hz: Long) { AirspyNative.setFreq(h, hz) }
