@@ -61,10 +61,7 @@ def replace_appimage(new_file, target):
     """Поставить new_file на место target (через временный файл рядом с target — работает и между дисками)."""
     tmp = target + ".new"
     try:
-        if os.path.abspath(os.path.dirname(new_file)) == os.path.abspath(os.path.dirname(target)):
-            os.replace(new_file, tmp)
-        else:
-            shutil.copy2(new_file, tmp)
+        shutil.copy2(new_file, tmp)   # копия, а не перенос: при ошибке скачанный файл остаётся
         os.chmod(tmp, 0o755)
         os.replace(tmp, target)
     except OSError:

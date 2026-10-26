@@ -179,7 +179,8 @@ def install_qt_translator(app=None):
     import PySide6
     t = QTranslator(app)
     for path in (QLibraryInfo.path(QLibraryInfo.TranslationsPath),
-                 os.path.join(os.path.dirname(PySide6.__file__), "translations")):   # в сборке PyInstaller
+                 os.path.join(os.path.dirname(PySide6.__file__), "translations"),   # сборка PyInstaller, Windows
+                 os.path.join(os.path.dirname(PySide6.__file__), "Qt", "translations")):   # … Linux и macOS
         if t.load(f"qtbase_{language()}", path):
             app.installTranslator(t)
             _qt_translators.append(t)

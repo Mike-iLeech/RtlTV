@@ -331,11 +331,54 @@ def test_replace_appimage_failure_cleans_up(tmp_path, monkeypatch):
 
 def test_elf_exports_garbage_is_safe():
     import struct
-    hdr = bytearray(b"ELF" + bytes(58))
-    struct.pack_into("<Q", hdr, 0x28, 2 ** 64 - 1)            # смещение секций за пределами
+    hdr = bytearray(b"\x7fELF" + bytes(60))
+    hdr[4], hdr[5] = 2, 1                                     # 64 бита, little-endian
+    struct.pack_into("<Q", hdr, 0x28, 2 ** 64 - 1)            # смещение секций за пределами (OverflowError)
     struct.pack_into("<HH", hdr, 0x3A, 64, 3)
     assert devices.elf_exports(bytes(hdr)) == set()
+    # одна секция .dynsym, чьи размер и строковая таблица указывают за конец файла
+    data = bytearray(b"\x7fELF" + bytes(60))
+    data[4], data[5] = 2, 1
+    struct.pack_into("<Q", data, 0x28, 64)
+    struct.pack_into("<HH", data, 0x3A, 64, 1)
+    data += struct.pack("<IIQQQQIIQQ", 0, 11, 0, 0, 10 ** 6, 10 ** 9, 0, 0, 8, 24)
+    assert devices.elf_exports(bytes(data)) == set()
     assert devices.elf_exports(b"MZ" + bytes(100)) == set()
+
+
+def test_restart_from_appimage(monkeypatch):
+    from rtltv import settings_dialog, updater_linux
+    calls = []
+    monkeypatch.setattr(updater_linux, "appimage_path", lambda: "/home/u/SDR4NOOB.AppImage")
+    monkeypatch.setattr(updater_linux, "restart", lambda p, args=(): calls.append(p))
+    monkeypatch.setattr(settings_dialog.subprocess, "Popen", lambda *a, **k: calls.append(("popen", a)))
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(app, "quit", lambda: None)
+    settings_dialog.restart()
+    assert calls == ["/home/u/SDR4NOOB.AppImage"]            # сам файл AppImage, не файл в его монтировании
+
+
+def test_route_urls_linux(monkeypatch):
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QApplication
+    from rtltv import __main__ as M
+    app = QApplication.instance() or QApplication([])
+    opened = []
+    monkeypatch.setattr(osplat, "open_path", lambda p: opened.append(p))
+    monkeypatch.setattr(M.sys, "frozen", True, raising=False)
+    try:
+        M._route_urls_linux(app)
+        QDesktopServices.openUrl(QUrl("https://example.org/a b?x=Ж"))
+        local = os.path.join(os.path.abspath(os.sep), "tmp", "Мои записи", "a.png")
+        QDesktopServices.openUrl(QUrl.fromLocalFile(local))
+    finally:
+        for s in ("http", "https", "file", "mailto"):
+            QDesktopServices.unsetUrlHandler(s)
+    assert opened[0] == "https://example.org/a%20b?x=%D0%96"
+    assert os.path.normpath(opened[1]) == os.path.normpath(local)
 
 
 def test_setup_access_dialog_thread(monkeypatch):

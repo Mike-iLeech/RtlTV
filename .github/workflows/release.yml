@@ -155,7 +155,7 @@ jobs:
             gh release create $tag $env:SETUP "$env:SETUP.sha256" $env:ZIP "$env:ZIP.sha256" --title "SDR4NOOB $ver" --notes-file notes.md
           }
 
-  # Linux: x86_64 (glibc от 2.34 — Ubuntu 22.04+, Debian 12+) и aarch64 (колёса Qt — glibc от 2.39: Ubuntu 24.04+).
+  # Linux: x86_64 (glibc от 2.35 — Ubuntu 22.04+, Debian 12+) и aarch64 (колёса Qt — glibc от 2.39: Ubuntu 24.04+).
   # Встроенные .so собираются здесь же (tools/build_linux_libs.sh), тесты — на них, без экрана (offscreen).
   build-linux:
     permissions:
