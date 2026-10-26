@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Права для подписи с hardened runtime (Developer ID + нотаризация), см. tools/build_macos.sh.
+     Песочница (App Sandbox) не включается: программе нужен прямой доступ к USB через libusb и загрузка
+     драйверов пользователя (HackRF, Airspy) из папки «Служебное/drivers». -->
+<plist version="1.0">
+<dict>
+	<!-- Python и numpy/scipy создают исполняемую память (ctypes-обратные вызовы, JIT в QtWebEngine) -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+	<!-- драйверы пользователя (libhackrf, libairspy, своя librtlsdr) подписаны не нами -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+	<!-- переменные RTLTV_* и QT_* для диагностики -->
+	<key>com.apple.security.cs.allow-dyld-environment-variables</key>
+	<true/>
+	<!-- USB-приёмник через libusb (IOKit) -->
+	<key>com.apple.security.device.usb</key>
+	<true/>
+</dict>
+</plist>

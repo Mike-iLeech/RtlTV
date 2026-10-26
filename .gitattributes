@@ -1,0 +1,2 @@
+# скрипты сборки macOS/Linux запускаются в bash — только с LF
+*.sh text eol=lf

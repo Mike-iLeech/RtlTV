@@ -36,6 +36,7 @@ class ModeWindow(QMainWindow):
         act_set.setShortcut(QKeySequence("Ctrl+,"))
         act_set.setToolTip("Где хранить записи, снимки, звук, журналы и служебные файлы")
         act_set.triggered.connect(lambda: __import__("rtltv.settings_dialog", fromlist=["x"]).show_settings(self))
+        act_set.setMenuRole(QAction.PreferencesRole)   # macOS: «Настройки…» в меню программы (⌘,)
         m.addAction(act_set)
         tm = self.menuBar().addMenu("Оформление")
         for name in THEMES:
@@ -68,6 +69,7 @@ class ModeWindow(QMainWindow):
         hm.addAction(site)
         about = QAction("О программе", self)
         about.triggered.connect(self.show_about)
+        about.setMenuRole(QAction.AboutRole)            # macOS: «О программе» в меню программы
         hm.addAction(about)
 
     def open_guide(self, page=None):
