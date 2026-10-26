@@ -29,6 +29,7 @@ from fractions import Fraction
 
 import numpy as np
 
+from . import linux_setup as _linux_setup
 from . import osplat, rtlsdr, settings
 from .source import BLOCK_BYTES, R828D_GAINS, SourceBase, TestSource
 from . import paths
@@ -161,15 +162,60 @@ def _host_arch():
     return {"amd64": "x86_64", "arm64": "aarch64"}.get(m, m)
 
 
+def elf_exports(data):
+    """Имена функций и данных, которые ELF-библиотека определяет сама (.dynsym, st_shndx != 0) — без символов
+    её зависимостей (dlsym/hasattr нашёл бы pthread_create в libc у любой библиотеки)."""
+    if data[:4] != b"\x7fELF" or len(data) < 64:
+        return set()
+    b64 = data[4] == 2
+    e = "<" if data[5] == 1 else ">"
+    try:
+        if b64:
+            shoff, = struct.unpack_from(e + "Q", data, 0x28)
+            shentsize, shnum = struct.unpack_from(e + "HH", data, 0x3A)
+        else:
+            shoff, = struct.unpack_from(e + "I", data, 0x20)
+            shentsize, shnum = struct.unpack_from(e + "HH", data, 0x2E)
+
+        def sec(i):
+            o = shoff + i * shentsize
+            if b64:
+                _n, typ, _f, _a, off, size, link, _i, _al, entsize = struct.unpack_from(e + "IIQQQQIIQQ", data, o)
+            else:
+                _n, typ, _f, _a, off, size, link, _i, _al, entsize = struct.unpack_from(e + "IIIIIIIIII", data, o)
+            return typ, off, size, link, entsize
+        out = set()
+        for i in range(min(shnum, 4096)):
+            typ, off, size, link, entsize = sec(i)
+            if typ != 11 or not entsize:          # SHT_DYNSYM
+                continue
+            _t, stroff, strsize, _l, _e = sec(link)
+            for k in range(1, min(size // entsize, 1 << 20)):
+                o = off + k * entsize
+                if b64:
+                    name, info, _other, shndx = struct.unpack_from(e + "IBBH", data, o)
+                else:
+                    name, _v, _s, info, _other, shndx = struct.unpack_from(e + "IIIBBH", data, o)
+                if shndx == 0 or (info & 0xF) not in (1, 2) or not name:   # не определён здесь / не функция и не данные
+                    continue
+                p = stroff + name
+                end = data.index(b"\0", p, stroff + strsize)
+                out.add(data[p:end].decode("latin-1"))
+        return out
+    except (struct.error, ValueError, OverflowError, IndexError):
+        return set()
+
+
 def native_lib_info(path):
     """macOS / Linux: заголовок ELF или Mach-O (архитектура) и экспорт — пробной загрузкой (файл выбрал сам
     пользователь, загрузить его всё равно придётся). Формат как у pe_info."""
     name = os.path.basename(path)
     try:
         with open(path, "rb") as f:
-            head = f.read(64)
+            data = f.read()
     except OSError as e:
         raise DriverError(f"Не удалось прочитать {path}: {e}") from e
+    head = data[:64]
     if head[:4] == b"\x7fELF" and len(head) >= 20:
         bits64 = head[4] == 2
         etype, machine = struct.unpack_from("<HH" if head[5] == 1 else ">HH", head, 16)
@@ -181,12 +227,15 @@ def native_lib_info(path):
         raise DriverError(f"{name} — не библиотека {osplat.LIB_EXT} (нет заголовка ELF/Mach-O)")
     exports = set()
     if info["dll"] and info["x64"]:
-        ensure_dll_dir(os.path.dirname(os.path.abspath(path)))
-        try:
-            L = C.CDLL(os.path.abspath(path))
-        except OSError as e:
-            raise DriverError(f"{name} не загружается: {e}. Скорее всего, {osplat.driver_dep_hint()}.") from e
-        exports = {n for n in _probe_names() if hasattr(L, n)}
+        if info["machine"] != "Mach-O":
+            exports = elf_exports(data) & _probe_names()
+        else:   # macOS: экспорт — пробной загрузкой
+            ensure_dll_dir(os.path.dirname(os.path.abspath(path)))
+            try:
+                L = C.CDLL(os.path.abspath(path))
+            except OSError as e:
+                raise DriverError(f"{name} не загружается: {e}. Скорее всего, {osplat.driver_dep_hint()}.") from e
+            exports = {n for n in _probe_names() if hasattr(L, n)}
     info["exports"] = exports
     return info
 
@@ -234,6 +283,8 @@ def ensure_dll_dir(path=None):
         return
     if not osplat.IS_WIN:
         _dll_dir_handles[path] = None
+        if path != os.path.abspath(DRIVERS_DIR):   # системный каталог (/usr/lib/…) — не трогаем
+            return
         for n in sorted(os.listdir(path)):
             if osplat.is_lib_name(n) and n.lower().startswith(DEP_NAMES):
                 try:
@@ -1125,6 +1176,9 @@ KNOWN_USB = [
     (0x04D8, 0xFB56, "FUNcube Dongle Pro", "funcube"),
     (0x04D8, 0xFB31, "FUNcube Dongle Pro+", "funcube"),
 ]
+# остальные приёмники на RTL2832U (Nooelec, Terratec, ezcap…) — как в rtl-sdr.rules
+KNOWN_USB += [(v, p, "RTL-SDR (RTL2832U)", "rtl") for v, p in _linux_setup.RTL_IDS
+              if not any(k[0] == v and k[1] == p for k in KNOWN_USB)]
 
 
 def known_model(vid, pid):
@@ -1304,8 +1358,101 @@ def _driver_state(kind, svc):
     return False, svc or "—", ""
 
 
+# ---------------------------------------------------------------- Linux: sysfs
+def _read(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def usb_raw_linux(sys_root="/sys/bus/usb/devices", dev_root="/dev/bus/usb"):
+    """[{"vid", "pid", "name", "node", "access", "drivers": {номер интерфейса: модуль ядра или ""}}] —
+    USB-устройства из sysfs. access — есть ли у нас чтение и запись узла /dev/bus/usb/BBB/DDD."""
+    out = []
+    try:
+        names = sorted(os.listdir(sys_root))
+    except OSError:
+        return out
+    for n in names:
+        if ":" in n:
+            continue
+        d = os.path.join(sys_root, n)
+        vid, pid = _read(os.path.join(d, "idVendor")), _read(os.path.join(d, "idProduct"))
+        try:
+            vid, pid = int(vid, 16), int(pid, 16)
+        except ValueError:
+            continue
+        bus, dev = _read(os.path.join(d, "busnum")), _read(os.path.join(d, "devnum"))
+        node = os.path.join(dev_root, f"{int(bus):03d}", f"{int(dev):03d}") if bus.isdigit() and dev.isdigit() else ""
+        drivers = {}
+        for ifn in names:
+            if not ifn.startswith(n + ":"):
+                continue
+            num = _read(os.path.join(sys_root, ifn, "bInterfaceNumber"))
+            try:
+                num = int(num, 16)
+            except ValueError:
+                continue
+            link = os.path.join(sys_root, ifn, "driver")
+            drivers[num] = os.path.basename(os.path.realpath(link)) if os.path.lexists(link) else ""
+        out.append({"vid": vid, "pid": pid, "name": n, "node": node,
+                    "access": bool(node) and os.access(node, os.R_OK | os.W_OK),
+                    "product": _read(os.path.join(d, "product")), "drivers": drivers})
+    return out
+
+
+SETUP_HINT = "Нажмите «Настроить доступ…» внизу окна (один раз, нужен пароль администратора)."
+
+
+def _driver_state_linux(kind, access, drv0):
+    """(готово ли, состояние, что делать) в Linux: права на узел USB и чей драйвер держит интерфейс 0."""
+    kernel_dvb = drv0 in _linux_setup.KERNEL_MODULES
+    if kind == "rtl":
+        if not access:
+            state = "нет доступа к USB" + (f"; занят драйвером ТВ-тюнера ядра ({drv0})" if kernel_dvb else "")
+            return False, state, "Нет прав на устройство. " + SETUP_HINT
+        if kernel_dvb:
+            return True, f"доступ есть; драйвер ядра {drv0}", (
+                "Встроенный драйвер отцепит драйвер ТВ-тюнера ядра при открытии. Чтобы ядро больше не "
+                "захватывало приёмник, " + SETUP_HINT[0].lower() + SETUP_HINT[1:])
+        if drv0 == "usbfs":
+            return True, "доступ есть; открыт программой", "Приёмник уже открыт (SDR4NOOB или другой программой)."
+        return True, "доступ есть", "Готово: работает со встроенным драйвером SDR4NOOB."
+    if kind in ("hackrf", "airspy"):
+        lib = find_driver(kind)
+        pkg = {"hackrf": "libhackrf0", "airspy": "libairspy0"}[kind]
+        need = "" if lib else f" Установите библиотеку драйвера: sudo apt install {pkg} (или аналог в вашем дистрибутиве)."
+        if not access:
+            return False, "нет доступа к USB", "Нет прав на устройство. " + SETUP_HINT + need
+        return bool(lib), "доступ есть", ("Готово." if lib else need.strip())
+    ready, state, hint = _driver_state(kind, "")
+    return False, ("доступ есть" if access else "нет доступа к USB"), hint
+
+
+def _usb_devices_linux(raw):
+    out = []
+    for r in raw:
+        km = known_model(r["vid"], r["pid"])
+        if not km:
+            continue
+        drv0 = r["drivers"].get(0, "")
+        ready, state, hint = _driver_state_linux(km[1], r["access"], drv0)
+        out.append({"vid": r["vid"], "pid": r["pid"], "model": km[0], "kind": km[1], "service": drv0,
+                    "services": sorted({d for d in r["drivers"].values() if d}), "ready": ready, "state": state,
+                    "hint": hint, "instance": f"{r['name']} {r['node']}".strip()})
+    out.sort(key=lambda d: (d["kind"], d["instance"]))
+    return out
+
+
 def usb_devices(raw=None):
-    """Найденные SDR на USB: [{"vid", "pid", "model", "kind", "service", "services", "ready", "state", "hint"}]."""
+    """Найденные SDR на USB: [{"vid", "pid", "model", "kind", "service", "services", "ready", "state", "hint"}].
+    raw — для проверок: записи _usb_raw_setupapi (Windows) или usb_raw_linux (словари)."""
+    if raw is None and osplat.IS_LINUX:
+        return _usb_devices_linux(usb_raw_linux())
+    if raw and isinstance(raw[0], dict):
+        return _usb_devices_linux(raw)
     if raw is None:
         try:
             raw = usb_raw()

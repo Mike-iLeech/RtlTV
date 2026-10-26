@@ -264,11 +264,15 @@ class SettingsDialog(QDialog):
 
 def restart():
     """Перезапустить SDR4NOOB (EXE или «py -m rtltv») и закрыть текущий процесс."""
-    if getattr(sys, "frozen", False):
-        args = [sys.executable]
+    from . import updater_linux
+    if updater_linux.appimage_path():   # не файл внутри монтирования AppImage — оно исчезнет вместе с нами
+        updater_linux.restart(updater_linux.appimage_path())
     else:
-        args = [sys.executable, "-m", "rtltv"]
-    subprocess.Popen(args, cwd=os.getcwd(), close_fds=True)
+        if getattr(sys, "frozen", False):
+            args = [sys.executable]
+        else:
+            args = [sys.executable, "-m", "rtltv"]
+        subprocess.Popen(args, cwd=os.getcwd(), close_fds=True)
     app = QApplication.instance()
     for w in app.topLevelWidgets():
         w.close()

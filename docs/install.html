@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.4.0</small></a>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.5.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -48,9 +48,10 @@
 <h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Что</th><th>Требование</th></tr>
-<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 14 и новее (Apple Silicon или Intel).</td></tr>
+<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 14 и новее (Apple Silicon или Intel); или Linux x86_64
+(glibc 2.35+: Ubuntu 22.04+, Debian 12+) или aarch64 (Ubuntu 24.04+) — см. <a href="#linux">«Linux»</a>.</td></tr>
 <tr><td>Приёмник</td><td>USB радиоприёмник (SDR): RTL-SDR Blog V4 или V3 и другие на RTL2832U (встроенный драйвер), HackRF One, Airspy R2/Mini
-(с их библиотекой: DLL в Windows, .dylib на Mac); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
+(с их библиотекой: DLL в Windows, .dylib на Mac, системные libhackrf/libairspy в Linux); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
 <tr><td>Драйвер</td><td>Windows: WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
 <tr><td>Антенна</td><td>Комплектный диполь для начала; для спутников и самолётов — см.
 <a href="guide/antennas.html">«Антенны и кабели»</a>.</td></tr>
@@ -140,6 +141,40 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 папки (программа должна быть закрыта).</li>
 </ul>
 
+<h2 id="linux">Linux<a class="anchor" href="#linux" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Для Linux есть готовые сборки: <b>x86_64</b> (Ubuntu 22.04 и новее, Debian 12+, Fedora 36+ — нужна glibc 2.35+)
+и <b>aarch64</b> (Raspberry Pi 5 и другие; glibc 2.39+: Ubuntu 24.04+, Debian 13+). Скачайте со
+<a href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">страницы последнего выпуска</a> один из вариантов:</p>
+<ul>
+<li><b>AppImage</b> <code>SDR4NOOB-&lt;версия&gt;-x86_64.AppImage</code> (или <code>-aarch64</code>) — один файл без
+установки. Сделайте его исполняемым (в свойствах файла или <code>chmod +x SDR4NOOB-*.AppImage</code>) и запустите.
+Автообновление заменяет этот файл новой версией.</li>
+<li><b>Пакет .deb</b> <code>sdr4noob_&lt;версия&gt;_amd64.deb</code> (или <code>_arm64</code>) для Ubuntu и Debian:
+<code>sudo apt install ./sdr4noob_*.deb</code>. Программа появится в меню приложений и как команда
+<code>sdr4noob</code>; новые версии ставятся так же, поверх прежней. Удаление — <code>sudo apt remove sdr4noob</code>.</li>
+</ul>
+<h3 id="linux-access">Доступ к приёмнику</h3>
+<p>В Linux любой USB радиоприёмник (SDR) по умолчанию доступен только администратору, а приёмники на RTL2832U ядро
+считает ТВ-тюнером и занимает своим драйвером <code>dvb_usb_rtl28xxu</code>. Это настраивается один раз:</p>
+<ol>
+<li>Откройте <b>«Режим → Устройства…»</b> и нажмите <b>«Настроить доступ…»</b>. Система спросит пароль
+администратора.</li>
+<li>SDR4NOOB поставит правило udev <code>/etc/udev/rules.d/60-sdr4noob.rules</code> (доступ для вошедшего
+пользователя) и запрет драйвера ТВ-тюнера <code>/etc/modprobe.d/blacklist-sdr4noob.conf</code>.</li>
+<li>Выдерните приёмник из USB и вставьте снова. В окне «Устройства…» в столбце «Состояние» должно быть
+«доступ есть».</li>
+</ol>
+<p>Пакет .deb ставит эти файлы сам. Если в системе нет pkexec, SDR4NOOB покажет те же команды для
+терминала. HackRF и Airspy работают через системные библиотеки: <code>sudo apt install libhackrf0 libairspy0</code>.
+Звук — через ALSA (PulseAudio и PipeWire тоже); если звука нет, проверьте устройство вывода в меню «Звук».</p>
+<div class="tw"><table class="t">
+<tr><th style="width:38%">Папка в Linux</th><th>Что в ней</th></tr>
+<tr><td><code>~/Документы/SDR4NOOB</code></td><td>Папка данных по умолчанию (папка «Документы» берётся из
+<code>xdg-user-dir DOCUMENTS</code>).</td></tr>
+<tr><td><code>~/.config/SDR4NOOB</code></td><td>Настройки (*.json).</td></tr>
+<tr><td><code>~/.local/share/SDR4NOOB</code></td><td>Кэш карт, орбиты, история самолётов, драйверы, журнал.</td></tr>
+</table></div>
+
 <h2 id="uninstall">Удаление<a class="anchor" href="#uninstall" aria-label="Ссылка на этот раздел">#</a></h2>
 <p>Если ставили установщиком — «Параметры → Приложения → SDR4NOOB → Удалить»; ваши записи и настройки при этом остаются. Переносную версию: закройте SDR4NOOB и удалите папку программы. Чтобы не осталось следов, удалите также <code>%APPDATA%\SDR4NOOB</code>
 и <code>%LOCALAPPDATA%\SDR4NOOB</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно
@@ -181,7 +216,7 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.4.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.5.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>

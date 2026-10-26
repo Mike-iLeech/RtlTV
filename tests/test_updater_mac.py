@@ -16,6 +16,7 @@ on_mac = pytest.mark.skipif(sys.platform != "darwin", reason="ditto/bash-скр�
 @pytest.fixture
 def mac(monkeypatch):
     monkeypatch.setattr(updater.osplat, "IS_MAC", True)
+    monkeypatch.setattr(updater.osplat, "IS_LINUX", False)   # на Linux-раннере update_kind иначе уйдёт в ветку AppImage
 
 
 def test_arch_and_suffix(monkeypatch):

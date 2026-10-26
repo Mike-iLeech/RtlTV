@@ -42,7 +42,8 @@ class DevicesDialog(QDialog):
         gl = QVBoxLayout(g)
         self.usb = QTreeWidget()
         self.usb.setColumnCount(4)
-        self.usb.setHeaderLabels(["Устройство", "VID:PID", "Драйвер Windows", "Что делать"])
+        self.usb.setHeaderLabels(["Устройство", "VID:PID", "Драйвер Windows" if osplat.IS_WIN else "Состояние",
+                                  "Что делать"])
         self.usb.setRootIsDecorated(False)
         self.usb.setWordWrap(True)
         self.usb.setSelectionMode(QAbstractItemView.NoSelection)
@@ -54,7 +55,7 @@ class DevicesDialog(QDialog):
         gl.addWidget(self.usb)
         v.addWidget(g, 2)
 
-        g2 = QGroupBox("Драйверы (DLL) в папке SDR4NOOB")
+        g2 = QGroupBox("Драйверы (DLL) в папке SDR4NOOB" if osplat.IS_WIN else "Драйверы в папке SDR4NOOB")
         g2l = QVBoxLayout(g2)
         self.dlls = QListWidget()
         g2l.addWidget(self.dlls)
@@ -87,13 +88,20 @@ class DevicesDialog(QDialog):
         v.addWidget(g3, 1)
 
         bb = QHBoxLayout()
-        self.b_load = QPushButton("Загрузить драйвер (DLL)…")
+        self.b_load = QPushButton("Загрузить драйвер (DLL)…" if osplat.IS_WIN else "Загрузить драйвер…")
         self.b_load.clicked.connect(self.load_dll)
         self.b_tcp = QPushButton("Добавить сетевой rtl_tcp…")
         self.b_tcp.clicked.connect(self.add_tcp)
         self.b_refresh = QPushButton("Обновить")
         self.b_refresh.clicked.connect(self.refresh)
-        for b in (self.b_load, self.b_tcp, self.b_refresh):
+        btns = [self.b_load, self.b_tcp, self.b_refresh]
+        if osplat.IS_LINUX:   # права на USB и драйвер ТВ-тюнера ядра — один раз, через pkexec
+            self.b_access = QPushButton("Настроить доступ…")
+            self.b_access.setToolTip("Правило udev для USB-приёмников и запрет драйвера ТВ-тюнера ядра "
+                                     "(dvb_usb_rtl28xxu). Нужен пароль администратора.")
+            self.b_access.clicked.connect(self.setup_access)
+            btns.insert(0, self.b_access)
+        for b in btns:
             bb.addWidget(b)
         bb.addStretch(1)
         close = QPushButton("Закрыть")
@@ -222,6 +230,42 @@ class DevicesDialog(QDialog):
         devices.save_dev_settings(self.d)
         self.changed = True
         self.refresh()
+
+    def setup_access(self):
+        from . import linux_setup
+        what = ("SDR4NOOB установит два файла (нужен пароль администратора):\n\n"
+                f"• {linux_setup.RULES_PATH} — доступ к USB-приёмникам для вошедшего пользователя;\n"
+                f"• {linux_setup.BLACKLIST_PATH} — ядро перестанет считать приёмник на RTL2832U "
+                "ТВ-тюнером (драйвер dvb_usb_rtl28xxu).\n\nПродолжить?")
+        if linux_setup.is_configured():
+            what = "Доступ уже настроен. Установить файлы заново?\n\n" + what
+        if QMessageBox.question(self, "Доступ к USB", what) != QMessageBox.Yes:
+            return
+        import threading
+        from PySide6.QtCore import QTimer
+        res = {}
+
+        def work():   # pkexec ждёт пароль в своём окне — окно программы при этом не замирает
+            try:
+                res["r"] = linux_setup.run_setup()
+            except Exception as e:  # noqa: BLE001
+                res["r"] = (False, f"Настройка не удалась: {e}")
+        th = threading.Thread(target=work, daemon=True, name="usb-access-setup")
+        self.b_access.setEnabled(False)
+        th.start()
+        timer = QTimer(self)
+
+        def check():
+            if th.is_alive():
+                return
+            timer.stop()
+            self.b_access.setEnabled(True)
+            ok, msg = res.get("r", (False, "Настройка не удалась."))
+            (QMessageBox.information if ok else QMessageBox.warning)(self, "Доступ к USB", msg)
+            self.refresh()
+        timer.timeout.connect(check)
+        timer.start(200)
+        return th
 
     def _open_dir(self):
         os.makedirs(devices.DRIVERS_DIR, exist_ok=True)

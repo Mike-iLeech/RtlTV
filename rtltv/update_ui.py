@@ -1,12 +1,11 @@
 """Интерфейс автообновления: фоновая проверка при запуске, диалог «Доступна новая версия», загрузка и установка."""
 import threading
-import webbrowser
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import (QApplication, QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressDialog,
                                QPushButton, QTextBrowser, QVBoxLayout)
 
-from . import __version__, osplat, updater
+from . import __version__, osplat, updater, updater_linux
 
 
 class _Bridge(QObject):
@@ -84,7 +83,7 @@ class UpdateDialog(QDialog):
         v = QVBoxLayout(self)
         self.kind = updater.update_kind(info)
         a = info.get(self.kind) or {}
-        what = "установщик" if self.kind == "setup" else "архив"
+        what = {"setup": "установщик", "appimage": "файл AppImage"}.get(self.kind, "архив")
         size = f", {what} {a['size'] / 1e6:.0f} МБ".replace(".", ",") if a.get("size") else ""
         head = QLabel(f"<b>Новая версия {info['version']}</b> (у вас {__version__}){size}.")
         head.setWordWrap(True)
@@ -93,7 +92,8 @@ class UpdateDialog(QDialog):
         notes.setOpenExternalLinks(True)
         notes.setMarkdown(info.get("notes") or "Описание изменений не указано.")
         v.addWidget(notes, 1)
-        manual = ("Нет прав на запись в папку с SDR4NOOB.app — скачайте образ .dmg со страницы релиза и перетащите "
+        manual = (updater_linux.manual_hint(info) if osplat.IS_LINUX else
+                  "Нет прав на запись в папку с SDR4NOOB.app — скачайте образ .dmg со страницы релиза и перетащите "
                   "SDR4NOOB в «Программы»." if osplat.IS_MAC else
                   "Нет прав на запись в папку программы — скачайте установщик со страницы релиза и запустите его "
                   "вручную (может понадобиться запуск от имени администратора).")
@@ -108,7 +108,7 @@ class UpdateDialog(QDialog):
         b_skip = QPushButton("Пропустить эту версию")
         b_skip.clicked.connect(self._skip)
         b_page = QPushButton("Страница релиза")
-        b_page.clicked.connect(lambda: webbrowser.open(info.get("url") or updater.RELEASES_PAGE))
+        b_page.clicked.connect(lambda: osplat.open_url(info.get("url") or updater.RELEASES_PAGE))
         b_later = QPushButton("Позже")
         b_later.clicked.connect(self.reject)
         row.addWidget(b_skip)
@@ -160,6 +160,17 @@ class UpdateDialog(QDialog):
         if state["err"]:
             if not state["cancel"]:
                 QMessageBox.warning(self, "Обновление", str(state["err"]))
+            return
+        if self.kind == "appimage":
+            QMessageBox.information(self, "Обновление",
+                                    "Обновление скачано. SDR4NOOB заменит файл AppImage новой версией, закроется и "
+                                    "запустится снова.")
+            try:
+                updater.install_appimage(state["path"])
+            except Exception as e:  # noqa: BLE001
+                QMessageBox.warning(self, "Обновление", str(e))
+                return
+            self._quit()
             return
         if self.kind == "setup":
             QMessageBox.information(self, "Обновление",

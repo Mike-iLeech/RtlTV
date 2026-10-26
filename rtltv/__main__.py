@@ -25,6 +25,26 @@ def configure(data_dir=None, updates=None):
     return 0
 
 
+def _route_urls_linux(app):
+    """Собранная программа в Linux: ссылки (справка, «Страница релиза», QTextBrowser) открываются через xdg-open
+    с окружением без LD_LIBRARY_PATH сборки (osplat.child_env) — иначе браузер получил бы её библиотеки."""
+    import sys as _sys
+    if not getattr(_sys, "frozen", False):
+        return
+    from PySide6.QtCore import QObject, Slot
+    from PySide6.QtGui import QDesktopServices
+    from . import osplat
+
+    class _Opener(QObject):
+        @Slot("QUrl")
+        def open(self, url):
+            from PySide6.QtCore import QUrl
+            osplat.open_path(url.toLocalFile() if url.isLocalFile() else url.toString(QUrl.FullyEncoded))
+    app._url_opener = _Opener(app)
+    for scheme in ("http", "https", "file", "mailto"):
+        QDesktopServices.setUrlHandler(scheme, app._url_opener, "open")
+
+
 def main():
     if "--configure" in sys.argv:
         cp = argparse.ArgumentParser(prog="SDR4NOOB --configure")
@@ -52,13 +72,23 @@ def main():
     if a.lang:
         i18n.set_language(a.lang)
     diag.setup()
+    from . import osplat
+    osplat.use_bundled_portaudio()   # Linux без libportaudio2 — встроенная (до первого import sounddevice)
     from . import updater
     updater.cleanup_legacy_exe()   # RtlTV.exe от 3.0 и ярлыки на него — после обновления с 3.0
+    if osplat.IS_LINUX:
+        # справка открывает только свои локальные страницы (guide_window.web_nav), а песочница Chromium в AppImage
+        # не запускается без setuid chrome-sandbox / непривилегированных пространств имён (Ubuntu 24.04)
+        import os
+        os.environ.setdefault("QTWEBENGINE_DISABLE_SANDBOX", "1")
     from PySide6.QtCore import QCoreApplication, Qt
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # до QApplication — нужно QtWebEngine (схема в справке)
     app = QApplication(sys.argv)
     app.setApplicationName("SDR4NOOB")
     i18n.install_qt_translator(app)   # стандартные кнопки Qt (Да/Нет, Отмена) на языке интерфейса
+    if osplat.IS_LINUX:
+        app.setDesktopFileName("sdr4noob")   # значок окна в Wayland — из sdr4noob.desktop
+        _route_urls_linux(app)
     from .branding import app_icon
     app.setWindowIcon(app_icon())   # иконка всех окон и панели задач
     if a.selftest_guide:            # встроенный браузер справки собран и оживает (код выхода 0)

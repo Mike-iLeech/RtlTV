@@ -225,6 +225,7 @@ def test_parse_hostport():
 # ======================================================================
 #  USB
 # ======================================================================
+@win_only
 def test_usb_this_machine_rtl_v4_winusb():
     found = devices.usb_devices()
     rtl = [d for d in found if (d["vid"], d["pid"]) == (0x0BDA, 0x2838)]
@@ -310,7 +311,8 @@ def test_reject_32bit_and_foreign_dll(tmp_path):
 
 @win_only
 def test_missing_backend_messages():
-    for sid, name in (("hackrf:0", "hackrf.dll"), ("airspy:0", "airspy.dll")):
+    for sid, name in (("hackrf:0", devices.PREFERRED_NAMES["hackrf"][0]),
+                      ("airspy:0", devices.PREFERRED_NAMES["airspy"][0])):
         col = Collector()
         src = devices.make_source(sid, col, 2400000, 100e6)
         src.start()

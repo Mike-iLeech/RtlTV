@@ -239,13 +239,56 @@ def builtin_driver_label():
     return "встроенный librtlsdr (rtl-sdr-blog)" + (", WinUSB" if IS_WIN else "")
 
 
+def use_bundled_portaudio():
+    """Linux: если в системе нет libportaudio2, звук (sounddevice) берёт встроенную rtltv/driver/libportaudio.so.2.
+    Вызывать до первого import sounddevice — он ищет библиотеку через ctypes.util.find_library("portaudio")."""
+    if not IS_LINUX:
+        return None
+    p = os.path.join(driver_dir(), "libportaudio.so.2")
+    if not os.path.isfile(p) or ctypes.util.find_library("portaudio"):
+        return None
+    orig = ctypes.util.find_library
+
+    def find_library(name):
+        return p if name == "portaudio" else orig(name)
+    ctypes.util.find_library = find_library
+    return p
+
+
 # ---------------------------------------------------------------- прочее
 
+def child_env():
+    """Окружение для сторонних программ (xdg-open, браузер): собранная PyInstaller программа в Linux ставит
+    LD_LIBRARY_PATH на свою папку — чужие программы получили бы её libstdc++/glib/Qt. Возвращаем прежний."""
+    env = dict(os.environ)
+    if IS_LINUX and getattr(sys, "frozen", False):
+        orig = env.pop("LD_LIBRARY_PATH_ORIG", None)
+        if orig:
+            env["LD_LIBRARY_PATH"] = orig
+        else:
+            env.pop("LD_LIBRARY_PATH", None)
+        for k in ("QT_PLUGIN_PATH", "QML2_IMPORT_PATH", "QTWEBENGINEPROCESS_PATH", "QTWEBENGINE_DISABLE_SANDBOX"):
+            env.pop(k, None)
+    return env
+
+
 def open_path(path):
-    """Открыть папку или файл в системном проводнике / программе по умолчанию."""
+    """Открыть папку, файл или адрес (http…) в системном проводнике / программе по умолчанию."""
     if IS_WIN:
         os.startfile(path)  # noqa: S606
         return
     cmd = "open" if IS_MAC else "xdg-open"
     subprocess.Popen([cmd, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,  # noqa: S603
-                     start_new_session=True)
+                     start_new_session=True, env=child_env())
+
+
+def open_url(url):
+    """Открыть адрес в браузере. Windows и macOS — модуль webbrowser; Linux — xdg-open с чистым окружением."""
+    if IS_LINUX:
+        try:
+            open_path(url)
+            return True
+        except OSError:
+            pass
+    import webbrowser
+    return webbrowser.open(url)

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=SDR4NOOB
+GenericName=SDR Receiver
+GenericName[ru]=Радиоприёмник SDR
+Comment=All-in-one for the beginner radio amateur: TV, FM radio, SSTV, satellites, ADS-B, APRS on any USB radio receiver (SDR)
+Comment[ru]=Всё в одном для начинающего радиолюбителя: ТВ, радио, SSTV, спутники, ADS-B, APRS на любом USB радиоприёмнике (SDR)
+Exec=sdr4noob
+Icon=sdr4noob
+Terminal=false
+Categories=AudioVideo;Audio;HamRadio;
+Keywords=SDR;radio;receiver;RTL-SDR;HackRF;Airspy;ADS-B;APRS;SSTV;satellite;FM;приёмник;радио;спутник;
+StartupWMClass=SDR4NOOB
+StartupNotify=true

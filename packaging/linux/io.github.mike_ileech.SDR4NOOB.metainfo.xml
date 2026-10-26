@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mike_ileech.SDR4NOOB</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>SDR4NOOB</name>
+  <summary>All-in-one for the beginner radio amateur on any USB radio receiver (SDR)</summary>
+  <summary xml:lang="ru">Всё в одном для начинающего радиолюбителя на любом USB радиоприёмнике (SDR)</summary>
+  <description>
+    <p>TV, FM radio with RDS, SSTV, weather and amateur satellites, ADS-B aircraft and APRS on any USB radio
+      receiver (SDR). A driver for RTL-SDR dongles is built in; HackRF and Airspy use the system libraries;
+      a receiver on another computer connects over rtl_tcp.</p>
+    <p xml:lang="ru">ТВ, радио с RDS, SSTV, метеорологические и любительские спутники, самолёты ADS-B и APRS на любом
+      USB радиоприёмнике (SDR). Для приёмников RTL-SDR драйвер встроен; HackRF и Airspy работают через
+      системные библиотеки; приёмник на другом компьютере подключается по rtl_tcp.</p>
+  </description>
+  <launchable type="desktop-id">sdr4noob.desktop</launchable>
+  <url type="homepage">https://mike-ileech.github.io/SDR4NOOB/</url>
+  <url type="bugtracker">https://github.com/Mike-iLeech/SDR4NOOB/issues</url>
+  <developer id="io.github.mike_ileech">
+    <name>Mike-iLeech</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <categories>
+    <category>HamRadio</category>
+  </categories>
+</component>

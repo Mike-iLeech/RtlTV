@@ -66,7 +66,8 @@ class ModeWindow(QMainWindow):
         upd.triggered.connect(lambda: __import__("rtltv.update_ui", fromlist=["x"]).check_now(self))
         hm.addAction(upd)
         site = QAction(tr("Сайт и вики SDR4NOOB"), self)
-        site.triggered.connect(lambda: __import__("webbrowser").open(__import__("rtltv").site_url()))
+        site.triggered.connect(lambda: __import__("rtltv.osplat", fromlist=["x"]).open_url(
+            __import__("rtltv").site_url()))
         hm.addAction(site)
         about = QAction(tr("О программе"), self)
         about.triggered.connect(self.show_about)

@@ -235,6 +235,7 @@ def test_check_latest_setup_asset(monkeypatch):
 
 
 def test_update_kind(monkeypatch, tmp_path):
+    monkeypatch.setattr(updater.osplat, "IS_LINUX", False)   # логика Windows (Linux — AppImage, tests/test_linux.py)
     info = {"asset": {"url": "z"}, "setup": {"url": "s"}}
     monkeypatch.setattr(updater, "app_dir", lambda: str(tmp_path))
     assert updater.update_kind(info) == "asset"              # переносная копия — архивом
@@ -301,6 +302,7 @@ def test_migrate_merges_and_retries(tmp_path, monkeypatch):
 
 
 def test_update_kind_manual_without_write_access(monkeypatch, tmp_path):
+    monkeypatch.setattr(updater.osplat, "IS_LINUX", False)
     monkeypatch.setattr(updater, "app_dir", lambda: str(tmp_path))
     monkeypatch.setattr(updater, "writable", lambda d: False)
     (tmp_path / "unins000.exe").write_bytes(b"x")
