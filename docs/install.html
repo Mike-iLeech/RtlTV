@@ -20,7 +20,7 @@
 <a class="skip" href="#content">К содержимому</a>
 <header class="top">
   <button class="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Разделы">☰</button>
-  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.3.1</small></a>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="28" height="28">SDR4NOOB<small>3.4.0</small></a>
   <div class="search" role="search">
     <input id="q" type="search" placeholder="Поиск по сайту  ( / )" autocomplete="off" aria-label="Поиск по сайту">
     <div id="results" class="results" role="listbox" hidden></div>
@@ -42,16 +42,16 @@
 <main id="content" class="content">
 
 <h1>Установка и обновление</h1>
-<p>SDR4NOOB поставляется готовой сборкой для Windows: Python, Qt и драйвер librtlsdr уже внутри. Есть установщик
-(рекомендуется) и архив для запуска без установки.</p>
+<p>SDR4NOOB поставляется готовой сборкой для Windows и macOS: Python, Qt и драйвер librtlsdr уже внутри. Для Windows
+есть установщик (рекомендуется) и архив для запуска без установки; для macOS — образ .dmg (<a href="#macos">как установить на Mac</a>).</p>
 
 <h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Что</th><th>Требование</th></tr>
-<tr><td>Система</td><td>Windows 10 или 11, 64 бит.</td></tr>
+<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 12 и новее (Apple Silicon или Intel).</td></tr>
 <tr><td>Приёмник</td><td>USB радиоприёмник (SDR): RTL-SDR Blog V4 или V3 и другие на RTL2832U (встроенный драйвер), HackRF One, Airspy R2/Mini
 (с их DLL); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
-<tr><td>Драйвер</td><td>WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
+<tr><td>Драйвер</td><td>Windows: WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
 <tr><td>Антенна</td><td>Комплектный диполь для начала; для спутников и самолётов — см.
 <a href="guide/antennas.html">«Антенны и кабели»</a>.</td></tr>
 <tr><td>Интернет</td><td>Не обязателен. Нужен для подложки карт, орбит (TLE), справочника бортов и обновлений.</td></tr>
@@ -145,15 +145,42 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 и <code>%LOCALAPPDATA%\SDR4NOOB</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно
 оставить: им пользуются и другие SDR-программы.</p>
 
+<h2 id="macos">macOS<a class="anchor" href="#macos" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Нужна macOS 12 или новее, Mac на Apple Silicon (M1 и новее) или Intel. Приёмники — те же, что в Windows.
+Драйвер ставить не нужно: встроенный librtlsdr (с libusb внутри) работает с RTL-SDR напрямую, Zadig не нужен.</p>
+<ol>
+<li>На <a href="https://github.com/Mike-iLeech/SDR4NOOB/releases/latest">странице последнего выпуска</a> скачайте образ
+<code>SDR4NOOB-&lt;версия&gt;-macos-arm64.dmg</code> (Apple Silicon) или <code>…-macos-x86_64.dmg</code> (Intel).
+Какой у вас Mac — меню Apple → «Об этом Mac»: «Чип Apple M…» — arm64, «Процессор Intel» — x86_64.</li>
+<li>Откройте образ и перетащите <b>SDR4NOOB</b> в папку «Программы».</li>
+<li>Сборка пока не подписана сертификатом Apple, поэтому при первом запуске macOS скажет, что не может проверить
+разработчика. Откройте «Системные настройки → Конфиденциальность и безопасность» и нажмите «Всё равно открыть»
+рядом с сообщением о SDR4NOOB (или щёлкните программу в Finder правой кнопкой → «Открыть»). Если macOS пишет, что
+программа «повреждена», выполните в Терминале <code>xattr -dr com.apple.quarantine /Applications/SDR4NOOB.app</code>.</li>
+<li>При первом сохранении записей macOS спросит доступ к папке «Документы» — разрешите (папку данных можно сменить
+в «Настройках»); для сетевого rtl_tcp — доступ к локальной сети.</li>
+</ol>
+<ul>
+<li><b>HackRF и Airspy:</b> <code>brew install hackrf airspy</code> — SDR4NOOB найдёт их библиотеки сам; или
+загрузите <code>libhackrf.dylib</code> / <code>libairspy.dylib</code> в «Устройства…».</li>
+<li><b>Файлы:</b> настройки — <code>~/Library/Application Support/SDR4NOOB</code>, служебное —
+<code>~/Library/Application Support/SDR4NOOB/Service</code>, папка данных — <code>~/Documents/SDR4NOOB</code>.</li>
+<li><b>Обновление</b> — как в Windows, из программы: скачивается <code>SDR4NOOB-&lt;версия&gt;-macos-&lt;arch&gt;.zip</code>,
+после выхода пакет SDR4NOOB.app заменяется целиком (прежняя версия возвращается при ошибке). Если программа лежит
+в папке без права записи — скачайте новый образ и перетащите программу заново.</li>
+<li><b>Удаление:</b> перетащите SDR4NOOB из «Программ» в Корзину; чтобы не осталось следов — удалите и
+<code>~/Library/Application Support/SDR4NOOB</code>.</li>
+</ul>
+
 <h2 id="source">Из исходников<a class="anchor" href="#source" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Нужен Python 3.12 для Windows x64. Инструкция по запуску, сборке EXE и тестам — в
+<p>Нужен Python 3.12 (Windows x64 или macOS). Инструкция по запуску, сборке EXE и тестам — в
 <a href="https://github.com/Mike-iLeech/SDR4NOOB#readme">README репозитория</a>.</p>
 
 
 </main>
 </div>
 <footer class="foot">
-  <p>SDR4NOOB 3.3.1 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
+  <p>SDR4NOOB 3.4.0 · свободная программа под лицензией <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/LICENSE">GPL-3.0-or-later</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB/blob/main/THIRD_PARTY.md">сторонние компоненты</a> ·
   <a href="https://github.com/Mike-iLeech/SDR4NOOB">исходный код</a> · <a href="https://github.com/Mike-iLeech/SDR4NOOB/issues">сообщить об ошибке</a></p>
   <p>Карты на снимках экрана — © участники OpenStreetMap (ODbL).</p>
