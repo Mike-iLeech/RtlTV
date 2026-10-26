@@ -17,9 +17,10 @@ import ctypes as C
 import os
 import re
 import struct
-import sys
 
 import numpy as np
+
+from . import osplat
 from scipy import signal as sps
 
 SYMBOL_RATE = 72000
@@ -39,10 +40,7 @@ SATS = {
 # ---------------------------------------------------------------- DLL
 
 def _dll_path():
-    base = getattr(sys, "_MEIPASS", None)
-    if base:
-        return os.path.join(base, "rtltv", "driver", "lrpt_dsp.dll")
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "driver", "lrpt_dsp.dll")
+    return osplat.bundled_lib("lrpt_dsp")
 
 
 _lib = None

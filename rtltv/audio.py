@@ -30,7 +30,10 @@ def output_devices():
         import sounddevice as sd
         apis = sd.query_hostapis()
         names = [a["name"] for a in apis]
-        want = "Windows WASAPI" if "Windows WASAPI" in names else "MME"  # у WASAPI полные названия
+        # Windows: у WASAPI полные названия; macOS — Core Audio; иначе — системный интерфейс PortAudio по умолчанию
+        want = next((n for n in ("Windows WASAPI", "MME", "Core Audio") if n in names), None)
+        if want is None:
+            want = names[sd.default.hostapi] if 0 <= sd.default.hostapi < len(names) else (names[0] if names else "")
         seen = set()
         for i, d in enumerate(sd.query_devices()):
             if d["max_output_channels"] <= 0:

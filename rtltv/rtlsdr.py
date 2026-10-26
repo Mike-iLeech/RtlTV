@@ -5,9 +5,10 @@ DLL лежит рядом с пакетом (rtltv/driver/librtlsdr.dll), поэ
 """
 import ctypes as C
 import os
-import sys
 
 import numpy as np
+
+from . import osplat
 
 
 TIMEOUT_HINT = ("Приёмник не отдаёт данные (USB: тайм-аут чтения). Так бывает после аварийного закрытия программы, "
@@ -27,10 +28,11 @@ _override = None    # путь к альтернативной librtlsdr (из �
 
 
 def _dll_path():
-    base = getattr(sys, "_MEIPASS", None)
-    if base:
-        return os.path.join(base, "rtltv", "driver", "librtlsdr.dll")
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "driver", "librtlsdr.dll")
+    """Встроенная librtlsdr; в macOS и Linux при запуске из исходников без неё — системная (пакет librtlsdr0)."""
+    p = osplat.bundled_lib("librtlsdr")
+    if not osplat.IS_WIN and not os.path.exists(p):
+        return osplat.find_system_lib(("rtlsdr",)) or p
+    return p
 
 
 def set_dll_override(path):
@@ -48,14 +50,18 @@ def lib(path=None):
     L = _libs.get(path)
     if L is not None:
         return L
-    if not os.path.exists(path):
+    by_name = os.sep not in path and "/" not in path   # системная библиотека по имени (librtlsdr.so.0)
+    if not by_name and not os.path.exists(path):
         raise RtlSdrError(f"Не найден драйвер RTL-SDR: {path}")
     try:
         L = C.CDLL(path)
     except OSError as e:
+        if osplat.IS_WIN:
+            raise RtlSdrError(f"Драйвер RTL-SDR не загрузился ({os.path.basename(path)}): {e}. "
+                              "Нужна 64-битная DLL; её зависимости (libusb-1.0.dll, pthreadVC2.dll) "
+                              "должны лежать рядом.") from e
         raise RtlSdrError(f"Драйвер RTL-SDR не загрузился ({os.path.basename(path)}): {e}. "
-                          "Нужна 64-битная DLL; её зависимости (libusb-1.0.dll, pthreadVC2.dll) "
-                          "должны лежать рядом.") from e
+                          f"{osplat.driver_dep_hint().capitalize()}.") from e
     vp, u32, i32 = C.c_void_p, C.c_uint32, C.c_int
     sigs = {
         "rtlsdr_get_device_count": ([], u32),
@@ -118,8 +124,7 @@ class RtlSdr:
         self.dev = C.c_void_p()
         r = self.L.rtlsdr_open(C.byref(self.dev), index)
         if r != 0:
-            raise RtlSdrError(f"Не удалось открыть RTL-SDR #{index} (код {r}). "
-                              "Устройство занято другой программой или не привязан WinUSB.")
+            raise RtlSdrError(f"Не удалось открыть RTL-SDR #{index} (код {r}). " + osplat.usb_busy_hint())
         self.index = index
         self.label = device_label(index, lib_path)
         self.tuner = TUNER_NAMES.get(self.L.rtlsdr_get_tuner_type(self.dev), "?")

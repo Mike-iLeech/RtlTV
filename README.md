@@ -4,7 +4,7 @@
 
 **Всё в одном для начинающего радиолюбителя.**
 
-Бесплатная программа для Windows, которая превращает любой USB радиоприёмник (SDR) в радио с поиском
+Бесплатная программа для Windows и macOS, которая превращает любой USB радиоприёмник (SDR) в радио с поиском
 станций, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов. Например, RTL-SDR — для него
 в программе есть встроенный драйвер. Всё по-русски, есть подробное руководство для начинающих.
 
@@ -96,6 +96,30 @@ Librtlsdr (сборка [rtl-sdr-blog](https://github.com/rtlsdrblog/rtl-sdr-blo
 - Начните с [«Быстрого старта»](https://mike-ileech.github.io/SDR4NOOB/guide/quickstart.html): FM-радио →
   самолёты → авиадиспетчеры за 10 минут.
 
+### macOS
+
+Требования: **macOS 14 (Sonoma) или новее**, Mac на Apple Silicon (M1 и новее) или Intel; приёмники — те же.
+Драйвер ставить не нужно: встроенный librtlsdr (с libusb внутри) работает с RTL-SDR напрямую, без Zadig.
+
+1. Скачайте со страницы [последнего выпуска](https://github.com/Mike-iLeech/SDR4NOOB/releases/latest) образ
+   `SDR4NOOB-<версия>-macos-arm64.dmg` (Apple Silicon) или `…-macos-x86_64.dmg` (Intel). Какой у вас Mac —
+   меню Apple → «Об этом Mac»: «Чип Apple M…» — arm64, «Процессор Intel» — x86_64.
+2. Откройте образ и перетащите **SDR4NOOB** в папку «Программы».
+3. Сборка пока не подписана сертификатом Apple, поэтому при первом запуске macOS скажет, что не может проверить
+   разработчика. Откройте «Системные настройки → Конфиденциальность и безопасность» и нажмите
+   **«Всё равно открыть»** рядом с сообщением о SDR4NOOB (в macOS 14 можно и так: правой кнопкой по программе
+   в Finder → «Открыть»). Если macOS пишет, что программа «повреждена», выполните в Терминале
+   `xattr -dr com.apple.quarantine /Applications/SDR4NOOB.app`.
+4. При первом сохранении записей macOS спросит доступ к папке «Документы» — разрешите (папку данных можно
+   сменить в «Настройках»). Для сетевого rtl_tcp — доступ к локальной сети. Пока сборка не подписана
+   сертификатом Apple, после каждого обновления macOS спросит эти разрешения заново.
+
+HackRF и Airspy: `brew install hackrf airspy` — SDR4NOOB найдёт их библиотеки сам (или загрузите
+`libhackrf.dylib` / `libairspy.dylib` через «Устройства…»). Файлы на Mac: настройки —
+`~/Library/Application Support/SDR4NOOB`, служебное — `~/Library/Application Support/SDR4NOOB/Service`, папка
+данных — `~/Documents/SDR4NOOB`. Обновление — как в Windows, из программы («Справка → Проверить обновления…»):
+пакет SDR4NOOB.app заменяется целиком, прежняя версия возвращается при ошибке.
+
 ## Режимы
 
 ### Радио
@@ -174,7 +198,7 @@ AFSK 1200 бод → AX.25 → станции на карте с треками,
 
 SDR4NOOB проверяет новую версию на GitHub Releases (по умолчанию раз в день; в «Настройках» — раз в неделю или
 никогда), вручную — «Справка → Проверить обновления…». «Обновить сейчас» скачивает
-`SDR4NOOB-<версия>-win64.zip`, сверяет SHA-256, после выхода программы заменяет файлы (прежняя версия
+`SDR4NOOB-<версия>-win64.zip` (на Mac — `SDR4NOOB-<версия>-macos-<arm64|x86_64>.zip`), сверяет SHA-256, после выхода программы заменяет файлы (прежняя версия
 восстанавливается при ошибке) и перезапускает SDR4NOOB. Настройки и данные не затрагиваются.
 
 ## Сборка из исходников
@@ -202,6 +226,16 @@ build.bat
 
 Готовые DLL лежат в `rtltv\driver\` (librtlsdr, mbelib, lrpt_dsp). Пересобрать свои: `tools\build_mbelib.bat`
 (исходники mbelib), `tools\build_lrpt_dsp.bat` (MSVC x64, исходник `tools\lrpt_dsp.c`).
+
+**macOS** (Python 3.12, Xcode Command Line Tools, cmake): библиотеки `.dylib` собираются из исходников,
+затем пакет `dist/SDR4NOOB.app` и образ `release/SDR4NOOB-<версия>-macos-<arch>.dmg`:
+
+```bash
+python3.12 -m pip install -r requirements-dev.txt
+tools/build_macos_libs.sh       # librtlsdr (rtl-sdr-blog + libusb статически), libmbelib, liblrpt_dsp
+python3.12 -m rtltv             # запуск из исходников
+tools/build_macos.sh            # SDR4NOOB.app → dmg + zip; подпись Developer ID — MACOS_SIGN_IDENTITY
+```
 
 Сайт (GitHub Pages из `docs/`) собирается из встроенного руководства:
 

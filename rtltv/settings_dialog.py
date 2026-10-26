@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDia
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QProgressDialog, QPushButton,
                                QVBoxLayout)
 
-from . import i18n, paths, settings
+from . import i18n, osplat, paths, settings
 from .i18n import tr
 
 
@@ -158,7 +158,7 @@ class SettingsDialog(QDialog):
                 (os.path.join(paths.LOGS, paths.LOGS_APRS), tr("журналы пакетов APRS"))]
         service = os.path.join(root, paths.SERVICE) if self.cb_service.isChecked() else paths.LOCAL
         html = "<table cellspacing='3'>" + "".join(
-            f"<tr><td><b>{root}\\{sub}</b></td><td>&nbsp;— {what}</td></tr>" for sub, what in rows)
+            f"<tr><td><b>{os.path.join(root, sub)}</b></td><td>&nbsp;— {what}</td></tr>" for sub, what in rows)
         html += f"<tr><td><b>{service}</b></td><td>&nbsp;— {tr('служебные файлы')}</td></tr></table>"
         self.layout_lbl.setText(html)
         self.items = paths.legacy_items(root, self.cb_service.isChecked())
@@ -185,7 +185,7 @@ class SettingsDialog(QDialog):
     def _open(self, d):
         d = os.path.abspath(d)
         os.makedirs(d, exist_ok=True)
-        os.startfile(d)  # noqa: S606 — только Windows
+        osplat.open_path(d)
 
     # ---------------------------------------------------------------- действия
     def _check_root(self, root):

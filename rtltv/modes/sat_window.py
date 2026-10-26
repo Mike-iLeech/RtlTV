@@ -31,7 +31,7 @@ from .sat_gallery import DIRS as GALLERY_DIRS
 from .sat_gallery import GalleryWidget, write_meta
 from .sat_userdlg import UserSatsDialog
 from .sat_widgets import ConstellationView, FileDialog, ImageScroll, scroll_panel, wrap_label
-from .. import paths
+from .. import osplat, paths
 
 
 class _ListenDemo(RadioTestSignal):
@@ -709,7 +709,7 @@ class SatWindow(ModeWindow):
         self.l_tle.setToolTip(
             "TLE — наборы элементов орбит NORAD, публикует CelesTrak (обновляет несколько раз в сутки).\n"
             "SDR4NOOB скачивает их не чаще раза в сутки или по кнопке «Обновить TLE»; без сети — кэш\n"
-            "%LOCALAPPDATA%\\SDR4NOOB\\tle. Положение считается моделью SGP4: при TLE возрастом 1–3 суток\n"
+            f"{satpass.TLE_DIR}. Положение считается моделью SGP4: при TLE возрастом 1–3 суток\n"
             "ошибка ~1 км, время пролёта — секунды.\n\n" + msg)
         self.map_note = (f"Орбиты: TLE CelesTrak, обновлено {time.strftime('%d.%m %H:%M', time.localtime(upd))}"
                          if upd else "Орбиты: TLE CelesTrak") + (f", возраст {ages[len(ages) // 2]:.0f} ч" if ages else "") \
@@ -1459,7 +1459,7 @@ class SatWindow(ModeWindow):
     def _open_dir(self, path):
         os.makedirs(path, exist_ok=True)
         try:
-            os.startfile(path)  # noqa: S606 — открыть папку в проводнике
+            osplat.open_path(path)
         except OSError:
             pass
 

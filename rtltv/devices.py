@@ -13,7 +13,8 @@
 Усиление везде — десятые dB или None (АРУ); info["gains"] — доступные значения в десятых dB.
 Если устройство не умеет запрошенную частоту дискретизации, поток пересчитывается (StreamResampler).
 
-Драйверы пользователя лежат в %LOCALAPPDATA%\\SDR4NOOB\\drivers\\ (каталог добавляется в поиск DLL).
+Драйверы пользователя лежат в <служебная папка>/drivers (Windows: %LOCALAPPDATA%\\SDR4NOOB\\drivers; каталог
+добавляется в поиск DLL). В macOS и Linux, если там пусто, берутся системные libhackrf / libairspy.
 """
 import collections
 import ctypes as C
@@ -28,7 +29,7 @@ from fractions import Fraction
 
 import numpy as np
 
-from . import rtlsdr, settings
+from . import osplat, rtlsdr, settings
 from .source import BLOCK_BYTES, R828D_GAINS, SourceBase, TestSource
 from . import paths
 
@@ -69,7 +70,13 @@ DRIVER_KINDS = {
 }
 DEP_MARKERS = {"libusb_init": "libusb-1.0", "pthread_create": "pthreads"}
 DEP_NAMES = ("libusb", "pthread", "libwinpthread", "libgcc", "libstdc++", "msvcp", "vcruntime", "libfftw")
-PREFERRED_NAMES = {"hackrf": ("hackrf.dll", "libhackrf.dll"), "airspy": ("airspy.dll", "libairspy.dll")}
+if osplat.IS_WIN:
+    PREFERRED_NAMES = {"hackrf": ("hackrf.dll", "libhackrf.dll"), "airspy": ("airspy.dll", "libairspy.dll")}
+else:
+    PREFERRED_NAMES = {k: ("lib" + k + osplat.LIB_EXT,
+                           "lib" + k + (".0" + osplat.LIB_EXT if osplat.IS_MAC else osplat.LIB_EXT + ".0"))
+                       for k in ("hackrf", "airspy")}
+SYSTEM_LIB_NAMES = {"hackrf": ("hackrf",), "airspy": ("airspy",)}   # ctypes.util.find_library (macOS, Linux)
 
 UNSUPPORTED_HINT = {
     "sdrplay": "Прямая работа с SDRplay API v3 в SDR4NOOB не реализована. Запустите сервер rsp_tcp "
@@ -137,19 +144,70 @@ def kind_title(kind):
     return DRIVER_KINDS[kind][0] if kind in DRIVER_KINDS else "неизвестная DLL"
 
 
+ELF_MACHINES = {62: "x86_64", 183: "aarch64", 3: "x86 (32 бита)", 40: "ARM (32 бита)"}
+
+
+def _probe_names():
+    names = set(DEP_MARKERS)
+    for _title, marker, need, _ok in DRIVER_KINDS.values():
+        names.add(marker)
+        names.update(need)
+    return names
+
+
+def _host_arch():
+    import platform as _pf
+    m = _pf.machine().lower()
+    return {"amd64": "x86_64", "arm64": "aarch64"}.get(m, m)
+
+
+def native_lib_info(path):
+    """macOS / Linux: заголовок ELF или Mach-O (архитектура) и экспорт — пробной загрузкой (файл выбрал сам
+    пользователь, загрузить его всё равно придётся). Формат как у pe_info."""
+    name = os.path.basename(path)
+    try:
+        with open(path, "rb") as f:
+            head = f.read(64)
+    except OSError as e:
+        raise DriverError(f"Не удалось прочитать {path}: {e}") from e
+    if head[:4] == b"\x7fELF" and len(head) >= 20:
+        bits64 = head[4] == 2
+        etype, machine = struct.unpack_from("<HH" if head[5] == 1 else ">HH", head, 16)
+        arch = ELF_MACHINES.get(machine, f"0x{machine:x}")
+        info = {"machine": arch, "x64": bits64 and arch == _host_arch(), "dll": etype == 3}
+    elif head[:4] in (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe"):
+        info = {"machine": "Mach-O", "x64": True, "dll": True}   # архитектуру проверит загрузка
+    else:
+        raise DriverError(f"{name} — не библиотека {osplat.LIB_EXT} (нет заголовка ELF/Mach-O)")
+    exports = set()
+    if info["dll"] and info["x64"]:
+        ensure_dll_dir(os.path.dirname(os.path.abspath(path)))
+        try:
+            L = C.CDLL(os.path.abspath(path))
+        except OSError as e:
+            raise DriverError(f"{name} не загружается: {e}. Скорее всего, {osplat.driver_dep_hint()}.") from e
+        exports = {n for n in _probe_names() if hasattr(L, n)}
+    info["exports"] = exports
+    return info
+
+
 def check_dll(path):
-    """Проверить DLL до копирования. Возвращает (вид, pe_info) или бросает DriverError с понятной причиной."""
+    """Проверить библиотеку до копирования. Возвращает (вид, сведения) или бросает DriverError с понятной
+    причиной. Windows — разбор PE без загрузки; macOS и Linux — native_lib_info."""
     name = os.path.basename(path)
     if not os.path.isfile(path):
         raise DriverError(f"Файл не найден: {path}")
-    if not name.lower().endswith(".dll"):
-        raise DriverError(f"{name}: нужен файл .dll")
-    info = pe_info(path)
+    if not osplat.is_lib_name(name):
+        raise DriverError(f"{name}: нужен файл {osplat.LIB_EXT}")
+    info = pe_info(path) if osplat.IS_WIN else native_lib_info(path)
     if not info["dll"]:
         raise DriverError(f"{name} — это программа (EXE), а не библиотека DLL")
     if not info["x64"]:
-        raise DriverError(f"{name} собрана для {info['machine']}, а SDR4NOOB — 64-битное приложение. "
-                          "Нужна 64-битная (x64) сборка этой DLL.")
+        if osplat.IS_WIN:
+            raise DriverError(f"{name} собрана для {info['machine']}, а SDR4NOOB — 64-битное приложение. "
+                              "Нужна 64-битная (x64) сборка этой DLL.")
+        raise DriverError(f"{name} собрана для {info['machine']}, а этот компьютер — {_host_arch()}. "
+                          "Нужна сборка библиотеки для вашей системы (проще всего — из пакетов дистрибутива).")
     kind = classify(info["exports"], name)
     if kind is None:
         raise DriverError(f"{name} не похожа на драйвер SDR: в ней нет функций librtlsdr, libhackrf, "
@@ -169,9 +227,19 @@ _dll_dir_handles = {}
 
 
 def ensure_dll_dir(path=None):
-    """Добавить папку драйверов в поиск зависимых DLL (os.add_dll_directory)."""
+    """Добавить папку драйверов в поиск зависимых DLL (os.add_dll_directory). В macOS и Linux путь поиска
+    после запуска не меняется — зависимости (libusb…) из этой папки загружаются заранее, глобально."""
     path = os.path.abspath(path or DRIVERS_DIR)
     if path in _dll_dir_handles or not os.path.isdir(path):
+        return
+    if not osplat.IS_WIN:
+        _dll_dir_handles[path] = None
+        for n in sorted(os.listdir(path)):
+            if osplat.is_lib_name(n) and n.lower().startswith(DEP_NAMES):
+                try:
+                    C.CDLL(os.path.join(path, n), mode=C.RTLD_GLOBAL)
+                except OSError:
+                    pass
         return
     try:
         _dll_dir_handles[path] = os.add_dll_directory(path)
@@ -187,8 +255,10 @@ def try_load(path):
         C.CDLL(os.path.abspath(path))
         return None
     except OSError as e:
-        return (f"{e}. Скорее всего, рядом нет зависимостей драйвера (libusb-1.0.dll, pthreadVC2.dll) — "
-                "загрузите их тоже.")
+        if osplat.IS_WIN:
+            return (f"{e}. Скорее всего, рядом нет зависимостей драйвера (libusb-1.0.dll, pthreadVC2.dll) — "
+                    "загрузите их тоже.")
+        return f"{e}. Скорее всего, {osplat.driver_dep_hint()}."
 
 
 def import_dll(src, drivers_dir=None):
@@ -223,7 +293,7 @@ def driver_dlls(drivers_dir=None):
     ddir = drivers_dir or DRIVERS_DIR
     out = []
     try:
-        names = sorted(n for n in os.listdir(ddir) if n.lower().endswith(".dll"))
+        names = sorted(n for n in os.listdir(ddir) if osplat.is_lib_name(n))
     except OSError:
         return out
     for n in names:
@@ -245,10 +315,13 @@ def driver_dlls(drivers_dir=None):
     return out
 
 
-def find_driver(kind, drivers_dir=None):
-    """Путь к DLL нужного вида в папке драйверов или None."""
+def find_driver(kind, drivers_dir=None, system=True):
+    """Путь к DLL нужного вида в папке драйверов или None. В macOS и Linux, если в папке нет, — системная
+    библиотека (пакеты libhackrf0 / libairspy0, brew install hackrf / airspy)."""
     found = [d for d in driver_dlls(drivers_dir) if d["kind"] == kind]
     if not found:
+        if system and not osplat.IS_WIN and kind in SYSTEM_LIB_NAMES:
+            return osplat.find_system_lib(SYSTEM_LIB_NAMES[kind])
         return None
     pref = PREFERRED_NAMES.get(kind, ())
     found.sort(key=lambda d: (d["name"].lower() not in pref, d["name"].lower()))
@@ -730,6 +803,11 @@ _backend_lock = threading.Lock()
 def _missing_dll(kind):
     title = DRIVER_KINDS[kind][0]
     names = " или ".join(PREFERRED_NAMES[kind])
+    if not osplat.IS_WIN:
+        pkg = {"hackrf": "libhackrf0", "airspy": "libairspy0"}.get(kind, kind)
+        how = f"brew install {kind}" if osplat.IS_MAC else f"sudo apt install {pkg} или аналог в вашем дистрибутиве"
+        return DriverError(f"Драйвер {title} не найден: нет {names} ни в {DRIVERS_DIR}, ни в системе. "
+                           f"Установите его ({how}) или загрузите файл в «Режим → Устройства…».")
     deps = "libusb-1.0.dll и pthreadVC2.dll"
     return DriverError(f"Драйвер {title} не загружен: нет {names} в {DRIVERS_DIR}. Откройте «Режим → "
                        f"Устройства…» → «Загрузить драйвер (DLL)…» и выберите {names} (вместе с {deps}).")
@@ -739,16 +817,21 @@ def _open_backend(kind, path, setup):
     path = path or find_driver(kind)
     if not path:
         raise _missing_dll(kind)
-    path = os.path.abspath(path)
+    if os.sep in path or os.path.exists(path):   # find_library в Linux отдаёт только имя (libhackrf.so.0)
+        path = os.path.abspath(path)
     with _backend_lock:
         if path in _backend_libs:
             return _backend_libs[path], path
-        ensure_dll_dir(os.path.dirname(path))
+        if os.path.dirname(path):
+            ensure_dll_dir(os.path.dirname(path))
         try:
             L = C.CDLL(path)
         except OSError as e:
-            raise DriverError(f"{os.path.basename(path)} не загрузилась: {e}. Нужна 64-битная DLL и её "
-                              "зависимости (libusb-1.0.dll, pthreadVC2.dll) в той же папке.") from e
+            if osplat.IS_WIN:
+                raise DriverError(f"{os.path.basename(path)} не загрузилась: {e}. Нужна 64-битная DLL и её "
+                                  "зависимости (libusb-1.0.dll, pthreadVC2.dll) в той же папке.") from e
+            raise DriverError(f"{os.path.basename(path)} не загрузилась: {e}. "
+                              f"{osplat.driver_dep_hint().capitalize()}.") from e
         need = DRIVER_KINDS[kind][2]
         missing = [f for f in need if not hasattr(L, f)]
         if missing:
@@ -862,11 +945,10 @@ class HackRfSource(_CallbackSource):
         try:
             if self.index >= count:
                 raise DeviceError(f"Не удалось открыть HackRF #{self.index}: подключено устройств — {count}. "
-                                  "Проверьте кабель и драйвер WinUSB («Режим → Устройства…»).")
+                                  "Проверьте кабель и " + ("драйвер WinUSB" if osplat.IS_WIN else "доступ к USB") + " («Режим → Устройства…»).")
             r = L.hackrf_device_list_open(lst, self.index, C.byref(self.dev))
             if r != 0:
-                raise DeviceError(f"Не удалось открыть HackRF #{self.index} (код {r}): устройство занято "
-                                  "другой программой или не привязан WinUSB.")
+                raise DeviceError(f"Не удалось открыть HackRF #{self.index} (код {r}): " + osplat.usb_busy_hint())
         finally:
             if lst:
                 L.hackrf_device_list_free(lst)
@@ -957,8 +1039,7 @@ class AirspySource(_CallbackSource):
         L.airspy_list_devices(arr, n)
         r = L.airspy_open_sn(C.byref(self.dev), arr[self.index])
         if r != 0:
-            raise DeviceError(f"Не удалось открыть Airspy #{self.index} (код {r}): устройство занято "
-                              "другой программой или не привязан WinUSB.")
+            raise DeviceError(f"Не удалось открыть Airspy #{self.index} (код {r}): " + osplat.usb_busy_hint())
         self._err(L.airspy_set_sample_type(self.dev, AIRSPY_SAMPLE_FLOAT32_IQ), "формат отсчётов")
         cnt = C.c_uint32(0)
         L.airspy_get_samplerates(self.dev, C.byref(cnt), 0)
@@ -1130,8 +1211,70 @@ def _usb_raw_setupapi():
     return out
 
 
+MAC_SVC = "macOS"   # «служба» устройства на macOS: системный драйвер не нужен, libusb открывает его напрямую
+_IOREG_KEYS = ("idVendor", "idProduct", "locationID", "USB Product Name", "USB Serial Number")
+
+
+def _usb_raw_ioreg(text=None):
+    """macOS: USB-устройства из `ioreg -p IOUSB -l -w0` в формате _usb_raw_setupapi."""
+    if text is None:
+        import subprocess
+        try:
+            text = subprocess.run(["ioreg", "-p", "IOUSB", "-l", "-w0"], capture_output=True, text=True,
+                                  timeout=10).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []
+    devs, cur = [], None
+    for line in text.splitlines():
+        if "+-o " in line:
+            cur = {"name": line.split("+-o ", 1)[1].split("@")[0].split("<")[0].strip()}
+            devs.append(cur)
+            continue
+        if cur is None:
+            continue
+        for k in _IOREG_KEYS:
+            tag = f'"{k}" = '
+            if tag in line:
+                cur[k] = line.split(tag, 1)[1].strip().strip('"')
+    out = []
+    for i, d in enumerate(devs):
+        try:
+            vid, pid = int(d["idVendor"]), int(d["idProduct"])
+        except (KeyError, ValueError):
+            continue
+        where = d.get("locationID") or d.get("USB Serial Number") or str(i)
+        out.append((f"USB\\VID_{vid:04X}&PID_{pid:04X}\\{where}", "", MAC_SVC, d.get("USB Product Name") or d["name"]))
+    return out
+
+
+def usb_raw():
+    """Сырые записи о USB-устройствах этой ОС в формате _usb_raw_setupapi (пусто, если ОС не умеет)."""
+    if osplat.IS_WIN:
+        return _usb_raw_setupapi()
+    if osplat.IS_MAC:
+        return _usb_raw_ioreg()
+    return []
+
+
+def _mac_driver_state(kind):
+    """macOS: драйвер ОС не нужен — RTL-SDR работает со встроенной librtlsdr, HackRF/Airspy — с их библиотекой."""
+    if kind == "rtl":
+        return True, "драйвер не нужен", "Готово: работает со встроенным драйвером SDR4NOOB."
+    if kind in ("hackrf", "airspy"):
+        if find_driver(kind):
+            return True, "драйвер не нужен", "Готово."
+        return False, f"нет библиотеки {kind}", (f"Установите её (brew install {kind}) или загрузите "
+                                                 f"{PREFERRED_NAMES[kind][0]} кнопкой «Загрузить драйвер…».")
+    return None
+
+
 def _driver_state(kind, svc):
     """(готово ли, текст состояния, что делать) для вида устройства и службы интерфейса 0."""
+    if svc == MAC_SVC:
+        st = _mac_driver_state(kind)
+        if st:
+            return st
+        svc = "USB"   # неподдерживаемые модели: дальше общий текст «не поддерживается»
     s = (svc or "").lower()
     zadig = f"Привяжите WinUSB через Zadig ({ZADIG_URL}): Options → List All Devices → нужное устройство → WinUSB."
     if kind == "rtl":
@@ -1165,7 +1308,7 @@ def usb_devices(raw=None):
     """Найденные SDR на USB: [{"vid", "pid", "model", "kind", "service", "services", "ready", "state", "hint"}]."""
     if raw is None:
         try:
-            raw = _usb_raw_setupapi()
+            raw = usb_raw()
         except (OSError, AttributeError):
             return []
     groups = {}

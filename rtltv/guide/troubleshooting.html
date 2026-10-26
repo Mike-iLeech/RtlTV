@@ -3,11 +3,13 @@
 <p class="crumbs"><a href="index.html">Содержание</a> › Помощь</p>
 <h1>Помехи и неполадки</h1>
 <p>Найдите свой симптом в таблице и идите по шагам сверху вниз. Подробный журнал работы SDR4NOOB —
-<span class="mono">%LOCALAPPDATA%\SDR4NOOB\sdr4noob.log</span> (туда же пишутся отчёты о зависаниях).</p>
+<span class="mono">%LOCALAPPDATA%\SDR4NOOB\sdr4noob.log</span> в Windows,
+<span class="mono">~/Library/Application Support/SDR4NOOB/Service/sdr4noob.log</span> на Mac (туда же пишутся отчёты о
+зависаниях).</p>
 
 <table class="t" border="1" cellspacing="0" cellpadding="4" width="99%">
 <tr><th width="30%">Симптом</th><th>Куда смотреть</th></tr>
-<tr><td>«Не удалось открыть RTL-SDR… Устройство занято другой программой или не привязан WinUSB»</td><td><a href="#busy">Приёмник занят / нет драйвера</a></td></tr>
+<tr><td>«Не удалось открыть RTL-SDR… Устройство занято другой программой» (в Windows — «…или не привязан WinUSB»)</td><td><a href="#busy">Приёмник занят / нет драйвера</a></td></tr>
 <tr><td>В списке источников нет приёмника</td><td><a href="#busy">Приёмник занят / нет драйвера</a>, <a href="#usb">USB</a></td></tr>
 <tr><td>Спектр есть, но ровный — сигналов нет</td><td><a href="#nosignal">Нет сигнала</a></td></tr>
 <tr><td>Ложные станции, полосы на водопаде, хрип</td><td><a href="#overload">Перегрузка</a></td></tr>
@@ -24,7 +26,7 @@
 <li><b>Переключение режима</b> SDR4NOOB освобождает приёмник сам; если окно закрылось с ошибкой, подождите 2–3 секунды и
 нажмите «Старт» ещё раз.</li>
 <li><b>Выньте и вставьте приёмник</b> в тот же порт.</li>
-<li><b>Драйвер WinUSB.</b> Если RTL-SDR в «Диспетчере устройств» виден как «RTL2832U DVB-T» в разделе
+<li><b>Драйвер WinUSB (Windows).</b> Если RTL-SDR в «Диспетчере устройств» виден как «RTL2832U DVB-T» в разделе
 «Звуковые, игровые и видеоустройства» — стоит родной драйвер Realtek. Замените его на WinUSB программой Zadig
 (<a href="sdr.html#driver">инструкция</a>). В другом USB-порту замену иногда приходится повторить.</li>
 </ol>

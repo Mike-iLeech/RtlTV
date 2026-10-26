@@ -14,7 +14,7 @@ from .. import devices, settings
 from ..modebase import ModeWindow
 from ..widgets import FreqDisplay, LevelMeter, SpectrumControls, SpectrumView
 from .radio_window import RadioEngine, rtlsdr_gains
-from .. import paths
+from .. import osplat, paths
 
 PRESETS = [
     ("КВ 20 м — 14,230 МГц (USB), главная частота SSTV", 14.230e6, "USB"),
@@ -193,7 +193,7 @@ class SstvWindow(ModeWindow):
         bf.clicked.connect(self._decode_file)
         f2.addRow(bf)
         bo = QPushButton("Открыть папку снимков")
-        bo.clicked.connect(lambda: (os.makedirs(self.folder, exist_ok=True), os.startfile(self.folder)))
+        bo.clicked.connect(lambda: (os.makedirs(self.folder, exist_ok=True), osplat.open_path(self.folder)))
         f2.addRow(bo)
         sv.addWidget(g2)
         note = QLabel("Подсказка: на КВ (14,230 МГц) нужна длинная проволочная антенна; V4 принимает КВ "

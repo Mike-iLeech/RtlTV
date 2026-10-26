@@ -28,10 +28,10 @@ TR_FUNCS = {"tr": (0,), "N_": (0,), "trn": (1, 2, 3)}
 PENDING = {
     "adsb.py", "aircraft_info.py", "app.py", "aprs.py", "audio.py", "bandplan.py", "devices.py",
     "devices_dialog.py", "diag.py", "dmr.py", "dmrscan.py", "elektro.py", "engine.py", "freqman.py",
-    "guide_window.py", "help_radio.py", "iqfile.py", "lrpt.py", "mapview.py", "paths.py",
+    "guide_window.py", "help_radio.py", "iqfile.py", "lrpt.py", "mapview.py", "osplat.py", "paths.py",
     "radiotest.py", "rds.py", "rtl_stream.py", "rtlsdr.py", "satcat.py", "satpass.py",
     "satrx.py", "source.py", "spectrum_nav.py", "sstv.py", "standards.py", "update_ui.py",
-    "updater.py", "widgets.py",
+    "updater.py", "updater_mac.py", "widgets.py",
     "modes/adsb_window.py", "modes/aprs_window.py", "modes/dmr_scan_panel.py", "modes/radio_panels.py",
     "modes/radio_window.py", "modes/sat_gallery.py", "modes/sat_userdlg.py", "modes/sat_widgets.py",
     "modes/sat_window.py", "modes/sstv_window.py",

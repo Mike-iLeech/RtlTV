@@ -276,7 +276,7 @@ def render_nav(groups, current, root):
 
 def page(*, title, body, current, root, groups, version, description="", prevnext=None, home=False):
     full_title = "SDR4NOOB — всё в одном для начинающего радиолюбителя" if home else f"{title} — SDR4NOOB"
-    desc = html.escape(description or "SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатная программа для Windows и любого USB радиоприёмника (SDR): ТВ, радио, "
+    desc = html.escape(description or "SDR4NOOB — всё в одном для начинающего радиолюбителя: бесплатная программа для Windows и macOS, для любого USB радиоприёмника (SDR): ТВ, радио, "
                                       "SSTV, спутники, самолёты ADS-B, APRS.")
     pn = ""
     if prevnext:
@@ -361,13 +361,13 @@ def home_body():
   <div>
     <h1 class="logo-title"><img src="assets/favicon.svg" alt="" width="64" height="64">SDR4NOOB</h1>
     <p class="tagline">Всё в одном для начинающего радиолюбителя</p>
-    <p class="lead">Бесплатная программа для Windows, которая превращает любой USB радиоприёмник (SDR)
+    <p class="lead">Бесплатная программа для Windows и macOS, которая превращает любой USB радиоприёмник (SDR)
     в радио с поиском станций, ТВ-измеритель, станцию приёма снимков со спутников и локатор самолётов.
     Всё в одном окне, по-русски, с подробным руководством для начинающих; для RTL-SDR драйвер встроен.</p>
-    <p class="cta"><a class="btn big" href="{DOWNLOAD_URL}">Скачать для Windows</a>
+    <p class="cta"><a class="btn big" href="{DOWNLOAD_URL}">Скачать для Windows и macOS</a>
     <a class="btn ghost big" href="install.html">Как установить</a>
     <a class="btn ghost big" href="{g}quickstart.html">Быстрый старт</a></p>
-    <p class="dim">Windows 10/11 x64 · USB радиоприёмник (SDR), например RTL-SDR Blog V3/V4 (встроенный драйвер), HackRF, Airspy · без антенны есть
+    <p class="dim">Windows 10/11 x64 · macOS 14+ (Apple Silicon, Intel) · USB радиоприёмник (SDR), например RTL-SDR Blog V3/V4 (встроенный драйвер), HackRF, Airspy · без антенны есть
     тестовый эфир для знакомства</p>
   </div>
   {fig("launcher", "Экран выбора режима. Галочка «Без антенны: тестовый эфир» включает синтетические сигналы для всех режимов.")}
@@ -464,10 +464,10 @@ Wraase SC2-180. Режим определяется по VIS-коду, накл�
 
 <h2 id="requirements">Системные требования<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <ul>
-<li><b>Windows 10 или 11, 64 бит.</b> Python ставить не нужно — всё внутри архива.</li>
+<li><b>Windows 10 или 11, 64 бит</b> или <b>macOS 14 и новее</b> (Apple Silicon или Intel, <a href="install.html#macos">как установить</a>). Python ставить не нужно — всё внутри сборки.</li>
 <li><b>Приёмник:</b> USB радиоприёмник (SDR). Встроенный драйвер — для RTL-SDR Blog V4 (R828D) и V3 и других
 приёмников на RTL2832U (R820T/R820T2 и т. п.); также поддерживаются HackRF One и Airspy R2/Mini (с их DLL) и сетевой rtl_tcp.</li>
-<li><b>Драйвер WinUSB</b> на приёмнике (RTL-SDR, HackRF, Airspy) — ставится один раз программой <a href="https://zadig.akeo.ie/">Zadig</a>
+<li><b>Windows: драйвер WinUSB</b> на приёмнике (RTL-SDR, HackRF, Airspy) — ставится один раз программой <a href="https://zadig.akeo.ie/">Zadig</a>
 (<a href="install.html#zadig">как</a>). Сам librtlsdr уже встроен.</li>
 <li>Двухъядерный процессор и выше; для полосы 2,4 МГц и больше — порт USB 2.0 без перегруженных хабов.</li>
 <li>Интернет нужен только для карт, орбит (TLE), справочника бортов и проверки обновлений.</li>
@@ -532,16 +532,16 @@ def install_body():
     g = "guide/"
     return f"""
 <h1>Установка и обновление</h1>
-<p>SDR4NOOB поставляется готовой сборкой для Windows: Python, Qt и драйвер librtlsdr уже внутри. Есть установщик
-(рекомендуется) и архив для запуска без установки.</p>
+<p>SDR4NOOB поставляется готовой сборкой для Windows и macOS: Python, Qt и драйвер librtlsdr уже внутри. Для Windows
+есть установщик (рекомендуется) и архив для запуска без установки; для macOS — образ .dmg (<a href="#macos">как установить на Mac</a>).</p>
 
 <h2 id="requirements">Что нужно<a class="anchor" href="#requirements" aria-label="Ссылка на этот раздел">#</a></h2>
 <div class="tw"><table class="t">
 <tr><th style="width:30%">Что</th><th>Требование</th></tr>
-<tr><td>Система</td><td>Windows 10 или 11, 64 бит.</td></tr>
+<tr><td>Система</td><td>Windows 10 или 11, 64 бит; или macOS 14 и новее (Apple Silicon или Intel).</td></tr>
 <tr><td>Приёмник</td><td>USB радиоприёмник (SDR): RTL-SDR Blog V4 или V3 и другие на RTL2832U (встроенный драйвер), HackRF One, Airspy R2/Mini
-(с их DLL); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
-<tr><td>Драйвер</td><td>WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
+(с их библиотекой: DLL в Windows, .dylib на Mac); или любой сервер rtl_tcp в сети. Без приёмника работает тестовый эфир.</td></tr>
+<tr><td>Драйвер</td><td>Windows: WinUSB на приёмнике (Zadig, один раз; для RTL-SDR — «Bulk-In, Interface 0»).</td></tr>
 <tr><td>Антенна</td><td>Комплектный диполь для начала; для спутников и самолётов — см.
 <a href="{g}antennas.html">«Антенны и кабели»</a>.</td></tr>
 <tr><td>Интернет</td><td>Не обязателен. Нужен для подложки карт, орбит (TLE), справочника бортов и обновлений.</td></tr>
@@ -635,8 +635,36 @@ USB ID должен начинаться с <code>0BDA 2838</code>.</li>
 и <code>%LOCALAPPDATA%\\SDR4NOOB</code>; папку данных со снимками и записями — по желанию. Драйвер WinUSB можно
 оставить: им пользуются и другие SDR-программы.</p>
 
+<h2 id="macos">macOS<a class="anchor" href="#macos" aria-label="Ссылка на этот раздел">#</a></h2>
+<p>Нужна macOS 14 (Sonoma) или новее, Mac на Apple Silicon (M1 и новее) или Intel. Приёмники — те же, что в Windows.
+Драйвер ставить не нужно: встроенный librtlsdr (с libusb внутри) работает с RTL-SDR напрямую, Zadig не нужен.</p>
+<ol>
+<li>На <a href="{DOWNLOAD_URL}">странице последнего выпуска</a> скачайте образ
+<code>SDR4NOOB-&lt;версия&gt;-macos-arm64.dmg</code> (Apple Silicon) или <code>…-macos-x86_64.dmg</code> (Intel).
+Какой у вас Mac — меню Apple → «Об этом Mac»: «Чип Apple M…» — arm64, «Процессор Intel» — x86_64.</li>
+<li>Откройте образ и перетащите <b>SDR4NOOB</b> в папку «Программы».</li>
+<li>Сборка пока не подписана сертификатом Apple, поэтому при первом запуске macOS скажет, что не может проверить
+разработчика. Откройте «Системные настройки → Конфиденциальность и безопасность» и нажмите «Всё равно открыть»
+рядом с сообщением о SDR4NOOB (в macOS 14 можно и так: правой кнопкой по программе в Finder → «Открыть»). Если macOS пишет, что
+программа «повреждена», выполните в Терминале <code>xattr -dr com.apple.quarantine /Applications/SDR4NOOB.app</code>.</li>
+<li>При первом сохранении записей macOS спросит доступ к папке «Документы» — разрешите (папку данных можно сменить
+в «Настройках»); для сетевого rtl_tcp — доступ к локальной сети. Пока сборка не подписана сертификатом Apple,
+после каждого обновления macOS спросит эти разрешения заново.</li>
+</ol>
+<ul>
+<li><b>HackRF и Airspy:</b> <code>brew install hackrf airspy</code> — SDR4NOOB найдёт их библиотеки сам; или
+загрузите <code>libhackrf.dylib</code> / <code>libairspy.dylib</code> в «Устройства…».</li>
+<li><b>Файлы:</b> настройки — <code>~/Library/Application Support/SDR4NOOB</code>, служебное —
+<code>~/Library/Application Support/SDR4NOOB/Service</code>, папка данных — <code>~/Documents/SDR4NOOB</code>.</li>
+<li><b>Обновление</b> — как в Windows, из программы: скачивается <code>SDR4NOOB-&lt;версия&gt;-macos-&lt;arch&gt;.zip</code>,
+после выхода пакет SDR4NOOB.app заменяется целиком (прежняя версия возвращается при ошибке). Если программа лежит
+в папке без права записи — скачайте новый образ и перетащите программу заново.</li>
+<li><b>Удаление:</b> перетащите SDR4NOOB из «Программ» в Корзину; чтобы не осталось следов — удалите и
+<code>~/Library/Application Support/SDR4NOOB</code>.</li>
+</ul>
+
 <h2 id="source">Из исходников<a class="anchor" href="#source" aria-label="Ссылка на этот раздел">#</a></h2>
-<p>Нужен Python 3.12 для Windows x64. Инструкция по запуску, сборке EXE и тестам — в
+<p>Нужен Python 3.12 (Windows x64 или macOS). Инструкция по запуску, сборке EXE и тестам — в
 <a href="{REPO_URL}#readme">README репозитория</a>.</p>
 """
 

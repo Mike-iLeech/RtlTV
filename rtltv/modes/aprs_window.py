@@ -23,7 +23,7 @@ from ..modebase import ModeWindow
 from ..radiotest import RadioTestSignal, Station
 from ..widgets import FreqDisplay, LevelMeter, SpectrumView
 from .radio_window import RadioEngine, rtlsdr_gains
-from .. import paths
+from .. import osplat, paths
 
 F_GROUND = 144.800e6
 F_ISS = 145.825e6
@@ -507,7 +507,7 @@ class AprsWindow(ModeWindow):
         self.cb_log.toggled.connect(self._log_toggled)
         v.addWidget(self.cb_log)
         b = QPushButton("Открыть папку журналов")
-        b.clicked.connect(lambda: (os.makedirs(LOG_DIR, exist_ok=True), os.startfile(LOG_DIR)))
+        b.clicked.connect(lambda: (os.makedirs(LOG_DIR, exist_ok=True), osplat.open_path(LOG_DIR)))
         v.addWidget(b)
         return g
 
