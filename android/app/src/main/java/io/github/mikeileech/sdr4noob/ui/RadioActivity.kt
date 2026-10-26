@@ -33,6 +33,7 @@ import io.github.mikeileech.sdr4noob.radio.Storage
 import io.github.mikeileech.sdr4noob.radio.WavWriter
 import java.io.File
 import io.github.mikeileech.sdr4noob.sdr.AdsbDemoSource
+import io.github.mikeileech.sdr4noob.sdr.TvDemoSource
 import io.github.mikeileech.sdr4noob.sdr.Receivers
 import io.github.mikeileech.sdr4noob.sdr.SdrException
 import java.util.Locale
@@ -51,6 +52,9 @@ class RadioActivity : Activity() {
         const val APP_SSTV = "sstv"
         const val APP_APRS = "aprs"
         const val APP_ADSB = "adsb"
+        const val APP_TV = "tv"
+        /** Режимы, где приёмник ведёт декодер на сыром IQ: звука и ручной настройки нет. */
+        private val IQ_APPS = setOf(APP_ADSB, APP_TV)
         private const val REQ_SSTV_WAV = 14
         private const val REQ_IMPORT = 11
         private const val REQ_EXPORT = 12
@@ -94,6 +98,7 @@ class RadioActivity : Activity() {
     private var sstv: SstvPanel? = null
     private var aprs: AprsPanel? = null
     private var adsb: AdsbPanel? = null
+    private var tvPanel: TvPanel? = null
     private var adsbTick = 0
 
     private val ticker = object : Runnable {
@@ -106,16 +111,16 @@ class RadioActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        app = intent.getStringExtra(EXTRA_APP)?.takeIf { it in listOf(APP_SSTV, APP_APRS, APP_ADSB) }
+        app = intent.getStringExtra(EXTRA_APP)?.takeIf { it in listOf(APP_SSTV, APP_APRS, APP_ADSB, APP_TV) }
         prefs = getSharedPreferences(if (app == null) "sdr4noob" else "sdr4noob_$app", MODE_PRIVATE)
         sourceId = intent.getStringExtra(EXTRA_SOURCE) ?: Receivers.DEMO
         val defMode = when (app) { APP_SSTV -> "USB"; APP_APRS, APP_ADSB -> "NFM"; else -> "WFM" }
         mode = runCatching { Modulation.valueOf(prefs.getString("mode", defMode)!!) }.getOrDefault(Modulation.WFM)
-        if (app == APP_ADSB || app == APP_APRS) mode = Modulation.NFM
+        if (app == APP_ADSB || app == APP_APRS || app == APP_TV) mode = Modulation.NFM
         // SSTV в тестовом эфире передаётся на 145,800 МГц ЧМ (как МКС): сразу туда, пока пользователь не выбрал сам
         if (app == APP_SSTV && sourceId == Receivers.DEMO && !prefs.contains("mode")) mode = Modulation.NFM
         title = when (app) {
-            APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> "Самолёты ADS-B · "; else -> ""
+            APP_SSTV -> "SSTV · "; APP_APRS -> "APRS · "; APP_ADSB -> "Самолёты ADS-B · "; APP_TV -> "Телевидение · "; else -> ""
         } + Receivers.describe(this, sourceId)
         freqFile = File(filesDir, "freqman.json")
         freqs = FreqMan.load(freqFile)
@@ -149,7 +154,7 @@ class RadioActivity : Activity() {
     override fun onDestroy() {
         val e = engine
         val owner = e != null && !e.preempted
-        sstv?.stop(); aprs?.stop(); adsb?.stop()
+        sstv?.stop(); aprs?.stop(); adsb?.stop(); tvPanel?.stop()
         e?.let { it.stopAudioRec(); it.stopIqRec(); it.stop() }   // stop снимает listener
         engine = null
         // сервис общий: вытесненное окно не трогает его — им пользуется новое окно радио
@@ -196,7 +201,7 @@ class RadioActivity : Activity() {
         }
         row.addView(stereoBox)
         root.addView(row)
-        if (app == APP_ADSB || app == APP_APRS) row.visibility = View.GONE     // режим задан: NFM для APRS, IQ для ADS-B
+        if (app == APP_ADSB || app == APP_APRS || app == APP_TV) row.visibility = View.GONE     // режим задан: NFM для APRS, IQ для ADS-B
 
         infoText = Ui.text(this, "", 13f, Ui.DIM)
         root.addView(infoText)
@@ -204,7 +209,7 @@ class RadioActivity : Activity() {
         root.addView(rdsText)
 
         spectrum = SpectrumView(this)
-        spectrum.locked = app == APP_ADSB
+        spectrum.locked = app in IQ_APPS
         root.addView(spectrum, Ui.lp(h = 0, weight = 1f, top = Ui.dp(this, 4)))
         val common = getSharedPreferences("sdr4noob", MODE_PRIVATE)    // место приёмника — общее для режимов
         val panel = when (app) {
@@ -217,9 +222,10 @@ class RadioActivity : Activity() {
             }.view
             APP_APRS -> AprsPanel(this, common, ::toast).also { aprs = it }.view
             APP_ADSB -> AdsbPanel(this, common, ::toast).also { adsb = it }.view
+            APP_TV -> TvPanel(this, prefs, ::toast).also { tvPanel = it }.view
             else -> null
         }
-        panel?.let { root.addView(it, Ui.lp(h = 0, weight = if (app == APP_ADSB) 3f else 2f, top = Ui.dp(this, 4))) }
+        panel?.let { root.addView(it, Ui.lp(h = 0, weight = if (app in IQ_APPS) 3f else 2f, top = Ui.dp(this, 4))) }
 
         // усиление
         val g = Ui.hbox(this)
@@ -240,7 +246,7 @@ class RadioActivity : Activity() {
         }
         v.addView(vol, Ui.lp(0, weight = 1f))
         root.addView(v)
-        if (app == APP_ADSB) v.visibility = View.GONE        // ADS-B без звука
+        if (app in IQ_APPS) v.visibility = View.GONE        // ADS-B и ТВ-измеритель без звука
         val s = Ui.hbox(this)
         s.addView(Ui.text(this, "Шумодав", 13f).apply { minWidth = Ui.dp(this@RadioActivity, 110) })
         squelchBar = SeekBar(this).apply {
@@ -264,7 +270,7 @@ class RadioActivity : Activity() {
         recButton = Ui.button(this, "● Звук в WAV") { toggleAudioRec() }
         btns.addView(recButton, Ui.lp(0, weight = 1f))
         root.addView(btns)
-        if (app == APP_ADSB) { btns.visibility = View.GONE; top.visibility = View.GONE }
+        if (app in IQ_APPS) { btns.visibility = View.GONE; top.visibility = View.GONE }
 
         statusText = Ui.text(this, "Подключение…", 12f, Ui.DIM)
         root.addView(statusText)
@@ -282,15 +288,18 @@ class RadioActivity : Activity() {
 
     private fun startEngine() {
         val src = try {
-            if (app == APP_ADSB && sourceId == Receivers.DEMO) AdsbDemoSource() else Receivers.sourceFor(this, sourceId)
+            if (app == APP_ADSB && sourceId == Receivers.DEMO) AdsbDemoSource()
+            else if (app == APP_TV && sourceId == Receivers.DEMO) TvDemoSource()
+            else Receivers.sourceFor(this, sourceId)
         } catch (e: SdrException) {
             fail(e.message ?: "Ошибка приёмника"); return
         }
         // по умолчанию 1,2 МГц обзора: вдвое меньше нагрузка и расход батареи; до 2,88 МГц — в меню
         // ADS-B: импульсы 0,5 мкс — нужна полоса от 2 МГц (2,4 МГц — ближайшая частота радиорежима), 1090 МГц
-        val rate = if (app == APP_ADSB) 2_400_000
+        // ТВ: обход мультиплекса кусками ±1 МГц — полоса не уже 2 МГц (Tv.RATES)
+        val rate = if (app == APP_ADSB || app == APP_TV) 2_400_000
             else prefs.getInt("rate", 1_200_000).takeIf { it in RadioDemod.RADIO_RATES } ?: 1_200_000
-        val freq = if (app == APP_ADSB) 1_090_000_000L else prefs.getLong("freq_${mode.name}", defaultFreq(mode))
+        val freq = if (app == APP_ADSB) 1_090_000_000L else if (app == APP_TV) tvPanel!!.startFreq() else prefs.getLong("freq_${mode.name}", defaultFreq(mode))
         val e = RadioEngine(src, rate, freq, mode)
         e.setBandwidth(prefs.getInt("bw_${mode.name}", mode.defaultBw))
         e.setAgc(prefs.getBoolean("agc", true))
@@ -312,7 +321,7 @@ class RadioActivity : Activity() {
         applyModeUi()
         spectrum.onTuned = { f -> saveFreq(f); updateFreq() }
         updateFreq()
-        sstv?.start(e); aprs?.start(e); adsb?.start(e)
+        sstv?.start(e); aprs?.start(e); adsb?.start(e); tvPanel?.start(e)
         e.start()
         if (app == APP_ADSB) e.setCenter(1_090_000_000L)     // кадры Mode S — в центре полосы, без смещения VFO
     }
@@ -333,6 +342,7 @@ class RadioActivity : Activity() {
             gainAuto.setOnCheckedChangeListener { _, _ -> applyGain(gains) }
         }
         biasBox.visibility = if (e.hasBiasTee) View.VISIBLE else View.GONE
+        tvPanel?.opened()
         statusText.text = e.label
     }
 
@@ -468,7 +478,7 @@ class RadioActivity : Activity() {
             else -> " · моно"
         }
         val sq = if (!e.squelchOpen) " · шумодав закрыт" else ""
-        infoText.text = (if (app == APP_ADSB) "1090 МГц" else String.format(Locale.ROOT, "Уровень %.0f dBFS", e.levelDb)) + st + sq +
+        infoText.text = (if (app == APP_ADSB) "1090 МГц" else if (app == APP_TV) Ui.mhz(e.centerHz) else String.format(Locale.ROOT, "Уровень %.0f dBFS", e.levelDb)) + st + sq +
             " · полоса " + Ui.mhz(e.sampleRate.toLong()).replace(" МГц", " МГц обзора")
         e.scanner?.let { s ->
             infoText.text = "Поиск DMR: проход ${s.passes}, окно ${e.scanWindow + 1} из ${s.centers.size}, " +
@@ -696,7 +706,7 @@ class RadioActivity : Activity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        if (app == APP_ADSB) {
+        if (app in IQ_APPS) {
             menu.add(0, 2, 0, "Поправка частоты (ppm)…")
             menu.add(0, 3, 0, "Справка")
             return true
@@ -741,7 +751,7 @@ class RadioActivity : Activity() {
                     }.setNegativeButton("Отмена", null).show()
             }
             3 -> startActivity(Intent(this, GuideActivity::class.java).putExtra(GuideActivity.EXTRA_PAGE,
-                when (app) { APP_SSTV -> "guide/mode-sstv.html"; APP_APRS -> "guide/mode-aprs.html"; APP_ADSB -> "guide/mode-adsb.html"; else -> "guide/mode-radio.html" }))
+                when (app) { APP_SSTV -> "guide/mode-sstv.html"; APP_APRS -> "guide/mode-aprs.html"; APP_ADSB -> "guide/mode-adsb.html"; APP_TV -> "guide/mode-tv.html"; else -> "guide/mode-radio.html" }))
             4 -> {
                 val e = engine ?: return true
                 val steps = listOf(0.25, 0.5, 0.75, 1.0, 1.5, 2.0).map { (mode.defaultBw * it).toInt() }
