@@ -39,6 +39,12 @@ $PY -m PyInstaller --noconfirm --clean --windowed --name SDR4NOOB \
   --exclude-module tkinter \
   run.py
 $PY tools/prune_webengine.py dist/SDR4NOOB
+# встроенный браузер справки не должен ссылаться на библиотеки, которых нет ни в сборке, ни в системе сборки
+# (Qt WebEngine для aarch64 берёт libopus/libminizip из системы — без них схема в справке не откроется)
+LIBDIRS="$(find dist/SDR4NOOB -name '*.so*' -printf '%h\n' | sort -u | paste -sd: -)"
+missing="$(find dist/SDR4NOOB \( -name 'libQt6WebEngine*.so*' -o -name 'QtWebEngine*.so' \) -print0 \
+  | LD_LIBRARY_PATH="$LIBDIRS" xargs -0 -r ldd 2>/dev/null | grep 'not found' | sort -u || true)"
+[ -z "$missing" ] || { echo "в сборке не хватает библиотек для Qt WebEngine:" >&2; echo "$missing" >&2; exit 1; }
 cp LICENSE THIRD_PARTY.md README.md CHANGELOG.md dist/SDR4NOOB/
 
 write_udev() {   # write_udev <папка для rules> <папка для modprobe.d>
