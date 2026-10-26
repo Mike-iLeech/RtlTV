@@ -49,7 +49,25 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
     }
 
     /** Полный снимок текущего пролёта — строится в потоке декодера и отдаётся в [cb] (null — снимка нет). */
-    fun requestFull(cb: (LrptPicture?) -> Unit) { commands.add { rx -> cb(picture(rx, Int.MAX_VALUE)) } }
+    fun requestFull(cb: (LrptPicture?) -> Unit) { commands.add { rx -> cb(full(rx)) } }
+
+    /**
+     * Полный снимок; не хватило памяти — снимок вдвое меньше (приём при этом не сбрасывается: принятое
+     * важнее одной попытки сохранить).
+     */
+    private fun full(rx: AutoLrptReceiver): LrptPicture? =
+        try { picture(rx, Int.MAX_VALUE) } catch (_: OutOfMemoryError) {
+            try { picture(rx, maxOf(1, rx.rx.imager.lines() / 2)) } catch (_: OutOfMemoryError) { null }
+        }
+
+    /** Отдать снимок пролёта (если кадры были), закрыть приёмник и начать новый. */
+    private fun endPass(rx: AutoLrptReceiver, fs: Int): AutoLrptReceiver {
+        runCatching { rx.finish() }                                   // последние кадры из буферов
+        if (runCatching { rx.stats().framesOk }.getOrDefault(0) > 0) full(rx)?.let(onPassEnd)
+        rx.rxs.forEach { runCatching { it.close() } }               // нативные демодуляторы — сразу, не в finalize
+        preview = null
+        return AutoLrptReceiver(fs.toDouble())
+    }
 
     fun stop() { running = false; thread.interrupt() }
 
@@ -64,7 +82,7 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
             try {
                 val x = queue.poll(250, TimeUnit.MILLISECONDS)
                 while (true) { (commands.poll() ?: break).invoke(rx) }
-                if (rate != fs) { fs = rate; rx = AutoLrptReceiver(fs.toDouble()); off = Double.NaN; queue.clear(); continue }
+                if (rate != fs) { rx = endPass(rx, rate); fs = rate; off = Double.NaN; queue.clear(); continue }
                 val o = offsetHz
                 if (o != off) { off = o; rx.setOffset(o) }
                 if (x != null) rx.feed(x, wantCons = false)
@@ -77,8 +95,7 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
                     val gap = (now - lastSync) / 1e9
                     if (st.framesOk > 0 && (gap > PASS_GAP_S || st.lines > MAX_LINES)) {
                         // пролёт кончился (или снимок слишком длинный): отдать целиком и начать заново
-                        picture(rx, Int.MAX_VALUE)?.let(onPassEnd)
-                        rx = AutoLrptReceiver(fs.toDouble()); off = Double.NaN; preview = null; lastSync = now
+                        rx = endPass(rx, fs); off = Double.NaN; lastSync = now
                         continue
                     }
                     if (wantPreview) preview = picture(rx, PREVIEW_LINES)
@@ -88,9 +105,12 @@ class LrptWorker(fs: Int, private val onPassEnd: (LrptPicture) -> Unit = {}, pri
             } catch (e: Throwable) {
                 // сбой или нехватка памяти не роняют приложение: приём начинается заново
                 if (!reported) { reported = true; onError("LRPT: сбой декодера (${e.javaClass.simpleName}), приём начат заново") }
+                rx.rxs.forEach { runCatching { it.close() } }
                 rx = AutoLrptReceiver(fs.toDouble()); off = Double.NaN; preview = null
             }
         }
+        // закрыли режим или сменили спутник посреди пролёта — принятое не пропадает
+        runCatching { endPass(rx, fs).rxs.forEach { it.close() } }
     }
 
     /** Композит (или канал) снимка, уменьшенный до [maxLines] строк прореживанием. */

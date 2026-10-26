@@ -144,7 +144,7 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
         thread(name = "lrpt-save") {
             val msg = try {
                 val b = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
-                (if (auto) "Пролёт закончился, снимок сохранён: " else "Снимок сохранён: ") + Storage.savePng(act, Storage.METEOR, name, b)
+                (if (auto) "Снимок пролёта сохранён: " else "Снимок сохранён: ") + Storage.savePng(act, Storage.METEOR, name, b)
             } catch (e: Throwable) { "Снимок не сохранён: ${e.message ?: e.javaClass.simpleName}" }
             ui.post { if (alive) toast(msg) }
         }
@@ -207,7 +207,14 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
             if (sel == null) { append("Выберите спутник («Спутник…» или касанием на карте)"); return@buildString }
             append(sel.name)
             x?.let { append(" · ${it.label} ${String.format(Locale.ROOT, "%.3f", it.center / 1e6).replace('.', ',')} МГц ${it.mode}") }
-            if (o == null) { append("\nНет орбиты (TLE) для этого спутника"); return@buildString }
+            if (o == null) {
+                append("\nНет орбиты (TLE) для этого спутника")
+                // приём LRPT и без орбиты (например, запись IQ): центр и полоса — от движка, без доплера
+                val w = lrpt; val e = engine
+                if (w != null && e != null && x != null) { w.rate = e.sampleRate; w.offsetHz = x.center - e.centerHz }
+                lrpt?.let { appendLrpt(this, it) }
+                return@buildString
+            }
             val l = runCatching { o.look(t, la, lo) }.getOrNull()
             if (l != null && l.el.isFinite()) {
                 append(String.format(Locale.ROOT, "\nАзимут %.0f° · угол места %.1f° · дальность %.0f км", l.az, l.el, l.range).replace('.', ','))
@@ -224,7 +231,18 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
                 }
                 if (l.el < 0) append(" · за горизонтом")
             }
-            lrpt?.let { w ->
+            lrpt?.let { appendLrpt(this, it) }
+        }
+        val next = passes.filter { it.los > t }.take(5)
+        list.text = if (next.isEmpty()) tleStatus else next.joinToString("\n") { p ->
+            String.format(Locale.ROOT, "%-14s %s–%s  макс %2.0f°",
+                p.name.take(14), time.format(Date((p.aos * 1000).toLong())), hhmm.format(Date((p.los * 1000).toLong())).take(5), p.maxEl)
+        }
+    }
+
+    /** Строка состояния LRPT и уменьшенный снимок (если открыт). */
+    private fun appendLrpt(sb: StringBuilder, w: LrptWorker) {
+        with(sb) {
                 val s = w.stats
                 append("\nLRPT: ")
                 if (s == null) append("запуск…") else {
@@ -241,12 +259,6 @@ class SatPanel(private val act: Activity, private val prefs: SharedPreferences, 
                     shownPic = p
                     picView.bitmap = android.graphics.Bitmap.createBitmap(p.argb, p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
                 }
-            }
-        }
-        val next = passes.filter { it.los > t }.take(5)
-        list.text = if (next.isEmpty()) tleStatus else next.joinToString("\n") { p ->
-            String.format(Locale.ROOT, "%-14s %s–%s  макс %2.0f°",
-                p.name.take(14), time.format(Date((p.aos * 1000).toLong())), hhmm.format(Date((p.los * 1000).toLong())).take(5), p.maxEl)
         }
     }
 

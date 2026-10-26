@@ -111,10 +111,20 @@ class TvWorker(private val engine: RadioEngine, private val onUpdate: () -> Unit
         return re to im
     }
 
-    /** Полоса уже 2 МГц (запись IQ со своей частотой) — измерять нечем: сказать один раз и ждать другой задачи. */
+    private var rateWarned = 0
+
+    /**
+     * Полоса уже 2 МГц (запись IQ со своей частотой): обход мультиплекса кусками ±1 МГц не сходится — сказать
+     * (один раз для этой полосы) и ждать другой задачи. Записи 2,048 МГц подходят.
+     */
     private fun rateOk(serial: Int): Boolean {
-        if (engine.sampleRate >= Tv.RATES.min()) return true
-        onError("Полоса ${engine.sampleRate / 1e6} МГц мала для ТВ: нужна не уже 2,4 МГц (у записи IQ полоса своя)")
+        val fs = engine.sampleRate
+        if (fs >= 2_000_000) return true
+        if (rateWarned != fs) {
+            rateWarned = fs
+            onError("Полоса " + String.format(java.util.Locale.ROOT, "%.3f", fs / 1e6).replace('.', ',') +
+                " МГц мала для ТВ: нужна не уже 2 МГц (у записи IQ полоса своя)")
+        }
         while (true) next(serial)
     }
 
