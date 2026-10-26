@@ -20,6 +20,9 @@ void sdr4n_shim_begin(int fd)
 int sdr4n_shim_end(void)
 {
 	int ok = pending_taken ? 0 : -1;
+	/* драйвер не взял обёрнутое устройство: закрыть хэндл, иначе fd останется в живом контексте libusb */
+	if (pending_handle && !pending_taken)
+		libusb_close(pending_handle);
 	pending_fd = -1;
 	pending_handle = NULL;
 	pending_taken = 0;

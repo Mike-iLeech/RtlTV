@@ -105,6 +105,7 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
             width = when (kind) { "u8", "s8" -> 2; "s16" -> 4; else -> 8 }
             total = sizeBytes / width
         }
+        if (fs <= 0) throw IqFormatException("Неверная частота дискретизации в заголовке файла")
         if (total <= 0) throw IqFormatException("Файл пуст")
     }
 
@@ -156,8 +157,11 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
     val seconds get() = total.toDouble() / fs
 
     private fun reopen() {
-        input?.close()
-        val s = DataInputStream(open().buffered(1 shl 16))
+        input?.close(); input = null
+        val s = try { DataInputStream(open().buffered(1 shl 16)) }
+        catch (e: SdrException) { throw e }
+        catch (e: SecurityException) { throw SdrException("Нет доступа к файлу IQ — выберите его заново", e) }
+        catch (e: java.io.IOException) { throw SdrException("Файл IQ больше не читается (удалён или перемещён?)", e) }
         var skip = offset
         // skip() у потоков ContentResolver может вернуть 0 — тогда дочитываем по байту, иначе данные сдвинутся
         while (skip > 0) {
@@ -187,7 +191,7 @@ class IqFileReader(private val open: () -> InputStream, val name: String, privat
             try { input!!.readFully(raw, 0, bytes) } catch (_: EOFException) {
                 if (fresh) throw SdrException("Файл IQ короче, чем указано в его заголовке: воспроизводить нечего")
                 pos = total; continue
-            }
+            } catch (e: java.io.IOException) { throw SdrException("Файл IQ больше не читается: ${e.message}", e) }
             fresh = false
             val b = ByteBuffer.wrap(raw, 0, bytes).order(ByteOrder.LITTLE_ENDIAN)
             for (i in 0 until take) {
@@ -236,7 +240,7 @@ class IqFileSource(shownName: String, private val makeReader: () -> IqFileReader
     }
 
     @Volatile private var name = shownName
-    private val reader: IqFileReader by lazy {
+    private val readerLazy = lazy {
         try {
             makeReader().also { name = it.name }
         } catch (e: SdrException) { throw e
@@ -247,6 +251,8 @@ class IqFileSource(shownName: String, private val makeReader: () -> IqFileReader
         } catch (e: IllegalArgumentException) { throw SdrException("Файл IQ не открывается: ${e.message}", e)
         }
     }
+
+    private val reader by readerLazy
 
     override val label get() = "Файл IQ: $name"
     override val gains = IntArray(0)
@@ -297,5 +303,6 @@ class IqFileSource(shownName: String, private val makeReader: () -> IqFileReader
     override fun setFrequency(hz: Long) {}
     override fun setSampleRate(rate: Int) {}
     override fun setGain(tenthsDb: Int) {}
-    override fun close() { reader.close() }
+    /** Не открывать файл ради закрытия (если открыть не удалось — повторная попытка лишь задержит выход). */
+    override fun close() { if (readerLazy.isInitialized()) reader.close() }
 }

@@ -252,8 +252,9 @@ class RadioEngine(
         if (source.fixedRate != null) return@post
         // окна плана поиска рассчитаны на прежнюю полосу: поиск останавливается
         if (scan != null || scanner != null) {
+            val was = scan != null
             scan = null; scanner = null
-            listener?.onScanStopped("Поиск DMR остановлен: сменена полоса обзора")
+            listener?.onScanStopped(if (was) "Поиск DMR остановлен: сменена полоса обзора" else "Поиск DMR не начат: сменилась полоса обзора")
         }
         sampleRate = rate
         source.setSampleRate(rate)
