@@ -294,6 +294,7 @@ def test_child_env_strips_bundle_libs(monkeypatch):
 def test_updater_picks_appimage_on_linux(monkeypatch):
     import json
     from rtltv import updater, updater_linux
+    monkeypatch.setattr(updater.osplat, "IS_MAC", False)       # «asset» — архив Windows (на Mac — свой суффикс)
     rel = {"tag_name": "v9.9.9", "body": "", "html_url": "u", "assets": [
         {"name": "SDR4NOOB-9.9.9-win64.zip", "browser_download_url": "https://x/w.zip", "size": 1,
          "digest": "sha256:" + "a" * 64},
