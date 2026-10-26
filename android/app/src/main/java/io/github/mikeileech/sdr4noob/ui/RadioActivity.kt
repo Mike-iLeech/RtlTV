@@ -76,7 +76,12 @@ class RadioActivity : Activity() {
         startEngine()
     }
 
-    override fun onResume() { super.onResume(); ui.post(ticker) }
+    override fun onResume() {
+        super.onResume()
+        // движок этого окна остановлен новым окном радио — это окно устарело
+        if (engine?.preempted == true) { finish(); return }
+        ui.post(ticker)
+    }
     override fun onPause() { super.onPause(); ui.removeCallbacks(ticker) }
 
     override fun onDestroy() {

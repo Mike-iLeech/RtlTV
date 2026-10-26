@@ -55,12 +55,30 @@ class RadioEngine(
     val squelchOpen get() = demod.squelchOpen
     @Volatile var dropped = 0L; private set
 
+    /** Движок остановлен, потому что запустили другой (второе окно радио): прежнему окну пора закрыться. */
+    @Volatile var preempted = false
+        private set
+
+    /**
+     * Приёмник один, движок — тоже: запуск нового останавливает прежний (например, окно радио с тестовым
+     * сигналом осталось под новым, открытым после подключения приёмника) и ждёт, пока тот закроет устройство.
+     */
     fun start() {
         if (running) return
         running = true
-        // предыдущий движок мог ещё закрывать тот же приёмник — новый открывает его только после этого
+        val old = current
+        if (old != null && old !== this) { old.preempted = true; old.stop() }
+        current = this
         val prev = previous
-        val t = Thread({ prev?.join(); loop() }, "sdr4noob-radio").apply { priority = Thread.MAX_PRIORITY }
+        val t = Thread({
+            prev?.join(CLOSE_WAIT_MS)
+            if (prev?.isAlive == true) {
+                listener?.onError("Приёмник ещё занят прежним окном радио — попробуйте через несколько секунд.")
+                running = false
+            } else {
+                loop()
+            }
+        }, "sdr4noob-radio").apply { priority = Thread.MAX_PRIORITY }
         previous = t
         thread = t
         t.start()
@@ -71,6 +89,7 @@ class RadioEngine(
         listener = null
         running = false
         thread = null
+        if (current === this) current = null
     }
 
     /** Настроиться на станцию. В пределах полосы приёмника меняется только VFO, иначе — и центр. */
@@ -186,6 +205,8 @@ class RadioEngine(
 
     companion object {
         @Volatile private var previous: Thread? = null
+        @Volatile private var current: RadioEngine? = null
+        private const val CLOSE_WAIT_MS = 10_000L
 
         /** Станция ставится не в центр полосы, а на 1/8 левее: там нет пика постоянной составляющей. */
         fun offsetFor(rate: Int): Long = (rate / 8).toLong()

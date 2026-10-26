@@ -30,6 +30,8 @@ jobs:
         working-directory: android
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # токен с правом записи нужен только шагу публикации (через GH_TOKEN)
 
       - uses: actions/setup-java@v4
         with:
